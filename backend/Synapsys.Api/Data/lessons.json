@@ -1,90 +1,276 @@
 {
+  "version": 1,
   "attribution": {
     "author": "Paul McWhorter",
     "website": "https://toptechboy.com/arduino-lessons/",
     "donate": "https://www.patreon.com/PaulMcWhorter",
     "note": "Lesson curriculum based on Paul McWhorter's Arduino tutorial series at toptechboy.com. Please support his free educational work on Patreon."
   },
+  "symbolLibrary": {
+    "source": "KiCad official symbol libraries",
+    "license": "CC-BY-SA 4.0 (with KiCad libraries exception)",
+    "path": "frontend/public/kicad-symbols/"
+  },
+  "phases": [
+    {
+      "id": "foundation",
+      "name": "Foundation",
+      "range": "1-5",
+      "concepts": [
+        "Digital out",
+        "Analog in",
+        "Serial monitor",
+        "Variables",
+        "Conditionals"
+      ]
+    },
+    {
+      "id": "sensing",
+      "name": "Sensing",
+      "range": "6-12",
+      "concepts": [
+        "Ultrasonic",
+        "Temp sensor",
+        "Light sensor",
+        "Buttons",
+        "Debouncing"
+      ]
+    },
+    {
+      "id": "control",
+      "name": "Control",
+      "range": "13-20",
+      "concepts": [
+        "Servos",
+        "DC motors",
+        "PWM",
+        "RGB LED",
+        "LCD display"
+      ]
+    },
+    {
+      "id": "python_bridge",
+      "name": "Python Bridge",
+      "range": "21-28",
+      "concepts": [
+        "Python syntax",
+        "Raspberry Pi crossover",
+        "Circuit parity with Arduino"
+      ]
+    },
+    {
+      "id": "expert",
+      "name": "Expert",
+      "range": "29+",
+      "concepts": [
+        "Wire gauge physics",
+        "Signal calibration",
+        "Interrupts",
+        "I2C"
+      ]
+    }
+  ],
+
   "lessons": [
     {
       "id": 1,
-      "phase": "Foundation",
-      "title": "Getting Started with Arduino",
-      "source": "Arduino Tutorial 1: Getting Started for Absolute Beginners — toptechboy.com",
-      "objective": "Set up the Arduino, understand the IDE, and blink the built-in LED on pin 13.",
-      "components": ["led-red", "resistor-220"],
-      "concepts": ["setup()", "loop()", "pinMode", "digitalWrite", "delay"],
-      "steps": [
-        "Every sketch has two parts: setup() runs once, loop() runs forever.",
-        "Tell the Arduino pin 13 is an OUTPUT: pinMode(13, OUTPUT);",
-        "Turn the LED on with digitalWrite(13, HIGH); and off with LOW.",
-        "Use delay(500); to wait half a second between changes.",
-        "Watch the LED blink — you have written your first program."
-      ]
+      "phase": "foundation",
+      "title": "Digital Output — LED Blink",
+      "description": "Learn how to control a digital pin and blink an LED using pinMode() and digitalWrite().",
+      "source": "Paul McWhorter, Arduino Tutorial 1–2 — toptechboy.com",
+      "circuit": {
+        "components": [
+          "Arduino Uno",
+          "Breadboard",
+          "LED",
+          "220Ω resistor"
+        ],
+        "notes": "An Arduino Uno connected to a breadboard containing a 220Ω resistor and an LED."
+      },
+      "componentGuide": {
+        "name": "LED — Light Emitting Diode",
+        "symbol": "kicad-symbols/LED.kicad_sym",
+        "info": {
+          "forwardVoltage": "2.0–2.2V",
+          "maxCurrent": "20mA",
+          "resistorNeeded": "220Ω",
+          "wavelength": "≈625nm (red)",
+          "polarityNotes": "The longer leg is the anode (+), shorter leg is the cathode (–)."
+        }
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  // One-time configuration\n}\n\nvoid loop() {\n  // Blink LED\n}"
+      },
+      "hints": [
+        "pinMode(13, OUTPUT);",
+        "digitalWrite(13, HIGH);",
+        "digitalWrite(13, LOW);"
+      ],
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
+
     {
       "id": 2,
-      "phase": "Foundation",
-      "title": "How LEDs Work and How to Control One",
-      "source": "Arduino Tutorial 2: How LEDs Work — toptechboy.com",
-      "objective": "Understand LED polarity and current limiting, then control an external LED.",
-      "components": ["led-red", "resistor-220"],
-      "concepts": ["LED polarity", "current limiting", "forward voltage"],
-      "steps": [
-        "An LED only conducts one direction: long leg is the anode (+), short leg the cathode (−).",
-        "An LED must NEVER be connected without a current-limiting resistor.",
-        "Use a 220Ω resistor in series to keep current under the 20mA maximum.",
-        "Wire pin 13 → resistor → LED anode, then LED cathode → GND.",
-        "Blink it with the same sketch from Lesson 1."
-      ]
+      "phase": "foundation",
+      "title": "Analog Input — Potentiometer",
+      "description": "Read a potentiometer, map its value, and print to the serial monitor.",
+      "source": "Paul McWhorter, Arduino Tutorial 10 — toptechboy.com",
+      "circuit": {
+        "components": [
+          "Arduino Uno",
+          "Breadboard",
+          "Potentiometer"
+        ],
+        "notes": "Lesson 2 introduces analogRead(), map(), Serial.begin(), and Serial.print()."
+      },
+      "componentGuide": {
+        "name": "Potentiometer",
+        "symbol": "kicad-symbols/R_Potentiometer.kicad_sym",
+        "info": {
+          "concept": "Variable resistance",
+          "resistance": "0–10kΩ (variable)",
+          "terminals": "3 (VCC, wiper, GND)",
+          "notes": "Turning the knob moves a wiper across a resistive track, producing 0V–5V on the middle pin."
+        }
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  int value = analogRead(A0);\n  int mapped = map(value, 0, 1023, 0, 255);\n  Serial.println(mapped);\n}"
+      },
+      "hints": [
+        "analogRead(A0);",
+        "map(value, 0, 1023, 0, 255);",
+        "Serial.begin(9600);",
+        "Serial.print(value);"
+      ],
+      "output": {
+        "initial": "Reading potentiometer...",
+        "status": "Serial active"
+      }
     },
+
     {
       "id": 3,
-      "phase": "Foundation",
-      "title": "How Breadboards Work",
-      "source": "Arduino Tutorial 3: How Breadboards Work — toptechboy.com",
-      "objective": "Learn how breadboard rows and power rails are connected internally, and build a clean circuit.",
-      "components": ["led-red", "resistor-220"],
-      "concepts": ["breadboard rows", "power rails", "circuit layout"],
-      "steps": [
-        "The two long rails on each side are power buses: red for 5V, blue for GND.",
-        "Each 5-hole row in the middle is connected internally; the center trench splits left from right.",
-        "Bring 5V and GND from the Arduino to the rails first.",
-        "Place components across rows — never short both legs into the same row.",
-        "Rebuild the Lesson 2 LED circuit neatly using the rails."
-      ]
+      "phase": "foundation",
+      "title": "Serial Monitor — Talking to Your Arduino",
+      "description": "Use Serial.begin(), Serial.print(), and Serial.println() to send readable data from the Arduino to your computer.",
+      "source": "Paul McWhorter, Arduino Tutorial (serial printing) — toptechboy.com",
+      "circuit": {
+        "components": [
+          "Arduino Uno"
+        ],
+        "notes": "No external circuit needed — the serial monitor communicates over the USB cable."
+      },
+      "componentGuide": {
+        "name": "Arduino Uno R3",
+        "symbol": "kicad-symbols/Arduino_UNO_R3.kicad_sym",
+        "info": {
+          "microcontroller": "ATmega328P",
+          "digitalPins": "14 (6 PWM)",
+          "analogInputs": "6 (10-bit ADC)",
+          "baudRate": "9600 is the classic starting speed",
+          "notes": "Serial.begin(9600) must match the monitor's baud rate or you get garbage characters."
+        }
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  // Start serial communication\n}\n\nvoid loop() {\n  // Print a message every second\n}"
+      },
+      "hints": [
+        "Serial.begin(9600);",
+        "Serial.println(\"Hello, world!\");",
+        "delay(1000);"
+      ],
+      "output": {
+        "initial": "Serial monitor idle",
+        "status": "Waiting for Serial.begin()..."
+      }
     },
+
     {
       "id": 4,
-      "phase": "Foundation",
-      "title": "Understanding Arduino Variables",
-      "source": "Arduino Tutorial 4: Understanding Arduino Variables — toptechboy.com",
-      "objective": "Replace magic numbers with named variables to make sketches readable and adjustable.",
-      "components": ["led-red", "resistor-220"],
-      "concepts": ["int", "variable naming", "scope"],
-      "steps": [
-        "Declare a variable for the pin: int ledPin = 13;",
-        "Declare variables for timing: int onTime = 500; int offTime = 500;",
-        "Use the variables in pinMode, digitalWrite, and delay instead of raw numbers.",
-        "Change onTime and offTime and re-run — one edit changes the whole behavior.",
-        "Good names make code self-documenting."
-      ]
+      "phase": "foundation",
+      "title": "Variables — Making Code Adjustable",
+      "description": "Replace magic numbers with named int variables so one edit changes the whole sketch.",
+      "source": "Paul McWhorter, Arduino Tutorial 4 (Variables) — toptechboy.com",
+      "circuit": {
+        "components": [
+          "Arduino Uno",
+          "Breadboard",
+          "LED",
+          "220Ω resistor"
+        ],
+        "notes": "Same LED circuit as Lesson 1 — the change is entirely in the code."
+      },
+      "componentGuide": {
+        "name": "Resistor — 220Ω",
+        "symbol": "kicad-symbols/R.kicad_sym",
+        "info": {
+          "resistance": "220Ω",
+          "tolerance": "±5%",
+          "powerRating": "1/4W",
+          "colorBands": "red, red, brown, gold",
+          "notes": "Limits LED current below the 20mA maximum. No polarity — either direction works."
+        }
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 13;\nint onTime = 500;\nint offTime = 500;\n\nvoid setup() {\n  // Configure ledPin as an output\n}\n\nvoid loop() {\n  // Blink using the variables\n}"
+      },
+      "hints": [
+        "pinMode(ledPin, OUTPUT);",
+        "digitalWrite(ledPin, HIGH);",
+        "delay(onTime);"
+      ],
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
+
     {
       "id": 5,
-      "phase": "Foundation",
-      "title": "Understanding Binary Numbers",
-      "source": "Arduino Tutorial 5: Working with Binary Numbers — toptechboy.com",
-      "objective": "Learn how computers count in binary, preparing for the LED binary counter.",
-      "components": ["led-red", "resistor-220"],
-      "concepts": ["binary", "bits", "place value"],
-      "steps": [
-        "Computers store everything as bits: 0 or 1, off or on.",
-        "Each binary place value doubles: 1, 2, 4, 8, 16…",
-        "Count to 7 on three bits: 000, 001, 010, 011, 100, 101, 110, 111.",
-        "An LED is a perfect one-bit display: on = 1, off = 0.",
-        "Next lesson: build a multi-LED binary counter."
-      ]
+      "phase": "foundation",
+      "title": "Conditionals — Making Decisions",
+      "description": "Use if/else to change LED behavior based on the potentiometer reading.",
+      "source": "Paul McWhorter, Arduino Tutorials (if statements) — toptechboy.com",
+      "circuit": {
+        "components": [
+          "Arduino Uno",
+          "Breadboard",
+          "LED",
+          "220Ω resistor",
+          "Potentiometer"
+        ],
+        "notes": "Combines Lesson 1's output circuit with Lesson 2's input circuit: the pot decides whether the LED is on."
+      },
+      "componentGuide": {
+        "name": "Potentiometer",
+        "symbol": "kicad-symbols/R_Potentiometer.kicad_sym",
+        "info": {
+          "concept": "Variable resistance as a decision input",
+          "threshold": "512 is the midpoint of the 0–1023 ADC range",
+          "notes": "Turn past halfway → LED on. Below halfway → LED off."
+        }
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  int value = analogRead(A0);\n  // Turn the LED on when value is past halfway\n}"
+      },
+      "hints": [
+        "if (value > 512) {",
+        "digitalWrite(ledPin, HIGH);",
+        "} else {",
+        "digitalWrite(ledPin, LOW);"
+      ],
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }

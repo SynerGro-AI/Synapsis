@@ -4,32 +4,26 @@ import CircuitCanvas from "./components/CircuitCanvas";
 import CodeEditor from "./components/CodeEditor";
 import {
   CREDIT,
-  FALLBACK_LESSONS,
-  FALLBACK_PARTS,
-  fetchComponents,
-  fetchLessons,
-  type Lesson,
-  type PartInfo,
+  FALLBACK_DATA,
+  fetchLessonData,
+  type LessonData,
 } from "./api";
 
+const HINT_LABELS = "ABCDEFGH";
+
 export default function App() {
-  const [lessons, setLessons] = useState<Lesson[]>(FALLBACK_LESSONS);
-  const [parts, setParts] = useState<PartInfo[]>(FALLBACK_PARTS);
+  const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [lessonId, setLessonId] = useState(1);
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
-    Promise.all([fetchLessons(), fetchComponents()])
-      .then(([l, p]) => {
-        setLessons(l);
-        setParts(p);
-      })
+    fetchLessonData()
+      .then(setData)
       .catch(() => setOffline(true));
   }, []);
 
-  const lesson = lessons.find((l) => l.id === lessonId) ?? lessons[0];
-  const part =
-    parts.find((p) => p.id === lesson.components[0]) ?? parts[0];
+  const lesson = data.lessons.find((l) => l.id === lessonId) ?? data.lessons[0];
+  const guide = lesson.componentGuide;
 
   return (
     <div className="page">
@@ -45,20 +39,31 @@ export default function App() {
       </div>
 
       <div className="app">
-        {/* Sidebar */}
+        {/* Sidebar — lessons grouped by curriculum phase */}
         <aside className="sidebar">
           <h2>Synapsys</h2>
-          <ul>
-            {lessons.map((l) => (
-              <li
-                key={l.id}
-                className={l.id === lesson.id ? "active" : ""}
-                onClick={() => setLessonId(l.id)}
-              >
-                {l.id}. {l.title}
-              </li>
+          {data.phases
+            .filter((phase) => data.lessons.some((l) => l.phase === phase.id))
+            .map((phase) => (
+              <div key={phase.id}>
+                <div className="phase-header">
+                  {phase.name} ({phase.range})
+                </div>
+                <ul>
+                  {data.lessons
+                    .filter((l) => l.phase === phase.id)
+                    .map((l) => (
+                      <li
+                        key={l.id}
+                        className={l.id === lesson.id ? "active" : ""}
+                        onClick={() => setLessonId(l.id)}
+                      >
+                        {l.id}. {l.title}
+                      </li>
+                    ))}
+                </ul>
+              </div>
             ))}
-          </ul>
         </aside>
 
         {/* Main Content */}
@@ -76,37 +81,56 @@ export default function App() {
             <div className="canvas">
               <div className="panel-label">Circuit Canvas</div>
               <CircuitCanvas />
+              <div className="circuit-notes">
+                <strong>{lesson.circuit.components.join(" · ")}</strong>
+                <br />
+                {lesson.circuit.notes}
+              </div>
             </div>
+
             <div className="guide">
               <div className="panel-label">Component Guide</div>
-              <h4>{part.name}</h4>
+              <h4>{guide.name}</h4>
               <dl>
-                {Object.entries(part.specs).map(([key, value]) => (
+                {Object.entries(guide.info).map(([key, value]) => (
                   <div key={key}>
                     <dt>{key.replace(/([A-Z])/g, " $1")}</dt>
                     <dd>{value}</dd>
                   </div>
                 ))}
               </dl>
-              <p className="why">{part.why}</p>
-              <p className="note">⚠ {part.polarityNote}</p>
               <h4>Objective</h4>
-              <p className="why">{lesson.objective}</p>
-              <ol className="steps">
-                {lesson.steps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
+              <p className="why">{lesson.description}</p>
+              {lesson.source && <p className="lesson-source">{lesson.source}</p>}
             </div>
+
             <div className="editor">
-              <div className="panel-label">Code IDE</div>
-              <CodeEditor />
+              <div className="panel-label">
+                Code IDE — {lesson.codeTemplate.language === "cpp" ? "Arduino C++" : lesson.codeTemplate.language}
+              </div>
+              <CodeEditor
+                key={lesson.id}
+                starter={lesson.codeTemplate.starter}
+                language={lesson.codeTemplate.language}
+              />
+              <div className="hints">
+                {lesson.hints.map((hint, i) => (
+                  <div className="hint" key={hint}>
+                    <span className="hint-label">{HINT_LABELS[i] ?? "•"}</span>
+                    <code>{hint}</code>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
           <footer className="console">
             <p className="panel-label">Serial Output</p>
-            <pre>PIN 13 OFF{"\n"}Waiting for sketch…</pre>
+            <pre>
+              {lesson.output.initial}
+              {"\n"}
+              {lesson.output.status}
+            </pre>
           </footer>
         </main>
       </div>

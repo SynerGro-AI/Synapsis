@@ -1,21 +1,34 @@
+export interface Phase {
+  id: string;
+  name: string;
+  range: string;
+  concepts: string[];
+}
+
 export interface Lesson {
   id: number;
   phase: string;
   title: string;
+  description: string;
   source?: string;
-  objective: string;
-  components: string[];
-  concepts: string[];
-  steps: string[];
-}
-
-export interface PartInfo {
-  id: string;
-  name: string;
-  category: string;
-  specs: Record<string, string>;
-  why: string;
-  polarityNote: string;
+  circuit: {
+    components: string[];
+    notes: string;
+  };
+  componentGuide: {
+    name: string;
+    symbol?: string;
+    info: Record<string, string>;
+  };
+  codeTemplate: {
+    language: string;
+    starter: string;
+  };
+  hints: string[];
+  output: {
+    initial: string;
+    status: string;
+  };
 }
 
 export interface Attribution {
@@ -25,6 +38,13 @@ export interface Attribution {
   note: string;
 }
 
+export interface LessonData {
+  version: number;
+  attribution?: Attribution;
+  phases: Phase[];
+  lessons: Lesson[];
+}
+
 export const CREDIT: Attribution = {
   author: "Paul McWhorter",
   website: "https://toptechboy.com/arduino-lessons/",
@@ -32,54 +52,66 @@ export const CREDIT: Attribution = {
   note: "Lesson curriculum based on Paul McWhorter's Arduino tutorial series at toptechboy.com.",
 };
 
-// Fallbacks let the UI run standalone (backend not started yet).
-export const FALLBACK_LESSONS: Lesson[] = [
-  {
-    id: 1,
-    phase: "Foundation",
-    title: "Getting Started with Arduino",
-    source: "Arduino Tutorial 1 — toptechboy.com",
-    objective:
-      "Set up the Arduino, understand the IDE, and blink the built-in LED on pin 13.",
-    components: ["led-red", "resistor-220"],
-    concepts: ["setup()", "loop()", "pinMode", "digitalWrite", "delay"],
-    steps: [
-      "Every sketch has two parts: setup() runs once, loop() runs forever.",
-      "Tell the Arduino pin 13 is an OUTPUT: pinMode(13, OUTPUT);",
-      "Turn the LED on with digitalWrite(13, HIGH); and off with LOW.",
-      "Use delay(500); to wait half a second between changes.",
-      "Watch the LED blink — you have written your first program.",
-    ],
-  },
-];
-
-export const FALLBACK_PARTS: PartInfo[] = [
-  {
-    id: "led-red",
-    name: "LED — Light Emitting Diode",
-    category: "output",
-    specs: {
-      forwardVoltage: "2.0–2.2V",
-      maxCurrent: "20mA",
-      resistorNeeded: "220Ω",
-      wavelength: "~625nm (red)",
+// Fallback lets the UI run standalone (backend not started yet).
+export const FALLBACK_DATA: LessonData = {
+  version: 1,
+  phases: [
+    {
+      id: "foundation",
+      name: "Foundation",
+      range: "1-5",
+      concepts: [
+        "Digital out",
+        "Analog in",
+        "Serial monitor",
+        "Variables",
+        "Conditionals",
+      ],
     },
-    why: "An LED converts electrical current into light. Unlike a light bulb, it only allows current to flow in ONE direction — from anode (+) to cathode (−).",
-    polarityNote:
-      "The LONGER leg is the anode (+). Connect it toward power. The SHORTER leg is the cathode (−). Connect it toward GND. Reversed = no light.",
-  },
-];
+  ],
+  lessons: [
+    {
+      id: 1,
+      phase: "foundation",
+      title: "Digital Output — LED Blink",
+      description:
+        "Learn how to control a digital pin and blink an LED using pinMode() and digitalWrite().",
+      circuit: {
+        components: ["Arduino Uno", "Breadboard", "LED", "220Ω resistor"],
+        notes:
+          "An Arduino Uno connected to a breadboard containing a 220Ω resistor and an LED.",
+      },
+      componentGuide: {
+        name: "LED — Light Emitting Diode",
+        info: {
+          forwardVoltage: "2.0–2.2V",
+          maxCurrent: "20mA",
+          resistorNeeded: "220Ω",
+          wavelength: "≈625nm (red)",
+          polarityNotes:
+            "The longer leg is the anode (+), shorter leg is the cathode (–).",
+        },
+      },
+      codeTemplate: {
+        language: "cpp",
+        starter:
+          "void setup() {\n  // One-time configuration\n}\n\nvoid loop() {\n  // Blink LED\n}",
+      },
+      hints: [
+        "pinMode(13, OUTPUT);",
+        "digitalWrite(13, HIGH);",
+        "digitalWrite(13, LOW);",
+      ],
+      output: {
+        initial: "PIN 13 OFF",
+        status: "Waiting for sketch...",
+      },
+    },
+  ],
+};
 
-export async function fetchLessons(): Promise<Lesson[]> {
+export async function fetchLessonData(): Promise<LessonData> {
   const res = await fetch("/api/lessons");
   if (!res.ok) throw new Error(`GET /api/lessons → ${res.status}`);
-  const data = await res.json();
-  return data.lessons;
-}
-
-export async function fetchComponents(): Promise<PartInfo[]> {
-  const res = await fetch("/api/components");
-  if (!res.ok) throw new Error(`GET /api/components → ${res.status}`);
-  const data = await res.json();
-  return data.components;
+  return res.json();
 }

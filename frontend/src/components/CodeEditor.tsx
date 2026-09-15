@@ -7,26 +7,20 @@ self.MonacoEnvironment = {
   getWorker: () => new editorWorker(),
 };
 
-const STARTER_SKETCH = `void setup() {
-  pinMode(13, OUTPUT);
+interface CodeEditorProps {
+  starter: string;
+  language?: string;
 }
 
-void loop() {
-  digitalWrite(13, HIGH);
-  delay(500);
-  digitalWrite(13, LOW);
-  delay(500);
-}`;
-
-export default function CodeEditor() {
+export default function CodeEditor({ starter, language = "cpp" }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const editor = monaco.editor.create(containerRef.current, {
-      value: STARTER_SKETCH,
-      language: "cpp",
+      value: starter,
+      language,
       theme: "vs-dark",
       minimap: { enabled: false },
       automaticLayout: true,
@@ -34,7 +28,7 @@ export default function CodeEditor() {
     });
 
     return () => editor.dispose();
-  }, []);
+  }, [starter, language]);
 
   return <div ref={containerRef} style={{ flex: 1, minHeight: 0 }} />;
 }

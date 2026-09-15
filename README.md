@@ -12,6 +12,11 @@ The lesson curriculum is based on the Arduino tutorial series by
 His tutorials are free — if they help you, please
 [support him on Patreon](https://www.patreon.com/PaulMcWhorter).
 
+Schematic symbols come from the official
+[KiCad symbol libraries](https://gitlab.com/kicad/libraries/kicad-symbols)
+(CC-BY-SA 4.0 with the KiCad libraries exception — license included at
+`frontend/public/kicad-symbols/LICENSE.md`).
+
 ## Layout
 
 | Panel               | What it does                                              |
