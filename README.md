@@ -17,6 +17,9 @@ Schematic symbols come from the official
 (CC-BY-SA 4.0 with the KiCad libraries exception — license included at
 `frontend/public/kicad-symbols/LICENSE.md`).
 
+Realistic component visuals are rendered with
+[@wokwi/elements](https://github.com/wokwi/wokwi-elements) (MIT) by Uri Shaked.
+
 ## Layout
 
 | Panel               | What it does                                              |
@@ -48,6 +51,14 @@ npm run dev
 3. **Control (13–20):** servos, DC motors, PWM, RGB LED, LCD display
 4. **Python Bridge (21–28):** same circuits, Python syntax, Raspberry Pi crossover
 5. **Expert (29+):** wire gauge physics, signal calibration, interrupts, I2C
+   (planned: [avr8js](https://github.com/wokwi/avr8js) for cycle-accurate AVR simulation)
+
+## Planned features
+
+- **Profiles with sign-up / sign-in** so learners can continue where they
+  left off (progress stored via the .NET backend)
+- Lesson completion tracking (all hints typed + sketch ran successfully)
+- Sensing-phase components: ultrasonic, temperature and light sensors, buttons
 
 ## Backend
 

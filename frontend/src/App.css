@@ -177,6 +177,19 @@
   background: #a33636;
 }
 
+.wokwi-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #252525;
+}
+
+.wokwi-canvas .part {
+  position: absolute;
+  transform-origin: top left;
+}
+
 .pot-control {
   display: flex;
   align-items: center;

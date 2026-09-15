@@ -27,9 +27,9 @@ export default function App() {
 
   const editorRef = useRef<CodeEditorHandle | null>(null);
   const engineRef = useRef<ArduinoSim | null>(null);
-  // Read every animation frame by the canvas; mutated by the simulator.
-  const simRef = useRef({ running: false, pins: {} as Record<number, boolean>, pot: 512 });
-  simRef.current.pot = potValue;
+  // Read synchronously by the interpreter's analogRead.
+  const potRef = useRef(512);
+  potRef.current = potValue;
 
   useEffect(() => {
     fetchLessonData()
@@ -46,7 +46,6 @@ export default function App() {
   const stopSim = useCallback(() => {
     engineRef.current?.stop();
     engineRef.current = null;
-    simRef.current.running = false;
     setRunning(false);
   }, []);
 
@@ -63,8 +62,6 @@ export default function App() {
     const sketch = editorRef.current?.getValue() ?? code;
     const sim = new ArduinoSim();
     engineRef.current = sim;
-    simRef.current.pins = {};
-    simRef.current.running = true;
     setSerial([]);
     setPinStates({});
     setRunning(true);
@@ -72,16 +69,14 @@ export default function App() {
     sim
       .run(sketch, {
         digitalWrite: (pin, high) => {
-          simRef.current.pins[pin] = high;
           setPinStates((p) => (p[pin] === high ? p : { ...p, [pin]: high }));
         },
-        analogRead: () => simRef.current.pot,
+        analogRead: () => potRef.current,
         serial: (line) => setSerial((s) => [...s.slice(-30), line]),
         onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
       })
       .finally(() => {
         if (engineRef.current === sim) {
-          simRef.current.running = false;
           setRunning(false);
         }
       });
@@ -148,7 +143,9 @@ export default function App() {
               <CircuitCanvas
                 key={lesson.id}
                 components={lesson.circuit.components}
-                sim={simRef}
+                ledOn={running && !!pinStates[13]}
+                potValue={potValue}
+                onPotChange={setPotValue}
               />
               {hasPot && (
                 <div className="pot-control">
