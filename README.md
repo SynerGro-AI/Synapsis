@@ -18,7 +18,7 @@ in real time.
 
 ```
 frontend/   React + TypeScript (Vite) — UI, circuit canvas, Monaco IDE
-backend/    .NET (C#) — simulation engine, lesson engine, component API  [planned]
+backend/    .NET (C#) — simulation engine, lesson engine, component API
 ```
 
 ## Getting started
@@ -37,17 +37,23 @@ npm run dev
 4. **Python Bridge (21–28):** same circuits, Python syntax, Raspberry Pi crossover
 5. **Expert (29+):** wire gauge physics, signal calibration, interrupts, I2C
 
-## Backend (planned)
+## Backend
 
-The .NET backend will host the simulation engine (virtual GPIO/ADC/PWM, timing
-and signal propagation), the component library API, the lesson engine, and
-user progress tracking, with a WASM sandbox for executing user sketches.
-Requires the .NET 10 SDK — once installed, scaffold with:
+The .NET backend hosts the component library API (`/api/components`), the
+lesson API (`/api/lessons`), and the simulation engine
+(`Synapsys.Simulation`) — currently a virtual microcontroller with digital
+pin state, growing toward ADC, PWM, timing, and signal propagation.
+
+Building and running happens **through GitHub** — no local SDK required:
+
+- **CI:** every push to `main` builds both frontend and backend via
+  GitHub Actions (`.github/workflows/ci.yml`)
+- **Codespaces:** open the repo in a GitHub Codespace (Code ▸ Codespaces ▸
+  Create) and the .NET 10 SDK + Node 22 are preinstalled via
+  `.devcontainer/devcontainer.json`. Then:
 
 ```bash
-cd backend
-dotnet new sln -n Synapsys
-dotnet new webapi -n Synapsys.Api
-dotnet new classlib -n Synapsys.Simulation
-dotnet sln add Synapsys.Api Synapsys.Simulation
+cd backend && dotnet run --project Synapsys.Api   # API
+cd frontend && npm run dev                        # UI
 ```
+

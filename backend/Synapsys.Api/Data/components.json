@@ -1,0 +1,42 @@
+{
+  "components": [
+    {
+      "id": "led-red",
+      "name": "LED — Light Emitting Diode",
+      "category": "output",
+      "specs": {
+        "forwardVoltage": "2.0–2.2V",
+        "maxCurrent": "20mA",
+        "resistorNeeded": "220Ω",
+        "wavelength": "~625nm (red)"
+      },
+      "why": "An LED converts electrical current into light. Unlike a light bulb, it only allows current to flow in ONE direction — from anode (+) to cathode (−). It emits almost no heat and lasts thousands of hours.",
+      "polarityNote": "The LONGER leg is the anode (+). Connect it toward power. The SHORTER leg is the cathode (−). Connect it toward GND. Reversed = no light."
+    },
+    {
+      "id": "resistor-220",
+      "name": "Resistor — 220Ω",
+      "category": "passive",
+      "specs": {
+        "resistance": "220Ω",
+        "tolerance": "±5%",
+        "powerRating": "1/4W",
+        "colorBands": "red, red, brown, gold"
+      },
+      "why": "A resistor limits current flow. Without it, an LED connected to 5V would draw far more than its 20mA maximum and burn out instantly.",
+      "polarityNote": "Resistors have no polarity — either direction works."
+    },
+    {
+      "id": "potentiometer-10k",
+      "name": "Potentiometer — 10kΩ",
+      "category": "input",
+      "specs": {
+        "resistance": "0–10kΩ (variable)",
+        "type": "rotary",
+        "terminals": "3 (VCC, wiper, GND)"
+      },
+      "why": "A potentiometer is a variable resistor. Turning the knob moves a wiper across a resistive track, producing a voltage between 0V and VCC on the middle pin — perfect for analog input.",
+      "polarityNote": "Outer pins go to 5V and GND (either order); the middle pin (wiper) is the signal."
+    }
+  ]
+}
