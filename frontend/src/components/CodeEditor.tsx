@@ -8,22 +8,26 @@ self.MonacoEnvironment = {
 };
 
 export interface CodeEditorHandle {
-  /** Insert a line of code at the cursor position. */
-  insert(text: string): void;
+  /** Current sketch text, exactly as the learner typed it. */
+  getValue(): string;
 }
 
 interface CodeEditorProps {
   starter: string;
   language?: string;
   handleRef?: RefObject<CodeEditorHandle | null>;
+  onChange?: (code: string) => void;
 }
 
 export default function CodeEditor({
   starter,
   language = "cpp",
   handleRef,
+  onChange,
 }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -37,17 +41,17 @@ export default function CodeEditor({
       fontSize: 13,
     });
 
+    const sub = editor.onDidChangeModelContent(() =>
+      onChangeRef.current?.(editor.getValue()),
+    );
+
     if (handleRef) {
-      handleRef.current = {
-        insert(text: string) {
-          editor.focus();
-          editor.trigger("hint", "type", { text: text + "\n" });
-        },
-      };
+      handleRef.current = { getValue: () => editor.getValue() };
     }
 
     return () => {
       if (handleRef) handleRef.current = null;
+      sub.dispose();
       editor.dispose();
     };
   }, [starter, language, handleRef]);

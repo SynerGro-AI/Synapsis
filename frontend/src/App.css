@@ -126,12 +126,82 @@
   color: inherit;
   font-family: inherit;
   text-align: left;
-  cursor: pointer;
 }
 
 .hint:hover {
-  border-color: #e8a33d;
-  background: #2a2113;
+  border-color: #444;
+}
+
+.hint.done {
+  border-color: #3f7a3f;
+  background: #1c2a1c;
+}
+
+.hint.done .hint-label {
+  color: #7fbf7f;
+}
+
+.hints-title {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.run {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 14px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.run:hover {
+  background: #388e3c;
+}
+
+.run.stop {
+  background: #8b2e2e;
+}
+
+.run.stop:hover {
+  background: #a33636;
+}
+
+.pot-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-top: 1px solid #333;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.pot-control input {
+  flex: 1;
+  accent-color: #e8a33d;
+}
+
+.pot-control code {
+  color: #e8a33d;
+  min-width: 36px;
+  text-align: right;
+}
+
+.console .live {
+  color: #7fbf7f;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .schematic {

@@ -1,9 +1,16 @@
 import { useEffect, useRef } from "react";
 import { Application, Graphics, Text } from "pixi.js";
 
+interface SimState {
+  running: boolean;
+  pins: Record<number, boolean>;
+}
+
 interface CircuitCanvasProps {
   /** Component names from the lesson's circuit definition. */
   components: string[];
+  /** Live simulation state (mutable ref contents, read every frame). */
+  sim: { current: SimState };
 }
 
 const has = (components: string[], word: string) =>
@@ -19,7 +26,7 @@ function label(text: string, x: number, y: number): Text {
   });
 }
 
-export default function CircuitCanvas({ components }: CircuitCanvasProps) {
+export default function CircuitCanvas({ components, sim }: CircuitCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,13 +98,14 @@ export default function CircuitCanvas({ components }: CircuitCanvasProps) {
 
         if (has(components, "led")) {
           const led = new Graphics().circle(320, 240, 14).fill(0xff0000);
+          led.alpha = 0.15;
           app.stage.addChild(led);
           app.stage.addChild(label("LED", 320, 258));
 
-          let elapsed = 0;
-          app.ticker.add((ticker) => {
-            elapsed += ticker.deltaMS;
-            led.alpha = elapsed % 1000 < 500 ? 1 : 0.15;
+          // The LED shows pin 13 from the learner's running sketch.
+          app.ticker.add(() => {
+            const state = sim.current;
+            led.alpha = state.running && state.pins[13] ? 1 : 0.15;
           });
         }
 
