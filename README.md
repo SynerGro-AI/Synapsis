@@ -5,6 +5,13 @@ through a virtual workspace: build circuits on a simulated breadboard, write
 Arduino-style sketches in a real code editor, and watch the simulation respond
 in real time.
 
+## Credits
+
+The lesson curriculum is based on the Arduino tutorial series by
+**Paul McWhorter** at [toptechboy.com](https://toptechboy.com/arduino-lessons/).
+His tutorials are free — if they help you, please
+[support him on Patreon](https://www.patreon.com/PaulMcWhorter).
+
 ## Layout
 
 | Panel               | What it does                                              |

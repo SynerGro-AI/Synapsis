@@ -1,9 +1,51 @@
-.app {
+.page {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   background: #1e1e1e;
   color: white;
   font-family: sans-serif;
+}
+
+/* Credits banner — Paul McWhorter, toptechboy.com */
+.credits {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 20px;
+  background: #2a2113;
+  border-bottom: 1px solid #e8a33d55;
+  font-size: 13px;
+  color: #d8c9a8;
+}
+
+.credits a {
+  color: #e8a33d;
+  text-decoration: none;
+}
+
+.credits a:hover {
+  text-decoration: underline;
+}
+
+.credits .donate {
+  margin-left: auto;
+  background: #e8a33d;
+  color: #1e1e1e;
+  font-weight: bold;
+  padding: 3px 12px;
+  border-radius: 12px;
+}
+
+.credits .donate:hover {
+  background: #f5b95a;
+  text-decoration: none;
+}
+
+.app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar {
@@ -33,6 +75,32 @@
   color: #e8a33d;
 }
 
+.sidebar li.active {
+  background: #2a2113;
+  color: #e8a33d;
+  border-left: 3px solid #e8a33d;
+}
+
+.topbar .offline {
+  margin-left: 12px;
+  font-size: 12px;
+  color: #b08a4a;
+}
+
+.guide .why {
+  margin: 10px;
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.guide .steps {
+  margin: 10px 10px 10px 0;
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.6;
+}
+
 .main {
   flex: 1;
   display: flex;
@@ -41,6 +109,8 @@
 }
 
 .topbar {
+  display: flex;
+  align-items: baseline;
   padding: 10px 20px;
   background: #222;
   border-bottom: 1px solid #333;

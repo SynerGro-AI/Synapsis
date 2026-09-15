@@ -1,33 +1,89 @@
 {
+  "attribution": {
+    "author": "Paul McWhorter",
+    "website": "https://toptechboy.com/arduino-lessons/",
+    "donate": "https://www.patreon.com/PaulMcWhorter",
+    "note": "Lesson curriculum based on Paul McWhorter's Arduino tutorial series at toptechboy.com. Please support his free educational work on Patreon."
+  },
   "lessons": [
     {
       "id": 1,
       "phase": "Foundation",
-      "title": "Blink an LED",
-      "objective": "Set pin 13 as an output and blink an LED on a 500ms cycle.",
+      "title": "Getting Started with Arduino",
+      "source": "Arduino Tutorial 1: Getting Started for Absolute Beginners — toptechboy.com",
+      "objective": "Set up the Arduino, understand the IDE, and blink the built-in LED on pin 13.",
       "components": ["led-red", "resistor-220"],
-      "concepts": ["pinMode", "digitalWrite", "delay"],
+      "concepts": ["setup()", "loop()", "pinMode", "digitalWrite", "delay"],
       "steps": [
-        "Place the LED on the breadboard — long leg (anode) toward the signal side.",
-        "Add the 220Ω resistor in series with the LED.",
-        "Wire pin 13 to the resistor, and the LED cathode to GND.",
-        "In setup(), tell the Arduino pin 13 is an OUTPUT: pinMode(13, OUTPUT);",
-        "In loop(), turn it on, wait, turn it off, wait."
+        "Every sketch has two parts: setup() runs once, loop() runs forever.",
+        "Tell the Arduino pin 13 is an OUTPUT: pinMode(13, OUTPUT);",
+        "Turn the LED on with digitalWrite(13, HIGH); and off with LOW.",
+        "Use delay(500); to wait half a second between changes.",
+        "Watch the LED blink — you have written your first program."
       ]
     },
     {
       "id": 2,
       "phase": "Foundation",
-      "title": "Analog Input — Potentiometer",
-      "objective": "Read a potentiometer, map its value, and print it to the serial monitor.",
-      "components": ["potentiometer-10k"],
-      "concepts": ["analogRead", "map", "Serial.begin", "Serial.println"],
+      "title": "How LEDs Work and How to Control One",
+      "source": "Arduino Tutorial 2: How LEDs Work — toptechboy.com",
+      "objective": "Understand LED polarity and current limiting, then control an external LED.",
+      "components": ["led-red", "resistor-220"],
+      "concepts": ["LED polarity", "current limiting", "forward voltage"],
       "steps": [
-        "Wire the potentiometer's outer pins to 5V and GND.",
-        "Wire the middle pin (wiper) to analog pin A0.",
-        "In setup(), start the serial monitor: Serial.begin(9600);",
-        "In loop(), read A0 with analogRead(A0) — you'll get 0–1023.",
-        "Map the value and print it with Serial.println()."
+        "An LED only conducts one direction: long leg is the anode (+), short leg the cathode (−).",
+        "An LED must NEVER be connected without a current-limiting resistor.",
+        "Use a 220Ω resistor in series to keep current under the 20mA maximum.",
+        "Wire pin 13 → resistor → LED anode, then LED cathode → GND.",
+        "Blink it with the same sketch from Lesson 1."
+      ]
+    },
+    {
+      "id": 3,
+      "phase": "Foundation",
+      "title": "How Breadboards Work",
+      "source": "Arduino Tutorial 3: How Breadboards Work — toptechboy.com",
+      "objective": "Learn how breadboard rows and power rails are connected internally, and build a clean circuit.",
+      "components": ["led-red", "resistor-220"],
+      "concepts": ["breadboard rows", "power rails", "circuit layout"],
+      "steps": [
+        "The two long rails on each side are power buses: red for 5V, blue for GND.",
+        "Each 5-hole row in the middle is connected internally; the center trench splits left from right.",
+        "Bring 5V and GND from the Arduino to the rails first.",
+        "Place components across rows — never short both legs into the same row.",
+        "Rebuild the Lesson 2 LED circuit neatly using the rails."
+      ]
+    },
+    {
+      "id": 4,
+      "phase": "Foundation",
+      "title": "Understanding Arduino Variables",
+      "source": "Arduino Tutorial 4: Understanding Arduino Variables — toptechboy.com",
+      "objective": "Replace magic numbers with named variables to make sketches readable and adjustable.",
+      "components": ["led-red", "resistor-220"],
+      "concepts": ["int", "variable naming", "scope"],
+      "steps": [
+        "Declare a variable for the pin: int ledPin = 13;",
+        "Declare variables for timing: int onTime = 500; int offTime = 500;",
+        "Use the variables in pinMode, digitalWrite, and delay instead of raw numbers.",
+        "Change onTime and offTime and re-run — one edit changes the whole behavior.",
+        "Good names make code self-documenting."
+      ]
+    },
+    {
+      "id": 5,
+      "phase": "Foundation",
+      "title": "Understanding Binary Numbers",
+      "source": "Arduino Tutorial 5: Working with Binary Numbers — toptechboy.com",
+      "objective": "Learn how computers count in binary, preparing for the LED binary counter.",
+      "components": ["led-red", "resistor-220"],
+      "concepts": ["binary", "bits", "place value"],
+      "steps": [
+        "Computers store everything as bits: 0 or 1, off or on.",
+        "Each binary place value doubles: 1, 2, 4, 8, 16…",
+        "Count to 7 on three bits: 000, 001, 010, 011, 100, 101, 110, 111.",
+        "An LED is a perfect one-bit display: on = 1, off = 0.",
+        "Next lesson: build a multi-LED binary counter."
       ]
     }
   ]
