@@ -1,7 +1,25 @@
 import { useEffect, useRef } from "react";
-import { Application, Graphics } from "pixi.js";
+import { Application, Graphics, Text } from "pixi.js";
 
-export default function CircuitCanvas() {
+interface CircuitCanvasProps {
+  /** Component names from the lesson's circuit definition. */
+  components: string[];
+}
+
+const has = (components: string[], word: string) =>
+  components.some((c) => c.toLowerCase().includes(word));
+
+function label(text: string, x: number, y: number): Text {
+  return new Text({
+    text,
+    x,
+    y,
+    anchor: { x: 0.5, y: 0 },
+    style: { fill: 0xbbbbbb, fontSize: 12, fontFamily: "sans-serif" },
+  });
+}
+
+export default function CircuitCanvas({ components }: CircuitCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -11,7 +29,6 @@ export default function CircuitCanvas() {
     const app = new Application();
     let destroyed = false;
 
-    // Pixi v8 initializes asynchronously.
     app
       .init({ resizeTo: container, background: "#252525", antialias: true })
       .then(() => {
@@ -21,39 +38,91 @@ export default function CircuitCanvas() {
         }
         container.appendChild(app.canvas);
 
-        // Breadboard
-        const breadboard = new Graphics()
-          .roundRect(60, 180, 480, 140, 8)
-          .fill(0xd8d2c0);
-        app.stage.addChild(breadboard);
+        const wire = new Graphics();
+        app.stage.addChild(wire);
 
-        // Resistor (220Ω)
-        const resistor = new Graphics()
-          .rect(150, 230, 70, 18)
-          .fill(0xc8a44d)
-          .rect(160, 230, 8, 18)
-          .fill(0x8b0000)
-          .rect(180, 230, 8, 18)
-          .fill(0x8b0000)
-          .rect(200, 230, 8, 18)
-          .fill(0x654321);
-        app.stage.addChild(resistor);
+        if (has(components, "arduino")) {
+          const board = new Graphics()
+            .roundRect(40, 40, 170, 110, 8)
+            .fill(0x1d7a4f)
+            .roundRect(48, 52, 28, 20, 3)
+            .fill(0x8a8a8a);
+          app.stage.addChild(board);
+          app.stage.addChild(label("Arduino Uno", 125, 155));
+        }
 
-        // LED — blinks with the simulated sketch
-        const led = new Graphics().circle(320, 240, 14).fill(0xff0000);
-        app.stage.addChild(led);
+        if (has(components, "breadboard")) {
+          const bb = new Graphics().roundRect(60, 210, 480, 130, 8).fill(0xd8d2c0);
+          // Tie-point rows, hinted with subtle dots.
+          for (let col = 0; col < 22; col++)
+            for (let row = 0; row < 4; row++)
+              bb.circle(85 + col * 21, 240 + row * 22, 1.6).fill(0x9a9484);
+          app.stage.addChild(bb);
+          app.stage.addChild(label("Breadboard", 300, 345));
+        }
 
-        let elapsed = 0;
-        app.ticker.add((ticker) => {
-          elapsed += ticker.deltaMS;
-          led.alpha = elapsed % 1000 < 500 ? 1 : 0.15;
-        });
+        if (has(components, "resistor")) {
+          const resistor = new Graphics()
+            .rect(150, 230, 70, 18)
+            .fill(0xc8a44d)
+            .rect(160, 230, 8, 18)
+            .fill(0x8b0000)
+            .rect(180, 230, 8, 18)
+            .fill(0x8b0000)
+            .rect(200, 230, 8, 18)
+            .fill(0x654321);
+          app.stage.addChild(resistor);
+          app.stage.addChild(label("220Ω", 185, 252));
+        }
+
+        if (has(components, "potentiometer")) {
+          const pot = new Graphics()
+            .circle(450, 265, 24)
+            .fill(0x3a6ea5)
+            .circle(450, 265, 18)
+            .fill(0x2a2a2a);
+          const knob = new Graphics()
+            .moveTo(450, 265)
+            .lineTo(450 + 14, 265 - 10)
+            .stroke({ width: 3, color: 0xdddddd });
+          app.stage.addChild(pot, knob);
+          app.stage.addChild(label("Potentiometer", 450, 295));
+        }
+
+        if (has(components, "led")) {
+          const led = new Graphics().circle(320, 240, 14).fill(0xff0000);
+          app.stage.addChild(led);
+          app.stage.addChild(label("LED", 320, 258));
+
+          let elapsed = 0;
+          app.ticker.add((ticker) => {
+            elapsed += ticker.deltaMS;
+            led.alpha = elapsed % 1000 < 500 ? 1 : 0.15;
+          });
+        }
+
+        // Simple hookup wires once both boards are present.
+        if (has(components, "arduino") && has(components, "breadboard")) {
+          wire
+            .moveTo(200, 140)
+            .lineTo(200, 180)
+            .lineTo(120, 180)
+            .lineTo(120, 218)
+            .stroke({ width: 2, color: 0xcc4444 })
+            .moveTo(210, 140)
+            .lineTo(210, 195)
+            .lineTo(520, 195)
+            .lineTo(520, 218)
+            .stroke({ width: 2, color: 0x444444 });
+        }
       });
 
     return () => {
       destroyed = true;
       if (app.renderer) app.destroy(true);
     };
+    // The parent remounts this component per lesson (key), so deps stay empty.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div ref={containerRef} style={{ flex: 1, minHeight: 0 }} />;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import * as monaco from "monaco-editor";
 import editorWorker from "monaco-editor/editor/editor.worker.js?worker";
 
@@ -7,12 +7,22 @@ self.MonacoEnvironment = {
   getWorker: () => new editorWorker(),
 };
 
+export interface CodeEditorHandle {
+  /** Insert a line of code at the cursor position. */
+  insert(text: string): void;
+}
+
 interface CodeEditorProps {
   starter: string;
   language?: string;
+  handleRef?: RefObject<CodeEditorHandle | null>;
 }
 
-export default function CodeEditor({ starter, language = "cpp" }: CodeEditorProps) {
+export default function CodeEditor({
+  starter,
+  language = "cpp",
+  handleRef,
+}: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,8 +37,20 @@ export default function CodeEditor({ starter, language = "cpp" }: CodeEditorProp
       fontSize: 13,
     });
 
-    return () => editor.dispose();
-  }, [starter, language]);
+    if (handleRef) {
+      handleRef.current = {
+        insert(text: string) {
+          editor.focus();
+          editor.trigger("hint", "type", { text: text + "\n" });
+        },
+      };
+    }
+
+    return () => {
+      if (handleRef) handleRef.current = null;
+      editor.dispose();
+    };
+  }, [starter, language, handleRef]);
 
   return <div ref={containerRef} style={{ flex: 1, minHeight: 0 }} />;
 }

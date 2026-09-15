@@ -123,6 +123,32 @@
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 12px;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hint:hover {
+  border-color: #e8a33d;
+  background: #2a2113;
+}
+
+.schematic {
+  margin: 4px 10px;
+  padding: 8px;
+  background: #252525;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e8a33d;
+  min-height: 40px;
+}
+
+.schematic svg {
+  display: block;
+  margin: 0 auto;
+  max-height: 110px;
+  width: 100%;
 }
 
 .hint-label {

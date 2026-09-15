@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import CircuitCanvas from "./components/CircuitCanvas";
-import CodeEditor from "./components/CodeEditor";
+import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
+import SchematicSymbol from "./components/SchematicSymbol";
 import {
   CREDIT,
   FALLBACK_DATA,
@@ -15,6 +16,7 @@ export default function App() {
   const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [lessonId, setLessonId] = useState(1);
   const [offline, setOffline] = useState(false);
+  const editorRef = useRef<CodeEditorHandle | null>(null);
 
   useEffect(() => {
     fetchLessonData()
@@ -80,7 +82,7 @@ export default function App() {
           <section className="content">
             <div className="canvas">
               <div className="panel-label">Circuit Canvas</div>
-              <CircuitCanvas />
+              <CircuitCanvas key={lesson.id} components={lesson.circuit.components} />
               <div className="circuit-notes">
                 <strong>{lesson.circuit.components.join(" · ")}</strong>
                 <br />
@@ -91,6 +93,7 @@ export default function App() {
             <div className="guide">
               <div className="panel-label">Component Guide</div>
               <h4>{guide.name}</h4>
+              {guide.symbol && <SchematicSymbol src={guide.symbol} />}
               <dl>
                 {Object.entries(guide.info).map(([key, value]) => (
                   <div key={key}>
@@ -112,13 +115,19 @@ export default function App() {
                 key={lesson.id}
                 starter={lesson.codeTemplate.starter}
                 language={lesson.codeTemplate.language}
+                handleRef={editorRef}
               />
               <div className="hints">
                 {lesson.hints.map((hint, i) => (
-                  <div className="hint" key={hint}>
+                  <button
+                    className="hint"
+                    key={hint}
+                    title="Click to insert into the editor"
+                    onClick={() => editorRef.current?.insert(hint)}
+                  >
                     <span className="hint-label">{HINT_LABELS[i] ?? "•"}</span>
                     <code>{hint}</code>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
