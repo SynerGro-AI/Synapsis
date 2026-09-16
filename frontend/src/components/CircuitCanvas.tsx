@@ -70,6 +70,7 @@ export default function CircuitCanvas({
   const [dragWire, setDragWire] = useState<{ from: Terminal; x: number; y: number } | null>(null);
   const [dragPart, setDragPart] = useState<{ id: string; dx: number; dy: number } | null>(null);
   const [selectedWire, setSelectedWire] = useState<number | null>(null);
+  const [hoverPin, setHoverPin] = useState<{ t: Terminal; x: number; y: number } | null>(null);
 
   const circuitRef = useRef(circuit);
   circuitRef.current = circuit;
@@ -113,6 +114,29 @@ export default function CircuitCanvas({
       anchors[t.part]?.find((a) => a.name === t.pin) ?? null,
     [anchors],
   );
+
+  /** Closest pin within radius — used for hover magnifier AND wire drop, so
+   *  the pin shown in the magnifier is exactly the one a release connects. */
+  const nearestPin = useCallback(
+    (pt: { x: number; y: number }, radius = 16) => {
+      let best: { t: Terminal; x: number; y: number; d: number } | null = null;
+      for (const [part, pins] of Object.entries(anchors))
+        for (const pin of pins) {
+          const d = Math.hypot(pin.x - pt.x, pin.y - pt.y);
+          if (d < radius && (!best || d < best.d))
+            best = { t: { part, pin: pin.name }, x: pin.x, y: pin.y, d };
+        }
+      return best;
+    },
+    [anchors],
+  );
+
+  const pinLabelText = (t: Terminal) => {
+    if (t.part !== "uno") return `${t.part} — ${t.pin}`;
+    if (t.pin.startsWith("GND")) return "GND";
+    if (/^\d+$/.test(t.pin)) return `pin ${t.pin}`;
+    return t.pin;
+  };
 
   // ---- Adding parts ----
   function addPart(type: PartType) {
@@ -187,8 +211,8 @@ export default function CircuitCanvas({
   }
 
   function onPointerMove(e: React.PointerEvent) {
+    const pt = containerPoint(e);
     if (dragPart) {
-      const pt = containerPoint(e);
       onCircuitChange({
         ...circuitRef.current,
         parts: circuitRef.current.parts.map((p) =>
@@ -197,29 +221,25 @@ export default function CircuitCanvas({
             : p,
         ),
       });
-    } else if (dragWire) {
-      const pt = containerPoint(e);
-      setDragWire({ ...dragWire, x: pt.x, y: pt.y });
+      setHoverPin(null);
+      return;
     }
+    if (dragWire) setDragWire({ ...dragWire, x: pt.x, y: pt.y });
+    // Magnifier: show which pin the cursor (or wire end) would connect to.
+    const near = nearestPin(pt);
+    setHoverPin(near ? { t: near.t, x: near.x, y: near.y } : null);
   }
 
   function onPointerUp(e: React.PointerEvent) {
     if (dragWire) {
-      // Did we land on a pin?
-      const pt = containerPoint(e);
-      let best: { t: Terminal; d: number } | null = null;
-      for (const [part, pins] of Object.entries(anchors))
-        for (const pin of pins) {
-          const d = Math.hypot(pin.x - pt.x, pin.y - pt.y);
-          if (d < 14 && (!best || d < best.d)) best = { t: { part, pin: pin.name }, d };
-        }
+      const near = nearestPin(containerPoint(e));
       if (
-        best &&
-        !(best.t.part === dragWire.from.part && best.t.pin === dragWire.from.pin)
+        near &&
+        !(near.t.part === dragWire.from.part && near.t.pin === dragWire.from.pin)
       ) {
         onCircuitChange({
           ...circuit,
-          wires: [...circuit.wires, { from: dragWire.from, to: best.t }],
+          wires: [...circuit.wires, { from: dragWire.from, to: near.t }],
         });
       }
       setDragWire(null);
@@ -375,7 +395,21 @@ export default function CircuitCanvas({
               </circle>
             )),
           )}
+          {/* Magnifier ring on the pin the cursor would connect to */}
+          {hoverPin && (
+            <circle cx={hoverPin.x} cy={hoverPin.y} r={9} className="pin-hover" />
+          )}
         </svg>
+
+        {/* Magnifier label — readable pin name before you let go */}
+        {hoverPin && (
+          <div
+            className="pin-tooltip"
+            style={{ left: hoverPin.x, top: hoverPin.y - 16 }}
+          >
+            {pinLabelText(hoverPin.t)}
+          </div>
+        )}
       </div>
     </div>
   );

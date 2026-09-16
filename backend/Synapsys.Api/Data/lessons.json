@@ -63,9 +63,8 @@
       },
       "hints": [
         "pinMode(13, OUTPUT);",
-        "digitalWrite(13, HIGH);",
-        "delay(500);",
-        "digitalWrite(13, LOW);"
+        "digitalWrite(13, HIGH);\ndelay(500);",
+        "digitalWrite(13, LOW);\ndelay(500);"
       ],
       "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
     },
@@ -138,7 +137,9 @@
       "hints": [
         "pinMode(ledPin, OUTPUT);",
         "digitalWrite(ledPin, HIGH);",
-        "delay(onTime);"
+        "delay(onTime);",
+        "digitalWrite(ledPin, LOW);",
+        "delay(offTime);"
       ],
       "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
     },
@@ -187,8 +188,8 @@
       "hints": [
         "pinMode(buttonPin, INPUT_PULLUP);",
         "int state = digitalRead(buttonPin);",
-        "if (state == LOW) {",
-        "digitalWrite(ledPin, HIGH);"
+        "if (state == LOW) {\n  digitalWrite(ledPin, HIGH);",
+        "} else {\n  digitalWrite(ledPin, LOW);\n}"
       ],
       "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
     },
@@ -213,7 +214,8 @@
         "if (reading != lastReading && millis() - lastChange > 50) {",
         "lastChange = millis();",
         "if (reading == LOW) { ledState = !ledState; }",
-        "digitalWrite(ledPin, ledState);"
+        "digitalWrite(ledPin, ledState);\n}",
+        "lastReading = reading;"
       ],
       "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
     },

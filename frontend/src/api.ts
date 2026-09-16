@@ -93,9 +93,8 @@ export const FALLBACK_DATA: LessonData = {
       },
       hints: [
         "pinMode(13, OUTPUT);",
-        "digitalWrite(13, HIGH);",
-        "delay(500);",
-        "digitalWrite(13, LOW);",
+        "digitalWrite(13, HIGH);\ndelay(500);",
+        "digitalWrite(13, LOW);\ndelay(500);",
       ],
       output: { initial: "PIN 13 OFF", status: "Waiting for sketch..." },
     },

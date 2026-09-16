@@ -421,6 +421,29 @@
   fill-opacity: 0.8;
 }
 
+.pin-hover {
+  fill: none;
+  stroke: #e8a33d;
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.pin-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: #1e1e1e;
+  border: 1.5px solid #e8a33d;
+  color: #e8a33d;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 5px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
 .world-controls {
   display: flex;
   gap: 16px;
@@ -580,6 +603,7 @@
 
 .hint code {
   color: #ccc;
+  white-space: pre-wrap;
 }
 
 .topbar .offline {
