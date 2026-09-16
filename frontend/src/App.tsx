@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import AccountPanel from "./components/AccountPanel";
 import CircuitCanvas from "./components/CircuitCanvas";
 import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
 import { ArduinoSim } from "./sim/arduino";
+import {
+  getProgress,
+  me,
+  saveProgress,
+  type User,
+} from "./auth";
 import {
   CREDIT,
   FALLBACK_DATA,
@@ -14,13 +21,23 @@ import {
 const HINT_LABELS = "ABCDEFGH";
 const normalize = (s: string) => s.replace(/\s+/g, "");
 
+interface SavedLesson {
+  completed: boolean;
+  sketch: string | null;
+}
+
 export default function App() {
   const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [lessonId, setLessonId] = useState(1);
   const [offline, setOffline] = useState(false);
 
+  const [user, setUser] = useState<User | null>(null);
+  const [saved, setSaved] = useState<Record<number, SavedLesson>>({});
+  const [restoreCount, setRestoreCount] = useState(0);
+
   const [code, setCode] = useState("");
   const [running, setRunning] = useState(false);
+  const [ranClean, setRanClean] = useState(false);
   const [serial, setSerial] = useState<string[]>([]);
   const [pinStates, setPinStates] = useState<Record<number, boolean>>({});
   const [potValue, setPotValue] = useState(512);
@@ -37,8 +54,36 @@ export default function App() {
       .catch(() => setOffline(true));
   }, []);
 
+  const applyProgress = useCallback((who: User | null) => {
+    setUser(who);
+    if (!who) {
+      setSaved({});
+      setRestoreCount((n) => n + 1);
+      return;
+    }
+    getProgress()
+      .then((progress) => {
+        const map: Record<number, SavedLesson> = {};
+        for (const entry of progress.lessons)
+          map[entry.lessonId] = {
+            completed: entry.completed,
+            sketch: entry.sketch,
+          };
+        setSaved(map);
+        setLessonId(progress.currentLesson);
+        setRestoreCount((n) => n + 1);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Restore the session on load.
+  useEffect(() => {
+    me().then((who) => who && applyProgress(who));
+  }, [applyProgress]);
+
   const lesson = data.lessons.find((l) => l.id === lessonId) ?? data.lessons[0];
   const guide = lesson.componentGuide;
+  const starter = saved[lesson.id]?.sketch ?? lesson.codeTemplate.starter;
   const hasPot = lesson.circuit.components.some((c) =>
     c.toLowerCase().includes("potentiometer"),
   );
@@ -54,8 +99,10 @@ export default function App() {
     stopSim();
     setSerial([]);
     setPinStates({});
-    setCode(lesson.codeTemplate.starter);
-  }, [lesson.id, lesson.codeTemplate.starter, stopSim]);
+    setRanClean(false);
+    setCode(starter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson.id, restoreCount, stopSim]);
 
   function runSketch() {
     stopSim();
@@ -69,10 +116,14 @@ export default function App() {
     sim
       .run(sketch, {
         digitalWrite: (pin, high) => {
+          setRanClean(true);
           setPinStates((p) => (p[pin] === high ? p : { ...p, [pin]: high }));
         },
         analogRead: () => potRef.current,
-        serial: (line) => setSerial((s) => [...s.slice(-30), line]),
+        serial: (line) => {
+          setRanClean(true);
+          setSerial((s) => [...s.slice(-30), line]);
+        },
         onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
       })
       .finally(() => {
@@ -84,6 +135,31 @@ export default function App() {
 
   const codeNorm = normalize(code);
   const typedHints = lesson.hints.map((h) => codeNorm.includes(normalize(h)));
+  const allTyped = lesson.hints.length > 0 && typedHints.every(Boolean);
+  const completed = Boolean(saved[lesson.id]?.completed) || (allTyped && ranClean);
+
+  // Mark completion locally the moment it's earned.
+  useEffect(() => {
+    if (allTyped && ranClean && !saved[lesson.id]?.completed) {
+      setSaved((s) => ({
+        ...s,
+        [lesson.id]: { completed: true, sketch: s[lesson.id]?.sketch ?? null },
+      }));
+    }
+  }, [allTyped, ranClean, lesson.id, saved]);
+
+  // Autosave sketch + completion + current lesson (debounced).
+  useEffect(() => {
+    if (!user || !code) return;
+    const timer = setTimeout(() => {
+      saveProgress(lesson.id, {
+        completed,
+        sketch: code,
+        current: true,
+      }).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [user, code, completed, lesson.id]);
 
   return (
     <div className="page">
@@ -102,28 +178,34 @@ export default function App() {
         {/* Sidebar — lessons grouped by curriculum phase */}
         <aside className="sidebar">
           <h2>Synapsys</h2>
-          {data.phases
-            .filter((phase) => data.lessons.some((l) => l.phase === phase.id))
-            .map((phase) => (
-              <div key={phase.id}>
-                <div className="phase-header">
-                  {phase.name} ({phase.range})
+          <div className="sidebar-lessons">
+            {data.phases
+              .filter((phase) => data.lessons.some((l) => l.phase === phase.id))
+              .map((phase) => (
+                <div key={phase.id}>
+                  <div className="phase-header">
+                    {phase.name} ({phase.range})
+                  </div>
+                  <ul>
+                    {data.lessons
+                      .filter((l) => l.phase === phase.id)
+                      .map((l) => (
+                        <li
+                          key={l.id}
+                          className={l.id === lesson.id ? "active" : ""}
+                          onClick={() => setLessonId(l.id)}
+                        >
+                          <span className="lesson-check">
+                            {saved[l.id]?.completed ? "✓" : ""}
+                          </span>
+                          {l.id}. {l.title}
+                        </li>
+                      ))}
+                  </ul>
                 </div>
-                <ul>
-                  {data.lessons
-                    .filter((l) => l.phase === phase.id)
-                    .map((l) => (
-                      <li
-                        key={l.id}
-                        className={l.id === lesson.id ? "active" : ""}
-                        onClick={() => setLessonId(l.id)}
-                      >
-                        {l.id}. {l.title}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            ))}
+              ))}
+          </div>
+          <AccountPanel user={user} onAuth={applyProgress} />
         </aside>
 
         {/* Main Content */}
@@ -132,6 +214,7 @@ export default function App() {
             <h3>
               Lesson {lesson.id} — {lesson.title}
             </h3>
+            {completed && <span className="lesson-done">✓ completed</span>}
             {offline && (
               <span className="offline">backend offline — using built-in data</span>
             )}
@@ -203,8 +286,8 @@ export default function App() {
                 )}
               </div>
               <CodeEditor
-                key={lesson.id}
-                starter={lesson.codeTemplate.starter}
+                key={`${lesson.id}:${restoreCount}`}
+                starter={starter}
                 language={lesson.codeTemplate.language}
                 handleRef={editorRef}
                 onChange={setCode}
