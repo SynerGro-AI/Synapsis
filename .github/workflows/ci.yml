@@ -34,4 +34,4 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      - run: dotnet build Synapsys.sln --configuration Release
+      - run: dotnet build Synapsys.slnx --configuration Release
