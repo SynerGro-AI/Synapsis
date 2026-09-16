@@ -21,6 +21,7 @@ const SCALE: Record<string, number> = {
   motor: 1,
   buzzer: 0.9,
   lcd: 0.75,
+  dht: 0.85,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -36,6 +37,7 @@ const ID_PREFIX: Record<PartType, string> = {
   motor: "MOTOR",
   buzzer: "BUZZ",
   lcd: "LCD",
+  dht: "DHT",
 };
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
@@ -449,6 +451,7 @@ export default function CircuitCanvas({
             characters={lcdCharacters(lcdLines ?? ["", ""])}
           />
         )}
+        {type === "dht" && <wokwi-dht22 />}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

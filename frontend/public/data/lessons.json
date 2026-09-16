@@ -68,36 +68,65 @@
       "track": "arduino",
       "name": "Foundation",
       "range": "1-5",
-      "concepts": ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"]
+      "concepts": [
+        "Digital out",
+        "Analog in",
+        "Serial monitor",
+        "Variables",
+        "Conditionals"
+      ]
     },
     {
       "id": "sensing",
       "track": "arduino",
       "name": "Sensing",
       "range": "6-12",
-      "concepts": ["Buttons", "Debouncing", "Light sensor", "Temp sensor", "Ultrasonic"]
+      "concepts": [
+        "Buttons",
+        "Debouncing",
+        "Light sensor",
+        "Temp sensor",
+        "Ultrasonic"
+      ]
     },
     {
       "id": "control",
       "track": "arduino",
       "name": "Control",
-      "range": "13-22",
-      "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display", "Piezo buzzer"]
+      "range": "13-23",
+      "concepts": [
+        "Servos",
+        "DC motors",
+        "PWM",
+        "RGB LED",
+        "LCD display",
+        "Piezo buzzer",
+        "DHT11 sensor"
+      ]
     },
     {
       "id": "expert",
       "track": "arduino",
       "name": "Expert",
       "range": "29+",
-      "concepts": ["Wire gauge physics", "Signal calibration", "Interrupts", "I2C"]
+      "concepts": [
+        "Wire gauge physics",
+        "Signal calibration",
+        "Interrupts",
+        "I2C"
+      ]
     },
-
     {
       "id": "cli_basics",
       "track": "devsetup",
       "name": "Command Line Basics",
       "range": "101-104",
-      "concepts": ["Navigation", "Files & folders", "Git version control", "Compilers & first program"]
+      "concepts": [
+        "Navigation",
+        "Files & folders",
+        "Git version control",
+        "Compilers & first program"
+      ]
     },
     {
       "id": "shells",
@@ -105,7 +134,13 @@
       "name": "Shells — PowerShell & Bash",
       "range": "105-110",
       "status": "coming-soon",
-      "concepts": ["PowerShell", "Bash", "Environment variables", "Scripting", "SSH"]
+      "concepts": [
+        "PowerShell",
+        "Bash",
+        "Environment variables",
+        "Scripting",
+        "SSH"
+      ]
     },
     {
       "id": "packages",
@@ -113,7 +148,13 @@
       "name": "Package Managers",
       "range": "111-116",
       "status": "coming-soon",
-      "concepts": ["pip", "npm", "apt-get", "winget", "Virtual environments"]
+      "concepts": [
+        "pip",
+        "npm",
+        "apt-get",
+        "winget",
+        "Virtual environments"
+      ]
     },
     {
       "id": "toolchain",
@@ -121,16 +162,26 @@
       "name": "Toolchain",
       "range": "117-122",
       "status": "coming-soon",
-      "concepts": ["Compilers", "Debuggers", "Editors & extensions", "Build tasks"]
+      "concepts": [
+        "Compilers",
+        "Debuggers",
+        "Editors & extensions",
+        "Build tasks"
+      ]
     },
-
     {
       "id": "motion_basics",
       "track": "nano",
       "name": "Motion Basics",
       "range": "201-206",
       "status": "coming-soon",
-      "concepts": ["BNO055 IMU", "Accelerometers", "Gyroscopes", "Reading raw data", "Calibration"]
+      "concepts": [
+        "BNO055 IMU",
+        "Accelerometers",
+        "Gyroscopes",
+        "Reading raw data",
+        "Calibration"
+      ]
     },
     {
       "id": "sensor_fusion",
@@ -138,7 +189,13 @@
       "name": "Sensor Fusion",
       "range": "207-214",
       "status": "coming-soon",
-      "concepts": ["Tilt from accel", "Low-pass filters", "Complementary filter", "Quaternions", "Tilt-compensated compass"]
+      "concepts": [
+        "Tilt from accel",
+        "Low-pass filters",
+        "Complementary filter",
+        "Quaternions",
+        "Tilt-compensated compass"
+      ]
     },
     {
       "id": "nano_control",
@@ -146,16 +203,27 @@
       "name": "Control Systems",
       "range": "215-220",
       "status": "coming-soon",
-      "concepts": ["Servo control", "Self-leveling platform", "Proportional control", "PID control"]
+      "concepts": [
+        "Servo control",
+        "Self-leveling platform",
+        "Proportional control",
+        "PID control"
+      ]
     },
-
     {
       "id": "linux_cli",
       "track": "pi",
       "name": "Linux Command Line",
       "range": "301-312",
       "status": "coming-soon",
-      "concepts": ["Navigation", "nano editor", "Wildcards & redirection", "Pipes", "grep & find", "Permissions"]
+      "concepts": [
+        "Navigation",
+        "nano editor",
+        "Wildcards & redirection",
+        "Pipes",
+        "grep & find",
+        "Permissions"
+      ]
     },
     {
       "id": "pi_network",
@@ -163,7 +231,12 @@
       "name": "Networking & Users",
       "range": "313-320",
       "status": "coming-soon",
-      "concepts": ["ifconfig / IP", "SSH login", "Users & admin", "SD-card backup"]
+      "concepts": [
+        "ifconfig / IP",
+        "SSH login",
+        "Users & admin",
+        "SD-card backup"
+      ]
     },
     {
       "id": "pi_gpio",
@@ -171,7 +244,13 @@
       "name": "Python GPIO",
       "range": "321-330",
       "status": "coming-soon",
-      "concepts": ["Python on the Pi", "GPIO out", "PWM analog", "Servos", "Buttons & inputs"]
+      "concepts": [
+        "Python on the Pi",
+        "GPIO out",
+        "PWM analog",
+        "Servos",
+        "Buttons & inputs"
+      ]
     },
     {
       "id": "pi_projects",
@@ -179,16 +258,25 @@
       "name": "Desktop & Projects",
       "range": "331-338",
       "status": "coming-soon",
-      "concepts": ["Graphical desktop", "Remote desktop", "IP camera", "Near-space project"]
+      "concepts": [
+        "Graphical desktop",
+        "Remote desktop",
+        "IP camera",
+        "Near-space project"
+      ]
     },
-
     {
       "id": "vpython_world",
       "track": "python",
       "name": "A Virtual World",
       "range": "401-406",
       "status": "coming-soon",
-      "concepts": ["Arduino + Python setup", "VPython 3D", "Mirroring sensors", "Ultrasonic & color"]
+      "concepts": [
+        "Arduino + Python setup",
+        "VPython 3D",
+        "Mirroring sensors",
+        "Ultrasonic & color"
+      ]
     },
     {
       "id": "python_plots",
@@ -196,7 +284,12 @@
       "name": "Data & Plots",
       "range": "407-414",
       "status": "coming-soon",
-      "concepts": ["pip & Matplotlib", "Live graphing", "Drawnow", "BMP180 pressure/temp"]
+      "concepts": [
+        "pip & Matplotlib",
+        "Live graphing",
+        "Drawnow",
+        "BMP180 pressure/temp"
+      ]
     },
     {
       "id": "python_comms",
@@ -204,16 +297,25 @@
       "name": "Talking Between Machines",
       "range": "415-420",
       "status": "coming-soon",
-      "concepts": ["Xbee radios", "Serial streaming", "Ethernet client/server", "Sockets"]
+      "concepts": [
+        "Xbee radios",
+        "Serial streaming",
+        "Ethernet client/server",
+        "Sockets"
+      ]
     },
-
     {
       "id": "vision_setup",
       "track": "ai",
       "name": "Give It Eyes",
       "range": "501-508",
       "status": "coming-soon",
-      "concepts": ["Raspberry Pi 5", "Camera setup", "py5 basics", "Displaying frames"]
+      "concepts": [
+        "Raspberry Pi 5",
+        "Camera setup",
+        "py5 basics",
+        "Displaying frames"
+      ]
     },
     {
       "id": "opencv",
@@ -221,7 +323,12 @@
       "name": "OpenCV",
       "range": "509-518",
       "status": "coming-soon",
-      "concepts": ["Image basics", "Color & thresholds", "Contours", "Face detection"]
+      "concepts": [
+        "Image basics",
+        "Color & thresholds",
+        "Contours",
+        "Face detection"
+      ]
     },
     {
       "id": "mediapipe",
@@ -229,7 +336,12 @@
       "name": "MediaPipe",
       "range": "519-528",
       "status": "coming-soon",
-      "concepts": ["Hand tracking", "Pose", "Face mesh", "Landmarks"]
+      "concepts": [
+        "Hand tracking",
+        "Pose",
+        "Face mesh",
+        "Landmarks"
+      ]
     },
     {
       "id": "edge_infer",
@@ -237,16 +349,25 @@
       "name": "Inference on the Edge",
       "range": "529-538",
       "status": "coming-soon",
-      "concepts": ["Collecting training data", "Training a model", "Gesture recognition", "Running on-device"]
+      "concepts": [
+        "Collecting training data",
+        "Training a model",
+        "Gesture recognition",
+        "Running on-device"
+      ]
     },
-
     {
       "id": "cpu",
       "track": "compute",
       "name": "The CPU",
       "range": "601-608",
       "status": "coming-soon",
-      "concepts": ["Instructions & opcodes", "Registers", "Memory & the stack", "Fetch-decode-execute"]
+      "concepts": [
+        "Instructions & opcodes",
+        "Registers",
+        "Memory & the stack",
+        "Fetch-decode-execute"
+      ]
     },
     {
       "id": "gpu",
@@ -254,7 +375,12 @@
       "name": "The GPU",
       "range": "609-616",
       "status": "coming-soon",
-      "concepts": ["Parallelism", "SIMD lanes", "Threads & warps", "When parallel wins"]
+      "concepts": [
+        "Parallelism",
+        "SIMD lanes",
+        "Threads & warps",
+        "When parallel wins"
+      ]
     },
     {
       "id": "npu",
@@ -262,10 +388,14 @@
       "name": "The NPU",
       "range": "617-624",
       "status": "coming-soon",
-      "concepts": ["Tensors", "Matrix multiply", "Quantization", "Why AI needs new silicon"]
+      "concepts": [
+        "Tensors",
+        "Matrix multiply",
+        "Quantization",
+        "Why AI needs new silicon"
+      ]
     }
   ],
-
   "lessons": [
     {
       "id": 1,
@@ -275,8 +405,14 @@
       "source": "Paul McWhorter, Arduino Tutorials 1–2 — toptechboy.com",
       "featuredComponent": "led",
       "circuit": {
-        "palette": ["led", "resistor"],
-        "required": ["led", "resistor"],
+        "palette": [
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "led",
+          "resistor"
+        ],
         "notes": "Wire pin 13 to one side of the resistor, the other side to the LED anode (A), and the LED cathode (C) to GND."
       },
       "codeTemplate": {
@@ -288,9 +424,11 @@
         "digitalWrite(13, HIGH);\ndelay(500);",
         "digitalWrite(13, LOW);\ndelay(500);"
       ],
-      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 2,
       "phase": "foundation",
@@ -299,8 +437,12 @@
       "source": "Paul McWhorter, Arduino Tutorial 10 — toptechboy.com",
       "featuredComponent": "potentiometer",
       "circuit": {
-        "palette": ["potentiometer"],
-        "required": ["potentiometer"],
+        "palette": [
+          "potentiometer"
+        ],
+        "required": [
+          "potentiometer"
+        ],
         "notes": "The wiper (SIG) picks off a voltage between 0V and 5V. Wire it to analog pin A0."
       },
       "codeTemplate": {
@@ -313,9 +455,11 @@
         "int mapped = map(value, 0, 1023, 0, 255);",
         "Serial.println(mapped);"
       ],
-      "output": { "initial": "Reading potentiometer...", "status": "Serial idle" }
+      "output": {
+        "initial": "Reading potentiometer...",
+        "status": "Serial idle"
+      }
     },
-
     {
       "id": 3,
       "phase": "foundation",
@@ -337,9 +481,11 @@
         "Serial.println(\"Hello, world!\");",
         "delay(1000);"
       ],
-      "output": { "initial": "Serial monitor idle", "status": "Waiting for Serial.begin()..." }
+      "output": {
+        "initial": "Serial monitor idle",
+        "status": "Waiting for Serial.begin()..."
+      }
     },
-
     {
       "id": 4,
       "phase": "foundation",
@@ -348,8 +494,14 @@
       "source": "Paul McWhorter, Arduino Tutorial 4 (Variables) — toptechboy.com",
       "featuredComponent": "resistor",
       "circuit": {
-        "palette": ["led", "resistor"],
-        "required": ["led", "resistor"],
+        "palette": [
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "led",
+          "resistor"
+        ],
         "notes": "Rebuild the Lesson 1 circuit: pin → resistor → LED anode, cathode → GND."
       },
       "codeTemplate": {
@@ -363,9 +515,11 @@
         "digitalWrite(ledPin, LOW);",
         "delay(offTime);"
       ],
-      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 5,
       "phase": "foundation",
@@ -374,8 +528,16 @@
       "source": "Paul McWhorter, Arduino if-statement tutorials — toptechboy.com",
       "featuredComponent": "potentiometer",
       "circuit": {
-        "palette": ["potentiometer", "led", "resistor"],
-        "required": ["potentiometer", "led", "resistor"],
+        "palette": [
+          "potentiometer",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "potentiometer",
+          "led",
+          "resistor"
+        ],
         "notes": "Two sub-circuits: the pot (VCC/GND/SIG→A0) for input, and pin 13 → resistor → LED → GND for output."
       },
       "codeTemplate": {
@@ -388,9 +550,11 @@
         "} else {",
         "digitalWrite(ledPin, LOW);"
       ],
-      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 6,
       "phase": "sensing",
@@ -399,8 +563,16 @@
       "source": "Paul McWhorter, Arduino button tutorials — toptechboy.com",
       "featuredComponent": "pushbutton",
       "circuit": {
-        "palette": ["pushbutton", "led", "resistor"],
-        "required": ["pushbutton", "led", "resistor"],
+        "palette": [
+          "pushbutton",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pushbutton",
+          "led",
+          "resistor"
+        ],
         "notes": "Button between pin 2 and GND (INPUT_PULLUP handles the rest internally). LED circuit on pin 13 as usual."
       },
       "codeTemplate": {
@@ -413,9 +585,11 @@
         "if (state == LOW) {\n  digitalWrite(ledPin, HIGH);",
         "} else {\n  digitalWrite(ledPin, LOW);\n}"
       ],
-      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 7,
       "phase": "sensing",
@@ -424,8 +598,16 @@
       "source": "Paul McWhorter, Arduino debounce tutorials — toptechboy.com",
       "featuredComponent": "pushbutton",
       "circuit": {
-        "palette": ["pushbutton", "led", "resistor"],
-        "required": ["pushbutton", "led", "resistor"],
+        "palette": [
+          "pushbutton",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pushbutton",
+          "led",
+          "resistor"
+        ],
         "notes": "Same wiring as Lesson 6: button on pin 2 to GND, LED circuit on pin 13."
       },
       "codeTemplate": {
@@ -439,9 +621,11 @@
         "digitalWrite(ledPin, ledState);\n}",
         "lastReading = reading;"
       ],
-      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 13 OFF",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 8,
       "phase": "sensing",
@@ -450,8 +634,12 @@
       "source": "Paul McWhorter, Arduino photoresistor tutorials — toptechboy.com",
       "featuredComponent": "photoresistor",
       "circuit": {
-        "palette": ["photoresistor"],
-        "required": ["photoresistor"],
+        "palette": [
+          "photoresistor"
+        ],
+        "required": [
+          "photoresistor"
+        ],
         "notes": "Module wiring: VCC→5V, GND→GND, AO→A0. The AO voltage rises with brightness."
       },
       "codeTemplate": {
@@ -463,9 +651,11 @@
         "Serial.println(light);",
         "delay(200);"
       ],
-      "output": { "initial": "Light sensor idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Light sensor idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 9,
       "phase": "sensing",
@@ -474,8 +664,16 @@
       "source": "Paul McWhorter, Arduino light-meter tutorials — toptechboy.com",
       "featuredComponent": "photoresistor",
       "circuit": {
-        "palette": ["photoresistor", "led", "resistor"],
-        "required": ["photoresistor", "led", "resistor"],
+        "palette": [
+          "photoresistor",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "photoresistor",
+          "led",
+          "resistor"
+        ],
         "notes": "Photoresistor module AO→A0, plus the LED circuit on pin 13."
       },
       "codeTemplate": {
@@ -488,9 +686,11 @@
         "} else {",
         "digitalWrite(ledPin, LOW);"
       ],
-      "output": { "initial": "Night light armed", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Night light armed",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 10,
       "phase": "sensing",
@@ -499,8 +699,12 @@
       "source": "Paul McWhorter, Arduino thermistor tutorials — toptechboy.com",
       "featuredComponent": "ntc",
       "circuit": {
-        "palette": ["ntc"],
-        "required": ["ntc"],
+        "palette": [
+          "ntc"
+        ],
+        "required": [
+          "ntc"
+        ],
         "notes": "Module wiring: VCC→5V, GND→GND, OUT→A0."
       },
       "codeTemplate": {
@@ -513,9 +717,11 @@
         "Serial.println(\" C\");",
         "delay(500);"
       ],
-      "output": { "initial": "Thermometer idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Thermometer idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 11,
       "phase": "sensing",
@@ -524,8 +730,12 @@
       "source": "Paul McWhorter, Arduino HC-SR04 tutorials — toptechboy.com",
       "featuredComponent": "ultrasonic",
       "circuit": {
-        "palette": ["ultrasonic"],
-        "required": ["ultrasonic"],
+        "palette": [
+          "ultrasonic"
+        ],
+        "required": [
+          "ultrasonic"
+        ],
         "notes": "Wiring: VCC→5V, GND→GND, TRIG→pin 9, ECHO→pin 10."
       },
       "codeTemplate": {
@@ -539,9 +749,11 @@
         "int cm = pulseIn(echoPin, HIGH) / 58;",
         "Serial.println(cm);"
       ],
-      "output": { "initial": "Sonar idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Sonar idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 12,
       "phase": "sensing",
@@ -550,8 +762,16 @@
       "source": "Paul McWhorter, Arduino distance-alarm tutorials — toptechboy.com",
       "featuredComponent": "ultrasonic",
       "circuit": {
-        "palette": ["ultrasonic", "led", "resistor"],
-        "required": ["ultrasonic", "led", "resistor"],
+        "palette": [
+          "ultrasonic",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "ultrasonic",
+          "led",
+          "resistor"
+        ],
         "notes": "HC-SR04 wiring (TRIG→9, ECHO→10) plus the LED circuit on pin 13."
       },
       "codeTemplate": {
@@ -564,9 +784,11 @@
         "} else {",
         "digitalWrite(ledPin, LOW);"
       ],
-      "output": { "initial": "Alarm armed", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Alarm armed",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 13,
       "phase": "control",
@@ -575,8 +797,14 @@
       "source": "Paul McWhorter, Arduino analogWrite/PWM tutorials — toptechboy.com",
       "featuredComponent": "led",
       "circuit": {
-        "palette": ["led", "resistor"],
-        "required": ["led", "resistor"],
+        "palette": [
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "led",
+          "resistor"
+        ],
         "notes": "Same LED circuit, but on a PWM pin: pin 9 (~) → resistor → LED anode, cathode → GND."
       },
       "codeTemplate": {
@@ -589,9 +817,11 @@
         "for (int brightness = 255; brightness >= 0; brightness -= 5) {",
         "analogWrite(ledPin, brightness);\ndelay(20);\n}"
       ],
-      "output": { "initial": "PIN 9 duty 0", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "PIN 9 duty 0",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 14,
       "phase": "control",
@@ -600,8 +830,13 @@
       "source": "Paul McWhorter, Arduino RGB LED tutorials — toptechboy.com",
       "featuredComponent": "rgbled",
       "circuit": {
-        "palette": ["rgbled", "resistor"],
-        "required": ["rgbled"],
+        "palette": [
+          "rgbled",
+          "resistor"
+        ],
+        "required": [
+          "rgbled"
+        ],
         "notes": "COM (longest leg) → GND. R leg → pin 9, G leg → pin 10, B leg → pin 11 (all PWM ~). Real builds put a 220Ω on each leg."
       },
       "codeTemplate": {
@@ -614,9 +849,11 @@
         "analogWrite(bluePin, 0);",
         "delay(500);"
       ],
-      "output": { "initial": "RGB idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "RGB idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 15,
       "phase": "control",
@@ -625,8 +862,12 @@
       "source": "Paul McWhorter, Arduino servo tutorials — toptechboy.com",
       "featuredComponent": "servo",
       "circuit": {
-        "palette": ["servo"],
-        "required": ["servo"],
+        "palette": [
+          "servo"
+        ],
+        "required": [
+          "servo"
+        ],
         "notes": "Servo wiring: GND → GND, V+ → 5V, PWM (signal) → pin 9."
       },
       "codeTemplate": {
@@ -641,9 +882,11 @@
         "myServo.write(angle);\ndelay(15);\n}",
         "for (int angle = 180; angle >= 0; angle -= 2) {"
       ],
-      "output": { "initial": "Servo at 0°", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Servo at 0°",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 16,
       "phase": "control",
@@ -652,8 +895,14 @@
       "source": "Paul McWhorter, Arduino servo knob tutorials — toptechboy.com",
       "featuredComponent": "servo",
       "circuit": {
-        "palette": ["servo", "potentiometer"],
-        "required": ["servo", "potentiometer"],
+        "palette": [
+          "servo",
+          "potentiometer"
+        ],
+        "required": [
+          "servo",
+          "potentiometer"
+        ],
         "notes": "Servo: GND→GND, V+→5V, PWM→pin 9. Pot: VCC→5V, GND→GND, SIG→A0."
       },
       "codeTemplate": {
@@ -666,9 +915,11 @@
         "myServo.write(angle);",
         "delay(20);"
       ],
-      "output": { "initial": "Servo at 0°", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Servo at 0°",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 17,
       "phase": "control",
@@ -677,8 +928,14 @@
       "source": "Paul McWhorter, Arduino DC motor tutorials — toptechboy.com",
       "featuredComponent": "motor",
       "circuit": {
-        "palette": ["motor", "potentiometer"],
-        "required": ["motor", "potentiometer"],
+        "palette": [
+          "motor",
+          "potentiometer"
+        ],
+        "required": [
+          "motor",
+          "potentiometer"
+        ],
         "notes": "Motor: terminal 1 → pin 9 (~), terminal 2 → GND. Pot: VCC→5V, GND→GND, SIG→A0. (Real builds add a transistor driver + flyback diode.)"
       },
       "codeTemplate": {
@@ -691,9 +948,11 @@
         "analogWrite(motorPin, speed);",
         "delay(20);"
       ],
-      "output": { "initial": "Motor stopped", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Motor stopped",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 18,
       "phase": "control",
@@ -702,8 +961,12 @@
       "source": "Paul McWhorter, Arduino LCD tutorials — toptechboy.com",
       "featuredComponent": "lcd",
       "circuit": {
-        "palette": ["lcd"],
-        "required": ["lcd"],
+        "palette": [
+          "lcd"
+        ],
+        "required": [
+          "lcd"
+        ],
         "notes": "Power: VSS→GND, VDD→5V, V0→GND, RW→GND, A→5V, K→GND. Signals: RS→12, E→11, D4→5, D5→4, D6→3, D7→2."
       },
       "codeTemplate": {
@@ -717,9 +980,11 @@
         "lcd.print(\"Hello, world!\");",
         "lcd.setCursor(0, 1);\nlcd.print(millis() / 1000);"
       ],
-      "output": { "initial": "LCD blank", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "LCD blank",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 19,
       "phase": "control",
@@ -728,8 +993,14 @@
       "source": "Paul McWhorter, Arduino LCD + sensor tutorials — toptechboy.com",
       "featuredComponent": "lcd",
       "circuit": {
-        "palette": ["lcd", "ntc"],
-        "required": ["lcd", "ntc"],
+        "palette": [
+          "lcd",
+          "ntc"
+        ],
+        "required": [
+          "lcd",
+          "ntc"
+        ],
         "notes": "LCD wired as in Lesson 18 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2). Temp sensor: VCC→5V, GND→GND, OUT→A0."
       },
       "codeTemplate": {
@@ -743,9 +1014,11 @@
         "lcd.print(tempC);\nlcd.print(\" C \");",
         "delay(500);"
       ],
-      "output": { "initial": "Thermometer idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Thermometer idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 20,
       "phase": "control",
@@ -754,8 +1027,16 @@
       "source": "Paul McWhorter, Arduino capstone-style projects — toptechboy.com",
       "featuredComponent": "ultrasonic",
       "circuit": {
-        "palette": ["ultrasonic", "lcd", "rgbled"],
-        "required": ["ultrasonic", "lcd", "rgbled"],
+        "palette": [
+          "ultrasonic",
+          "lcd",
+          "rgbled"
+        ],
+        "required": [
+          "ultrasonic",
+          "lcd",
+          "rgbled"
+        ],
         "notes": "Sonar: TRIG→8, ECHO→10. LCD: RS→12, E→11, D4→7, D5→6, D6→4, D7→2. RGB: R leg→3, G leg→5, COM→GND."
       },
       "codeTemplate": {
@@ -769,9 +1050,11 @@
         "} else {\n  analogWrite(3, 0);\n  analogWrite(5, 255);\n}",
         "delay(200);"
       ],
-      "output": { "initial": "Radar idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Radar idle",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 21,
       "phase": "control",
@@ -780,8 +1063,12 @@
       "source": "Paul McWhorter, Arduino tone()/buzzer tutorials — toptechboy.com",
       "featuredComponent": "buzzer",
       "circuit": {
-        "palette": ["buzzer"],
-        "required": ["buzzer"],
+        "palette": [
+          "buzzer"
+        ],
+        "required": [
+          "buzzer"
+        ],
         "notes": "Buzzer: + terminal (pin 1) → Arduino pin 8. – terminal (pin 2) → GND. A piezo buzzer needs no resistor and no pinMode — tone() drives the pin for you."
       },
       "codeTemplate": {
@@ -795,9 +1082,11 @@
         "noTone(buzzer);",
         "delay(400);"
       ],
-      "output": { "initial": "Buzzer silent", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Buzzer silent",
+        "status": "Waiting for sketch..."
+      }
     },
-
     {
       "id": 22,
       "phase": "control",
@@ -806,8 +1095,14 @@
       "source": "Paul McWhorter, Arduino sonar + buzzer projects — toptechboy.com",
       "featuredComponent": "buzzer",
       "circuit": {
-        "palette": ["ultrasonic", "buzzer"],
-        "required": ["ultrasonic", "buzzer"],
+        "palette": [
+          "ultrasonic",
+          "buzzer"
+        ],
+        "required": [
+          "ultrasonic",
+          "buzzer"
+        ],
         "notes": "Sonar: VCC→5V, GND→GND, TRIG→8, ECHO→10. Buzzer: + (pin 1) → pin 9, – (pin 2) → GND. Drag the distance slider while it runs to hear the pitch change."
       },
       "codeTemplate": {
@@ -820,7 +1115,44 @@
         "} else {\n  noTone(buzzer);\n}",
         "delay(60);"
       ],
-      "output": { "initial": "Beeper idle", "status": "Waiting for sketch..." }
+      "output": {
+        "initial": "Beeper idle",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 23,
+      "phase": "control",
+      "title": "Weather Station",
+      "description": "Keep the LCD from the thermometer build and add a DHT11 — a single sensor that reads BOTH temperature and humidity over one data wire. A library decodes the sensor for you; you just call readTemperature() and readHumidity() and print them to the display. Drag the Temp and Humidity sliders while it runs to watch the readout change.",
+      "source": "Paul McWhorter, Arduino DHT11 + LCD projects — toptechboy.com",
+      "featuredComponent": "dht",
+      "circuit": {
+        "palette": [
+          "lcd",
+          "dht"
+        ],
+        "required": [
+          "lcd",
+          "dht"
+        ],
+        "notes": "LCD wired as in Lesson 19 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2; VSS/V0/RW/K→GND, VDD/A→5V). DHT11: VCC→5V, GND→GND, SDA (data)→7. The DHT object in the code uses pin 7."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <LiquidCrystal.h>\n#include <DHT.h>\n\nLiquidCrystal lcd(12, 11, 5, 4, 3, 2);\nDHT dht(7, DHT11);\n\nvoid setup() {\n  lcd.begin(16, 2);\n  dht.begin();\n}\n\nvoid loop() {\n  float t = dht.readTemperature();\n  float h = dht.readHumidity();\n  // Show temperature on the top row and humidity on the bottom row,\n  // then wait a second before reading again.\n}"
+      },
+      "hints": [
+        "lcd.setCursor(0, 0);\n  lcd.print(\"Temp: \");",
+        "lcd.print(t);",
+        "lcd.setCursor(0, 1);\n  lcd.print(\"Humid: \");",
+        "lcd.print(h);",
+        "delay(1000);"
+      ],
+      "output": {
+        "initial": "Weather station idle",
+        "status": "Waiting for sketch..."
+      }
     },
     {
       "id": 101,
@@ -834,19 +1166,47 @@
         "cwd": "~/projects",
         "intro": "This is a safe practice terminal. Nothing here touches your real computer, but every command behaves exactly like the real thing. Work down the checklist on the right — type each command yourself.",
         "steps": [
-          { "cmd": "pwd", "why": "Print Working Directory — asks the shell 'where am I right now?' It answers with your current folder's path." },
-          { "cmd": "ls", "why": "List the files and folders in the current directory. Right now it's empty, so nothing prints." },
-          { "cmd": "mkdir hello-cli", "why": "MaKe DIRectory — create a new folder named hello-cli." },
-          { "cmd": "ls", "why": "List again. Now you can see the hello-cli folder you just made." },
-          { "cmd": "cd hello-cli", "why": "Change Directory — step inside the folder." },
-          { "cmd": "pwd", "why": "Confirm you moved. The path now ends in /hello-cli." }
+          {
+            "cmd": "pwd",
+            "why": "Print Working Directory — asks the shell 'where am I right now?' It answers with your current folder's path."
+          },
+          {
+            "cmd": "ls",
+            "why": "List the files and folders in the current directory. Right now it's empty, so nothing prints."
+          },
+          {
+            "cmd": "mkdir hello-cli",
+            "why": "MaKe DIRectory — create a new folder named hello-cli."
+          },
+          {
+            "cmd": "ls",
+            "why": "List again. Now you can see the hello-cli folder you just made."
+          },
+          {
+            "cmd": "cd hello-cli",
+            "why": "Change Directory — step inside the folder."
+          },
+          {
+            "cmd": "pwd",
+            "why": "Confirm you moved. The path now ends in /hello-cli."
+          }
         ]
       },
       "featuredComponent": "terminal",
-      "circuit": { "palette": [], "required": [], "notes": "" },
-      "codeTemplate": { "language": "bash", "starter": "" },
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
       "hints": [],
-      "output": { "initial": "", "status": "" }
+      "output": {
+        "initial": "",
+        "status": ""
+      }
     },
     {
       "id": 102,
@@ -860,19 +1220,47 @@
         "cwd": "~/projects/hello-cli",
         "intro": "You're inside the hello-cli folder from the last lesson. Let's put some files in it. The > symbol means 'send this output into a file' instead of printing it to the screen.",
         "steps": [
-          { "cmd": "echo \"Hello, terminal!\" > notes.txt", "why": "echo prints text; > redirects that text into a new file called notes.txt." },
-          { "cmd": "ls", "why": "List the folder — notes.txt now exists." },
-          { "cmd": "cat notes.txt", "why": "conCATenate — dump a file's contents to the screen. You'll see your saved line." },
-          { "cmd": "mkdir src", "why": "Make a src folder to hold source code — a very common project layout." },
-          { "cmd": "touch src/app.js", "why": "touch creates an empty file. Here it makes app.js inside src/." },
-          { "cmd": "tree", "why": "Show the folder as a tree so you can see the whole structure at a glance." }
+          {
+            "cmd": "echo \"Hello, terminal!\" > notes.txt",
+            "why": "echo prints text; > redirects that text into a new file called notes.txt."
+          },
+          {
+            "cmd": "ls",
+            "why": "List the folder — notes.txt now exists."
+          },
+          {
+            "cmd": "cat notes.txt",
+            "why": "conCATenate — dump a file's contents to the screen. You'll see your saved line."
+          },
+          {
+            "cmd": "mkdir src",
+            "why": "Make a src folder to hold source code — a very common project layout."
+          },
+          {
+            "cmd": "touch src/app.js",
+            "why": "touch creates an empty file. Here it makes app.js inside src/."
+          },
+          {
+            "cmd": "tree",
+            "why": "Show the folder as a tree so you can see the whole structure at a glance."
+          }
         ]
       },
       "featuredComponent": "terminal",
-      "circuit": { "palette": [], "required": [], "notes": "" },
-      "codeTemplate": { "language": "bash", "starter": "" },
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
       "hints": [],
-      "output": { "initial": "", "status": "" }
+      "output": {
+        "initial": "",
+        "status": ""
+      }
     },
     {
       "id": 103,
@@ -886,19 +1274,47 @@
         "cwd": "~/projects/hello-cli",
         "intro": "A 'repository' is a folder Git is watching. You initialise it once, then 'stage' the files you want to save and 'commit' them as a permanent snapshot.",
         "steps": [
-          { "cmd": "git --version", "why": "Check that Git is installed and see which version you have." },
-          { "cmd": "git init", "why": "Turn this folder into a Git repository — it creates a hidden .git folder to store history." },
-          { "cmd": "git status", "why": "Ask Git what it sees: which files are new, changed, or already saved." },
-          { "cmd": "git add .", "why": "Stage every file (the . means 'everything here') — mark it to be included in the next snapshot." },
-          { "cmd": "git commit -m \"first commit\"", "why": "Save a permanent snapshot. The -m message describes what this snapshot is." },
-          { "cmd": "git log", "why": "View the history. Your first commit is now recorded forever." }
+          {
+            "cmd": "git --version",
+            "why": "Check that Git is installed and see which version you have."
+          },
+          {
+            "cmd": "git init",
+            "why": "Turn this folder into a Git repository — it creates a hidden .git folder to store history."
+          },
+          {
+            "cmd": "git status",
+            "why": "Ask Git what it sees: which files are new, changed, or already saved."
+          },
+          {
+            "cmd": "git add .",
+            "why": "Stage every file (the . means 'everything here') — mark it to be included in the next snapshot."
+          },
+          {
+            "cmd": "git commit -m \"first commit\"",
+            "why": "Save a permanent snapshot. The -m message describes what this snapshot is."
+          },
+          {
+            "cmd": "git log",
+            "why": "View the history. Your first commit is now recorded forever."
+          }
         ]
       },
       "featuredComponent": "terminal",
-      "circuit": { "palette": [], "required": [], "notes": "" },
-      "codeTemplate": { "language": "bash", "starter": "" },
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
       "hints": [],
-      "output": { "initial": "", "status": "" }
+      "output": {
+        "initial": "",
+        "status": ""
+      }
     },
     {
       "id": 104,
@@ -912,19 +1328,47 @@
         "cwd": "~/projects",
         "intro": "A compiler turns human-readable code into a program your machine can run. The dotnet tool scaffolds a starter project, then builds and runs it for you.",
         "steps": [
-          { "cmd": "dotnet --version", "why": "Confirm the .NET compiler toolchain is installed." },
-          { "cmd": "dotnet new console -n hello", "why": "Scaffold a new console app named hello — it writes Program.cs and a project file for you." },
-          { "cmd": "cd hello", "why": "Step into the project folder that was just created." },
-          { "cmd": "ls", "why": "See what the template made: Program.cs (your code) and hello.csproj (the project settings)." },
-          { "cmd": "cat Program.cs", "why": "Read the starter code — a single line that prints Hello, World!." },
-          { "cmd": "dotnet run", "why": "Compile and run the program. 'Hello, World!' is your machine running code you built." }
+          {
+            "cmd": "dotnet --version",
+            "why": "Confirm the .NET compiler toolchain is installed."
+          },
+          {
+            "cmd": "dotnet new console -n hello",
+            "why": "Scaffold a new console app named hello — it writes Program.cs and a project file for you."
+          },
+          {
+            "cmd": "cd hello",
+            "why": "Step into the project folder that was just created."
+          },
+          {
+            "cmd": "ls",
+            "why": "See what the template made: Program.cs (your code) and hello.csproj (the project settings)."
+          },
+          {
+            "cmd": "cat Program.cs",
+            "why": "Read the starter code — a single line that prints Hello, World!."
+          },
+          {
+            "cmd": "dotnet run",
+            "why": "Compile and run the program. 'Hello, World!' is your machine running code you built."
+          }
         ]
       },
       "featuredComponent": "terminal",
-      "circuit": { "palette": [], "required": [], "notes": "" },
-      "codeTemplate": { "language": "bash", "starter": "" },
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
       "hints": [],
-      "output": { "initial": "", "status": "" }
+      "output": {
+        "initial": "",
+        "status": ""
+      }
     }
   ]
 }

@@ -15,7 +15,8 @@ export type PartType =
   | "servo"
   | "motor"
   | "buzzer"
-  | "lcd";
+  | "lcd"
+  | "dht";
 
 export interface PlacedPart {
   id: string;
@@ -55,6 +56,7 @@ export interface SketchInfo {
   servoPins: number[];
   tonePins: number[];
   lcdPins: number[];
+  dhtPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -63,6 +65,7 @@ export interface WorldState {
   potValue: number; // 0-1023
   lightPct: number; // 0-100
   tempC: number; // -24..80
+  humidityPct: number; // 0..100 (DHT11)
   distanceCm: number; // 2..400
 }
 
@@ -79,6 +82,7 @@ export const PART_PINS: Record<PartType, string[]> = {
   motor: ["1", "2"],
   buzzer: ["1", "2"],
   lcd: ["VSS", "VDD", "V0", "RS", "RW", "E", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "A", "K"],
+  dht: ["VCC", "SDA", "NC", "GND"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -94,6 +98,7 @@ export const PART_LABELS: Record<PartType, string> = {
   motor: "DC Motor",
   buzzer: "Buzzer",
   lcd: "LCD 16x2",
+  dht: "DHT11 temp/humidity",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -330,6 +335,7 @@ export function validate(
     motor: ["1", "2"],
     buzzer: ["1", "2"],
     lcd: ["VSS", "VDD", "RS", "E", "D4", "D5", "D6", "D7"],
+    dht: ["VCC", "SDA", "GND"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -362,6 +368,7 @@ export function validate(
       ultrasonic: ["VCC", "GND"],
       servo: ["V+", "GND"],
       lcd: ["VDD", "VSS"],
+      dht: ["VCC", "GND"],
     };
     const pins = powered[p.type];
     if (pins) {
@@ -628,6 +635,17 @@ export function validate(
         if (isTerminalWired(lcd.id, "A", "lcd") && c.netOf(lcd.id, "A") !== c.v5)
           warn("circuit", `${lcd.id}: A is the backlight anode — wire it to 5V.`);
       }
+
+      // DHT11: the data (SDA) wire must go to the digital pin DHT dht(pin, DHT11)
+      for (const dht of c.partsByType("dht")) {
+        const dataPins = c.unoPinsOnNet(c.netOf(dht.id, "SDA")).filter((n) => n <= 13);
+        if (isTerminalWired(dht.id, "SDA", "dht") && !dataPins.length)
+          err("circuit", `${dht.id}: the SDA (data) pin must go to a digital pin so the Uno can read it.`);
+        if (dataPins.length && sketch.dhtPins.length && !sketch.dhtPins.includes(dataPins[0]))
+          err("both", `${dht.id}'s data line is on pin ${dataPins[0]}, but your code says DHT dht(${sketch.dhtPins.map(pinLabel).join(", ")}, ...). Match the pin numbers.`);
+      }
+      if (sketch.dhtPins.length && !c.partsByType("dht").length && required.includes("dht"))
+        err("circuit", "Your code creates a DHT sensor, but there's no DHT11 in the circuit yet.");
     }
   }
 
@@ -848,5 +866,20 @@ export class CircuitRuntime {
       return Math.round(this.world.distanceCm * 58);
     }
     return 0;
+  }
+
+  /** DHT11 reading: temp in °C or relative humidity %, if a powered sensor's
+   *  data line reaches this pin. NaN when unwired/unpowered (DHT returns NaN). */
+  dhtRead(pin: number, kind: "temp" | "humidity"): number {
+    const net = this.circuit.netOf("uno", pinLabel(pin));
+    for (const s of this.circuit.partsByType("dht")) {
+      if (this.circuit.netOf(s.id, "SDA") !== net) continue;
+      const powered =
+        this.circuit.netOf(s.id, "VCC") === this.circuit.v5 &&
+        this.circuit.netOf(s.id, "GND") === this.circuit.gnd;
+      if (!powered) return NaN;
+      return kind === "temp" ? this.world.tempC : this.world.humidityPct;
+    }
+    return NaN;
   }
 }

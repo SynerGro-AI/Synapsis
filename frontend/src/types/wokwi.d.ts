@@ -30,6 +30,7 @@ declare module "react/jsx-runtime" {
       "wokwi-hc-sr04": WokwiProps<{ distance?: number }>;
       "wokwi-servo": WokwiProps<{ angle?: number; horn?: string; hornColor?: string }>;
       "wokwi-buzzer": WokwiProps<{ hasSignal?: boolean }>;
+      "wokwi-dht22": WokwiProps;
       "wokwi-rgb-led": WokwiProps<{ ledRed?: number; ledGreen?: number; ledBlue?: number }>;
       "wokwi-lcd1602": WokwiProps<{
         characters?: Uint8Array;

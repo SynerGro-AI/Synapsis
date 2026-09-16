@@ -80,6 +80,7 @@ export default function App() {
   const [potValue, setPotValue] = useState(512);
   const [lightPct, setLightPct] = useState(70);
   const [tempC, setTempC] = useState(22);
+  const [humidityPct, setHumidityPct] = useState(50);
   const [distanceCm, setDistanceCm] = useState(50);
 
   const editorRef = useRef<CodeEditorHandle | null>(null);
@@ -91,11 +92,13 @@ export default function App() {
     potValue: 512,
     lightPct: 70,
     tempC: 22,
+    humidityPct: 50,
     distanceCm: 50,
   });
   worldRef.current.potValue = potValue;
   worldRef.current.lightPct = lightPct;
   worldRef.current.tempC = tempC;
+  worldRef.current.humidityPct = humidityPct;
   worldRef.current.distanceCm = distanceCm;
 
   // Piezo buzzer audio: play the highest active buzzer's pitch through a
@@ -325,6 +328,7 @@ export default function App() {
         digitalRead: (pin, mode) => rt.digitalRead(pin, mode),
         analogRead: (pin) => rt.analogRead(pin),
         pulseIn: (pin) => rt.pulseIn(pin),
+        dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
         serial: (line) => {
           setRanClean(true);
           setSerial((s) => [...s.slice(-30), line]);
@@ -586,12 +590,20 @@ export default function App() {
                     <code>{lightPct}%</code>
                   </label>
                 )}
-                {hasType("ntc") && (
+                {(hasType("ntc") || hasType("dht")) && (
                   <label>
                     Temp
                     <input type="range" min={-24} max={80} value={tempC}
                       onChange={(e) => setTempC(Number(e.target.value))} />
                     <code>{tempC}°C</code>
+                  </label>
+                )}
+                {hasType("dht") && (
+                  <label>
+                    Humidity
+                    <input type="range" min={0} max={100} value={humidityPct}
+                      onChange={(e) => setHumidityPct(Number(e.target.value))} />
+                    <code>{humidityPct}%</code>
                   </label>
                 )}
                 {hasType("ultrasonic") && (

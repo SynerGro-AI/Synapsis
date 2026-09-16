@@ -203,6 +203,22 @@
       "notes": "Power: VSS→GND, VDD→5V, V0 (contrast)→GND, RW→GND, backlight A→5V and K→GND. Signals: RS, E, D4–D7 → six digital pins matching LiquidCrystal(rs, en, d4, d5, d6, d7) in code.",
       "symbol": "kicad-symbols/WC1602A.kicad_sym",
       "terminals": "VSS, VDD, V0, RS, RW, E, D4–D7, A, K"
+    },
+    {
+      "id": "dht",
+      "name": "DHT11 Temperature & Humidity Sensor",
+      "category": "input",
+      "function": "Measures air temperature AND relative humidity, and reports both back over a single data wire. You talk to it through the DHT library: dht.readTemperature() gives degrees Celsius, dht.readHumidity() gives percent moisture in the air.",
+      "science": "Two sensing elements share one little blue package. Humidity is read by a capacitor whose plastic film soaks up water vapour — as the air gets damper the film holds more moisture, changing how much charge the capacitor stores. Temperature is read by a thermistor, a resistor whose resistance falls as it warms. A tiny chip inside measures both, converts them to digital numbers, and shoots them out on the single DATA pin as a precisely-timed train of pulses. That timing is far too fast and fussy to decode by hand, so you install the DHT library once and it does the bit-banging for you — you just call readTemperature() and readHumidity(). Because the sensor samples slowly, you should only ask it for a new reading about once per second.",
+      "specs": {
+        "type": "capacitive humidity + thermistor",
+        "tempRange": "0–50 °C, ±2 °C",
+        "humidityRange": "20–90 % RH, ±5 %",
+        "interface": "single-wire digital (proprietary 1-wire)",
+        "sampling": "≈1 reading per second"
+      },
+      "notes": "Wire VCC→5V, GND→GND, and DATA→any digital pin. In code: create the object with DHT dht(pin, DHT11); call dht.begin() once in setup(); then read with dht.readTemperature() and dht.readHumidity(). Don't poll faster than once a second or the readings go stale.",
+      "terminals": "VCC (5V), SDA/DATA (to a digital pin), NC (unused), GND"
     }
   ]
 }

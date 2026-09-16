@@ -9,6 +9,7 @@ export interface SimIO {
   digitalRead(pin: number, mode: string | undefined): number;
   analogRead(pin: number): number;
   pulseIn(pin: number): number;
+  dhtRead(pin: number, kind: "temp" | "humidity"): number;
   servoWrite(pin: number, angle: number): void;
   tone(pin: number, freq: number): void;
   noTone(pin: number): void;
@@ -103,7 +104,7 @@ interface Program {
 // ---------- Parser ----------
 
 const TYPE_KEYWORDS = ["int", "long", "float", "double", "bool", "byte", "unsigned"];
-const OBJECT_TYPES = ["Servo", "LiquidCrystal"];
+const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT"];
 
 class Parser {
   private pos = 0;
@@ -357,6 +358,8 @@ const CONSTANTS: Record<string, number> = {
   A3: 17,
   A4: 18,
   A5: 19,
+  DHT11: 11,
+  DHT22: 22,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -603,6 +606,17 @@ export class ArduinoSim {
             }
           }
         }
+        if (obj.type === "DHT") {
+          // DHT dht(pin, DHT11); — args[0] is the data pin.
+          switch (method) {
+            case "begin":
+              return 0;
+            case "readTemperature":
+              return io.dhtRead(obj.args[0], "temp");
+            case "readHumidity":
+              return io.dhtRead(obj.args[0], "humidity");
+          }
+        }
         throw new SimError(`'${objName}.${method}()' isn't supported yet`);
       }
     }
@@ -715,6 +729,7 @@ export interface SketchAnalysis {
   servoPins: number[];
   tonePins: number[];
   lcdPins: number[];
+  dhtPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -733,6 +748,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
     servoPins: [],
     tonePins: [],
     lcdPins: [],
+    dhtPins: [],
     pinModes: new Map(),
   };
 
@@ -822,6 +838,8 @@ export function analyzeSketch(code: string): SketchAnalysis {
             result.lcdPins = s.args
               .map(staticEval)
               .filter((v): v is number => v !== null);
+          else if (s.type === "DHT" && s.args.length)
+            addUnique(result.dhtPins, staticEval(s.args[0]));
           break;
         case "assign":
           visitExpr(s.expr);
