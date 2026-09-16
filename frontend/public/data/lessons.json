@@ -27,18 +27,39 @@
       "accent": "#5cc8ff"
     },
     {
+      "id": "nano",
+      "name": "Arduino Nano & Motion",
+      "icon": "🧭",
+      "blurb": "Point it, spin it, balance it. The Arduino Nano with a 9-axis IMU — accelerometers, gyros, sensor fusion, and PID control.",
+      "accent": "#f2a65a"
+    },
+    {
+      "id": "pi",
+      "name": "Raspberry Pi & Linux",
+      "icon": "🍓",
+      "blurb": "A whole Linux computer for the price of a sensor. Master the Pi's command line, then drive its GPIO pins with Python.",
+      "accent": "#d94f6a"
+    },
+    {
       "id": "python",
-      "name": "Python & Raspberry Pi",
+      "name": "Python & Data",
       "icon": "🐍",
-      "blurb": "Carry your electronics instincts into Python — same circuits, new language, on a Raspberry Pi.",
+      "blurb": "Bring your circuits into Python — a virtual 3D world, live data plots, and boards talking to each other over the network.",
       "accent": "#7fbf7f"
     },
     {
       "id": "ai",
-      "name": "AI & Machine Learning",
+      "name": "AI on the Edge",
       "icon": "🧠",
-      "blurb": "From sensors to smarts: teach your projects to see, classify, and decide.",
+      "blurb": "Give a Raspberry Pi eyes: py5 and OpenCV for vision, MediaPipe for hands and gestures, and neural nets running on-device.",
       "accent": "#c58cff"
+    },
+    {
+      "id": "compute",
+      "name": "Compute Hardware — CPU · GPU · NPU",
+      "icon": "🖥",
+      "blurb": "Open the black box. How a CPU runs your instructions one by one, how a GPU does thousands at once, and what an NPU adds for AI.",
+      "accent": "#8a9bb5"
     }
   ],
   "phases": [
@@ -64,25 +85,184 @@
       "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display"]
     },
     {
-      "id": "python_bridge",
-      "track": "python",
-      "name": "Python Bridge",
-      "range": "21-28",
-      "concepts": ["Python syntax", "Raspberry Pi crossover", "Circuit parity with Arduino"]
-    },
-    {
       "id": "expert",
       "track": "arduino",
       "name": "Expert",
       "range": "29+",
       "concepts": ["Wire gauge physics", "Signal calibration", "Interrupts", "I2C"]
     },
+
     {
       "id": "cli_basics",
       "track": "devsetup",
       "name": "Command Line Basics",
       "range": "101-104",
       "concepts": ["Navigation", "Files & folders", "Git version control", "Compilers & first program"]
+    },
+    {
+      "id": "shells",
+      "track": "devsetup",
+      "name": "Shells — PowerShell & Bash",
+      "range": "105-110",
+      "status": "coming-soon",
+      "concepts": ["PowerShell", "Bash", "Environment variables", "Scripting", "SSH"]
+    },
+    {
+      "id": "packages",
+      "track": "devsetup",
+      "name": "Package Managers",
+      "range": "111-116",
+      "status": "coming-soon",
+      "concepts": ["pip", "npm", "apt-get", "winget", "Virtual environments"]
+    },
+    {
+      "id": "toolchain",
+      "track": "devsetup",
+      "name": "Toolchain",
+      "range": "117-122",
+      "status": "coming-soon",
+      "concepts": ["Compilers", "Debuggers", "Editors & extensions", "Build tasks"]
+    },
+
+    {
+      "id": "motion_basics",
+      "track": "nano",
+      "name": "Motion Basics",
+      "range": "201-206",
+      "status": "coming-soon",
+      "concepts": ["BNO055 IMU", "Accelerometers", "Gyroscopes", "Reading raw data", "Calibration"]
+    },
+    {
+      "id": "sensor_fusion",
+      "track": "nano",
+      "name": "Sensor Fusion",
+      "range": "207-214",
+      "status": "coming-soon",
+      "concepts": ["Tilt from accel", "Low-pass filters", "Complementary filter", "Quaternions", "Tilt-compensated compass"]
+    },
+    {
+      "id": "nano_control",
+      "track": "nano",
+      "name": "Control Systems",
+      "range": "215-220",
+      "status": "coming-soon",
+      "concepts": ["Servo control", "Self-leveling platform", "Proportional control", "PID control"]
+    },
+
+    {
+      "id": "linux_cli",
+      "track": "pi",
+      "name": "Linux Command Line",
+      "range": "301-312",
+      "status": "coming-soon",
+      "concepts": ["Navigation", "nano editor", "Wildcards & redirection", "Pipes", "grep & find", "Permissions"]
+    },
+    {
+      "id": "pi_network",
+      "track": "pi",
+      "name": "Networking & Users",
+      "range": "313-320",
+      "status": "coming-soon",
+      "concepts": ["ifconfig / IP", "SSH login", "Users & admin", "SD-card backup"]
+    },
+    {
+      "id": "pi_gpio",
+      "track": "pi",
+      "name": "Python GPIO",
+      "range": "321-330",
+      "status": "coming-soon",
+      "concepts": ["Python on the Pi", "GPIO out", "PWM analog", "Servos", "Buttons & inputs"]
+    },
+    {
+      "id": "pi_projects",
+      "track": "pi",
+      "name": "Desktop & Projects",
+      "range": "331-338",
+      "status": "coming-soon",
+      "concepts": ["Graphical desktop", "Remote desktop", "IP camera", "Near-space project"]
+    },
+
+    {
+      "id": "vpython_world",
+      "track": "python",
+      "name": "A Virtual World",
+      "range": "401-406",
+      "status": "coming-soon",
+      "concepts": ["Arduino + Python setup", "VPython 3D", "Mirroring sensors", "Ultrasonic & color"]
+    },
+    {
+      "id": "python_plots",
+      "track": "python",
+      "name": "Data & Plots",
+      "range": "407-414",
+      "status": "coming-soon",
+      "concepts": ["pip & Matplotlib", "Live graphing", "Drawnow", "BMP180 pressure/temp"]
+    },
+    {
+      "id": "python_comms",
+      "track": "python",
+      "name": "Talking Between Machines",
+      "range": "415-420",
+      "status": "coming-soon",
+      "concepts": ["Xbee radios", "Serial streaming", "Ethernet client/server", "Sockets"]
+    },
+
+    {
+      "id": "vision_setup",
+      "track": "ai",
+      "name": "Give It Eyes",
+      "range": "501-508",
+      "status": "coming-soon",
+      "concepts": ["Raspberry Pi 5", "Camera setup", "py5 basics", "Displaying frames"]
+    },
+    {
+      "id": "opencv",
+      "track": "ai",
+      "name": "OpenCV",
+      "range": "509-518",
+      "status": "coming-soon",
+      "concepts": ["Image basics", "Color & thresholds", "Contours", "Face detection"]
+    },
+    {
+      "id": "mediapipe",
+      "track": "ai",
+      "name": "MediaPipe",
+      "range": "519-528",
+      "status": "coming-soon",
+      "concepts": ["Hand tracking", "Pose", "Face mesh", "Landmarks"]
+    },
+    {
+      "id": "edge_infer",
+      "track": "ai",
+      "name": "Inference on the Edge",
+      "range": "529-538",
+      "status": "coming-soon",
+      "concepts": ["Collecting training data", "Training a model", "Gesture recognition", "Running on-device"]
+    },
+
+    {
+      "id": "cpu",
+      "track": "compute",
+      "name": "The CPU",
+      "range": "601-608",
+      "status": "coming-soon",
+      "concepts": ["Instructions & opcodes", "Registers", "Memory & the stack", "Fetch-decode-execute"]
+    },
+    {
+      "id": "gpu",
+      "track": "compute",
+      "name": "The GPU",
+      "range": "609-616",
+      "status": "coming-soon",
+      "concepts": ["Parallelism", "SIMD lanes", "Threads & warps", "When parallel wins"]
+    },
+    {
+      "id": "npu",
+      "track": "compute",
+      "name": "The NPU",
+      "range": "617-624",
+      "status": "coming-soon",
+      "concepts": ["Tensors", "Matrix multiply", "Quantization", "Why AI needs new silicon"]
     }
   ],
 
