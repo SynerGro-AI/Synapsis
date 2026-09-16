@@ -10,7 +10,11 @@ export type PartType =
   | "pushbutton"
   | "photoresistor"
   | "ntc"
-  | "ultrasonic";
+  | "ultrasonic"
+  | "rgbled"
+  | "servo"
+  | "motor"
+  | "lcd";
 
 export interface PlacedPart {
   id: string;
@@ -45,7 +49,10 @@ export interface SketchInfo {
   digitalWrites: number[];
   digitalReads: number[];
   analogReads: number[];
+  analogWrites: number[];
   pulseIns: number[];
+  servoPins: number[];
+  lcdPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -65,6 +72,10 @@ export const PART_PINS: Record<PartType, string[]> = {
   photoresistor: ["VCC", "GND", "DO", "AO"],
   ntc: ["GND", "VCC", "OUT"],
   ultrasonic: ["VCC", "TRIG", "ECHO", "GND"],
+  rgbled: ["R", "COM", "G", "B"],
+  servo: ["GND", "V+", "PWM"],
+  motor: ["1", "2"],
+  lcd: ["VSS", "VDD", "V0", "RS", "RW", "E", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "A", "K"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -75,7 +86,13 @@ export const PART_LABELS: Record<PartType, string> = {
   photoresistor: "Light sensor",
   ntc: "Temp sensor",
   ultrasonic: "Ultrasonic",
+  rgbled: "RGB LED",
+  servo: "Servo",
+  motor: "DC Motor",
+  lcd: "LCD 16x2",
 };
+
+export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
 
 export const UNO_DIGITAL = Array.from({ length: 14 }, (_, i) => String(i));
 export const UNO_ANALOG = ["A0", "A1", "A2", "A3", "A4", "A5"];
@@ -304,6 +321,10 @@ export function validate(
     photoresistor: ["VCC", "GND", "AO"],
     ntc: ["VCC", "GND", "OUT"],
     ultrasonic: ["VCC", "TRIG", "ECHO", "GND"],
+    rgbled: ["COM"],
+    servo: ["GND", "V+", "PWM"],
+    motor: ["1", "2"],
+    lcd: ["VSS", "VDD", "RS", "E", "D4", "D5", "D6", "D7"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -334,14 +355,16 @@ export function validate(
       photoresistor: ["VCC", "GND"],
       ntc: ["VCC", "GND"],
       ultrasonic: ["VCC", "GND"],
+      servo: ["V+", "GND"],
+      lcd: ["VDD", "VSS"],
     };
     const pins = powered[p.type];
     if (pins) {
       const [vcc, gnd] = pins;
       if (isTerminalWired(p.id, vcc, p.type) && c.netOf(p.id, vcc) !== c.v5)
-        err("circuit", `${p.id}: VCC must be wired to the 5V pin — the sensor has no power.`);
+        err("circuit", `${p.id}: ${vcc} must be wired to the 5V pin — it has no power.`);
       if (isTerminalWired(p.id, gnd, p.type) && c.netOf(p.id, gnd) !== c.gnd)
-        err("circuit", `${p.id}: the sensor's GND must be wired to a GND pin to complete its circuit.`);
+        err("circuit", `${p.id}: ${gnd} must be wired to a GND pin to complete its circuit.`);
     }
     if (p.type === "potentiometer") {
       const vNet = c.netOf(p.id, "VCC");
@@ -383,6 +406,13 @@ export function validate(
     if (sketch.parseError) {
       err("code", `Sketch error: ${sketch.parseError}`);
     } else {
+      const writes = [...new Set([...sketch.digitalWrites, ...sketch.analogWrites])];
+
+      // analogWrite only works on PWM-capable pins
+      for (const pin of sketch.analogWrites)
+        if (pin <= 13 && !PWM_PINS.has(pin))
+          err("code", `analogWrite needs a PWM pin — on the Uno those are 3, 5, 6, 9, 10, 11 (marked ~). Pin ${pinLabel(pin)} can't do PWM; digitalWrite would only give full on/off.`);
+
       // digitalWrite pins vs LED wiring
       const leds = c.partsByType("led");
       for (const led of leds) {
@@ -390,8 +420,8 @@ export function validate(
         const p = ledPath(c, led.id, allHigh, new Set(), true);
         if (p && typeof p.sourcePin === "number") {
           const wanted = p.sourcePin;
-          if (sketch.digitalWrites.length && !sketch.digitalWrites.includes(wanted))
-            err("both", `${led.id} is wired to pin ${wanted}, but your code writes pin ${sketch.digitalWrites.map(pinLabel).join(", ")}. Match them: move the wire or change the code.`);
+          if (writes.length && !writes.includes(wanted))
+            err("both", `${led.id} is wired to pin ${wanted}, but your code writes pin ${writes.map(pinLabel).join(", ")}. Match them: move the wire or change the code.`);
           if (sketch.digitalWrites.includes(wanted) && sketch.pinModes.get(wanted) !== "OUTPUT")
             err("code", `Pin ${wanted} drives the LED but is never set as an output — add pinMode(${wanted}, OUTPUT); in setup().`);
         }
@@ -469,6 +499,100 @@ export function validate(
       for (const sonar of c.partsByType("ultrasonic"))
         if (!sketch.pulseIns.length && sketch.digitalWrites.length)
           warn("code", `The ${sonar.id} sensor needs pulseIn(echoPin, HIGH) in your code to time the echo.`);
+
+      // RGB LED: common cathode to GND, each used leg to a PWM pin
+      for (const rgb of c.partsByType("rgbled")) {
+        if (isTerminalWired(rgb.id, "COM", "rgbled") && c.netOf(rgb.id, "COM") !== c.gnd)
+          err("circuit", `${rgb.id}: COM is the common cathode — wire it to GND so all three colors share a return path.`);
+        const legs: [string, string][] = [["R", "red"], ["G", "green"], ["B", "blue"]];
+        const isDigitalPin = (t: Terminal) =>
+          t.part === "uno" && (pinNumber(t.pin) ?? 99) <= 13;
+        let anyLeg = false;
+        for (const [leg, color] of legs) {
+          if (!isTerminalWired(rgb.id, leg, "rgbled")) continue;
+          anyLeg = true;
+          const trace = tracePath(c, { part: rgb.id, pin: leg }, isDigitalPin, new Set(), true);
+          if (!trace)
+            err("circuit", `${rgb.id}: the ${color} leg (${leg}) must reach a digital pin (directly or through a 220Ω resistor).`);
+          else {
+            const pin = pinNumber(trace.goal.pin)!;
+            if (!PWM_PINS.has(pin))
+              warn("circuit", `${rgb.id}: the ${color} leg is on pin ${pin}, which has no PWM (~) — you'll only get full on/off for that color.`);
+            else if (writes.length && !writes.includes(pin))
+              warn("both", `${rgb.id}: the ${color} leg is wired to pin ${pin} but your code never writes that pin.`);
+          }
+        }
+        if (!anyLeg)
+          err("circuit", `${rgb.id}: wire at least one color leg (R, G, or B) to a PWM pin.`);
+      }
+
+      // Servo: signal pin must match myServo.attach(pin)
+      for (const servo of c.partsByType("servo")) {
+        const sigPins = c.unoPinsOnNet(c.netOf(servo.id, "PWM")).filter((n) => n <= 13);
+        if (isTerminalWired(servo.id, "PWM", "servo") && !sigPins.length)
+          err("circuit", `${servo.id}: the PWM (signal) wire must go to a digital pin.`);
+        if (sigPins.length && sketch.servoPins.length && !sketch.servoPins.includes(sigPins[0]))
+          err("both", `${servo.id}'s signal is on pin ${sigPins[0]}, but your code attaches pin ${sketch.servoPins.map(pinLabel).join(", ")} — the pulses go to the wrong wire.`);
+      }
+      if (sketch.servoPins.length && !c.partsByType("servo").length && required.includes("servo"))
+        err("circuit", "Your code attaches a servo, but there's no servo in the circuit yet.");
+
+      // DC motor: one side driven, other side to GND — plus the real-world caveat
+      for (const motor of c.partsByType("motor")) {
+        const net1 = c.netOf(motor.id, "1");
+        const net2 = c.netOf(motor.id, "2");
+        if (!isTerminalWired(motor.id, "1", "motor") || !isTerminalWired(motor.id, "2", "motor"))
+          continue; // floating already reported
+        const side1Pins = c.unoPinsOnNet(net1).filter((n) => n <= 13);
+        const side2Pins = c.unoPinsOnNet(net2).filter((n) => n <= 13);
+        const driven = side1Pins.length || net1 === c.v5 ? 1 : side2Pins.length || net2 === c.v5 ? 2 : 0;
+        const grounded = net2 === c.gnd ? 2 : net1 === c.gnd ? 1 : 0;
+        if (!driven || !grounded || driven === grounded)
+          err("circuit", `${motor.id}: one terminal needs a driven pin (or 5V) and the other needs GND — current must flow THROUGH the motor.`);
+        else {
+          const drivePin = driven === 1 ? side1Pins[0] : side2Pins[0];
+          if (drivePin !== undefined && writes.length && !writes.includes(drivePin))
+            err("both", `${motor.id} is wired to pin ${drivePin}, but your code writes pin ${writes.map(pinLabel).join(", ")}.`);
+          if (drivePin !== undefined && sketch.analogWrites.includes(drivePin) && !PWM_PINS.has(drivePin))
+            err("code", `Pin ${drivePin} has no PWM — speed control needs a ~ pin (3, 5, 6, 9, 10, 11).`);
+          out.push({
+            level: "info",
+            source: "circuit",
+            message: `${motor.id}: in a real build, a bare Uno pin can't supply motor current — you'd add a transistor driver and a flyback diode. The simulator forgives it so you can learn the code.`,
+          });
+        }
+      }
+
+      // LCD: signal wires must match LiquidCrystal(rs, en, d4, d5, d6, d7)
+      for (const lcd of c.partsByType("lcd")) {
+        const signals: [string, number][] = [
+          ["RS", 0],
+          ["E", 1],
+          ["D4", 2],
+          ["D5", 3],
+          ["D6", 4],
+          ["D7", 5],
+        ];
+        if (sketch.lcdPins.length === 6) {
+          for (const [pinName, idx] of signals) {
+            if (!isTerminalWired(lcd.id, pinName, "lcd")) continue; // floating already reported
+            const actual = c.unoPinsOnNet(c.netOf(lcd.id, pinName)).filter((n) => n <= 13);
+            const expected = sketch.lcdPins[idx];
+            if (!actual.length)
+              err("circuit", `${lcd.id}: ${pinName} must go to a digital pin (your code expects pin ${expected}).`);
+            else if (actual[0] !== expected)
+              err("both", `${lcd.id}: ${pinName} is wired to pin ${actual[0]}, but LiquidCrystal(...) says pin ${expected}. The display can't decode scrambled wiring.`);
+          }
+        }
+        if (isTerminalWired(lcd.id, "RW", "lcd") && c.netOf(lcd.id, "RW") !== c.gnd)
+          warn("circuit", `${lcd.id}: tie RW to GND — we only ever WRITE to the display.`);
+        if (isTerminalWired(lcd.id, "V0", "lcd") && c.netOf(lcd.id, "V0") !== c.gnd)
+          warn("circuit", `${lcd.id}: V0 sets contrast — GND gives maximum contrast (a potentiometer would let you adjust it).`);
+        if (isTerminalWired(lcd.id, "K", "lcd") && c.netOf(lcd.id, "K") !== c.gnd)
+          warn("circuit", `${lcd.id}: K is the backlight cathode — wire it to GND.`);
+        if (isTerminalWired(lcd.id, "A", "lcd") && c.netOf(lcd.id, "A") !== c.v5)
+          warn("circuit", `${lcd.id}: A is the backlight anode — wire it to 5V.`);
+      }
     }
   }
 
@@ -486,32 +610,136 @@ export function validate(
 
 // ---------- Runtime bridge for the simulator ----------
 
+export interface CircuitOutputs {
+  /** LED id -> brightness 0..1 (only LEDs with a valid conductive path) */
+  led: Map<string, number>;
+  /** wire index -> current direction (true = stored from->to order) */
+  current: Map<number, boolean>;
+  /** RGB LED id -> channel levels 0..1 */
+  rgb: Map<string, { r: number; g: number; b: number }>;
+  /** servo id -> angle 0..180 */
+  servo: Map<string, number>;
+  /** motor id -> speed 0..1 */
+  motor: Map<string, number>;
+  /** 16x2 text (two lines) when a powered LCD is present */
+  lcd: { lines: [string, string] } | null;
+}
+
 export class CircuitRuntime {
   private circuit: Circuit;
   private world: WorldState;
-  private highPins = new Set<number>();
+  private duties = new Map<number, number>();
+  private servoByPin = new Map<number, number>();
+  private lcdLines: [string, string] = ["", ""];
+  private lcdCursor = { x: 0, y: 0 };
+  private lcdUsed = false;
+
   constructor(state: CircuitState, world: WorldState) {
     this.circuit = new Circuit(state);
     this.world = world;
   }
 
   setPin(pin: number, high: boolean): void {
-    if (high) this.highPins.add(pin);
-    else this.highPins.delete(pin);
+    this.duties.set(pin, high ? 255 : 0);
   }
 
-  /** Which LEDs are lit right now, and the wires carrying current. */
-  outputs(): { lit: Set<string>; current: Map<number, boolean> } {
-    const lit = new Set<string>();
-    const current = new Map<number, boolean>(); // wire index -> forward?
-    for (const led of this.circuit.partsByType("led")) {
-      const p = ledPath(this.circuit, led.id, this.highPins, this.world.pressed, false);
+  setDuty(pin: number, duty: number): void {
+    this.duties.set(pin, duty);
+  }
+
+  servoWrite(pin: number, angle: number): void {
+    this.servoByPin.set(pin, angle);
+  }
+
+  lcdOp(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void {
+    this.lcdUsed = true;
+    if (op === "clear") {
+      this.lcdLines = ["", ""];
+      this.lcdCursor = { x: 0, y: 0 };
+    } else if (op === "setCursor") {
+      this.lcdCursor = { x: Number(a) || 0, y: Number(b) || 0 };
+    } else if (op === "print") {
+      const row = Math.min(1, Math.max(0, this.lcdCursor.y));
+      const text = String(a ?? "");
+      const line = this.lcdLines[row].padEnd(this.lcdCursor.x, " ");
+      this.lcdLines[row] = (
+        line.slice(0, this.lcdCursor.x) + text + line.slice(this.lcdCursor.x + text.length)
+      ).slice(0, 16);
+      this.lcdCursor.x += text.length;
+    }
+  }
+
+  private get highPins(): Set<number> {
+    const set = new Set<number>();
+    for (const [pin, duty] of this.duties) if (duty > 0) set.add(pin);
+    return set;
+  }
+
+  private dutyLevel(pin: number | "5V" | null): number {
+    if (pin === "5V") return 1;
+    if (pin === null) return 0;
+    return (this.duties.get(pin) ?? 0) / 255;
+  }
+
+  outputs(): CircuitOutputs {
+    const led = new Map<string, number>();
+    const current = new Map<number, boolean>();
+    const high = this.highPins;
+
+    for (const part of this.circuit.partsByType("led")) {
+      const p = ledPath(this.circuit, part.id, high, this.world.pressed, false);
       if (p && p.resistors > 0) {
-        lit.add(led.id);
+        led.set(part.id, this.dutyLevel(p.sourcePin));
         for (const w of p.wires) current.set(w.index, w.forward);
       }
     }
-    return { lit, current };
+
+    const rgb = new Map<string, { r: number; g: number; b: number }>();
+    const isDriven = (t: Terminal) =>
+      t.part === "uno" && (pinNumber(t.pin) ?? 99) <= 13 && high.has(pinNumber(t.pin)!);
+    for (const part of this.circuit.partsByType("rgbled")) {
+      if (this.circuit.netOf(part.id, "COM") !== this.circuit.gnd) continue;
+      const level = (leg: string) => {
+        const trace = tracePath(this.circuit, { part: part.id, pin: leg }, isDriven, this.world.pressed, false);
+        if (!trace) return 0;
+        for (const w of trace.wires) current.set(w.index, !w.forward);
+        return this.dutyLevel(pinNumber(trace.goal.pin));
+      };
+      const channels = { r: level("R"), g: level("G"), b: level("B") };
+      if (channels.r || channels.g || channels.b) rgb.set(part.id, channels);
+    }
+
+    const servo = new Map<string, number>();
+    for (const part of this.circuit.partsByType("servo")) {
+      const net = this.circuit.netOf(part.id, "PWM");
+      for (const [pin, angle] of this.servoByPin)
+        if (this.circuit.netOf("uno", pinLabel(pin)) === net) servo.set(part.id, angle);
+    }
+
+    const motor = new Map<string, number>();
+    for (const part of this.circuit.partsByType("motor")) {
+      const net1 = this.circuit.netOf(part.id, "1");
+      const net2 = this.circuit.netOf(part.id, "2");
+      const speedOf = (driveNet: string, gndNet: string): number | null => {
+        if (gndNet !== this.circuit.gnd) return null;
+        if (driveNet === this.circuit.v5) return 1;
+        const pins = this.circuit.unoPinsOnNet(driveNet).filter((n) => n <= 13);
+        if (!pins.length) return null;
+        return (this.duties.get(pins[0]) ?? 0) / 255;
+      };
+      const speed = speedOf(net1, net2) ?? speedOf(net2, net1);
+      if (speed !== null && speed > 0) motor.set(part.id, speed);
+    }
+
+    let lcd: CircuitOutputs["lcd"] = null;
+    for (const part of this.circuit.partsByType("lcd")) {
+      const powered =
+        this.circuit.netOf(part.id, "VDD") === this.circuit.v5 &&
+        this.circuit.netOf(part.id, "VSS") === this.circuit.gnd;
+      if (powered && this.lcdUsed) lcd = { lines: [...this.lcdLines] as [string, string] };
+    }
+
+    return { led, current, rgb, servo, motor, lcd };
   }
 
   digitalRead(pin: number, mode: string | undefined): number {

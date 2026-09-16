@@ -609,6 +609,12 @@
   letter-spacing: 0;
 }
 
+@keyframes motor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .schematic {
   margin: 4px 10px;
   padding: 8px;

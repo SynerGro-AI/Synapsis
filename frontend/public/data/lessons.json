@@ -343,6 +343,211 @@
         "digitalWrite(ledPin, LOW);"
       ],
       "output": { "initial": "Alarm armed", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 13,
+      "phase": "control",
+      "title": "PWM — Dimming an LED",
+      "description": "analogWrite() pulses a pin faster than the eye can see — the duty cycle becomes brightness. Fade the LED up and down with for loops.",
+      "source": "Paul McWhorter, Arduino analogWrite/PWM tutorials — toptechboy.com",
+      "featuredComponent": "led",
+      "circuit": {
+        "palette": ["led", "resistor"],
+        "required": ["led", "resistor"],
+        "notes": "Same LED circuit, but on a PWM pin: pin 9 (~) → resistor → LED anode, cathode → GND."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 9;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  // Fade up from 0 to 255, then back down\n}"
+      },
+      "hints": [
+        "for (int brightness = 0; brightness <= 255; brightness += 5) {",
+        "analogWrite(ledPin, brightness);\ndelay(20);\n}",
+        "for (int brightness = 255; brightness >= 0; brightness -= 5) {",
+        "analogWrite(ledPin, brightness);\ndelay(20);\n}"
+      ],
+      "output": { "initial": "PIN 9 duty 0", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 14,
+      "phase": "control",
+      "title": "RGB LED — Mixing Colors",
+      "description": "Three PWM channels, 16.7 million colors. Drive the red, green, and blue legs with analogWrite() and mix your own color.",
+      "source": "Paul McWhorter, Arduino RGB LED tutorials — toptechboy.com",
+      "featuredComponent": "rgbled",
+      "circuit": {
+        "palette": ["rgbled", "resistor"],
+        "required": ["rgbled"],
+        "notes": "COM (longest leg) → GND. R leg → pin 9, G leg → pin 10, B leg → pin 11 (all PWM ~). Real builds put a 220Ω on each leg."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int redPin = 9;\nint greenPin = 10;\nint bluePin = 11;\n\nvoid setup() {\n  pinMode(redPin, OUTPUT);\n  pinMode(greenPin, OUTPUT);\n  pinMode(bluePin, OUTPUT);\n}\n\nvoid loop() {\n  // Mix a color: 0-255 per channel. Try orange: 255, 100, 0\n}"
+      },
+      "hints": [
+        "analogWrite(redPin, 255);",
+        "analogWrite(greenPin, 100);",
+        "analogWrite(bluePin, 0);",
+        "delay(500);"
+      ],
+      "output": { "initial": "RGB idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 15,
+      "phase": "control",
+      "title": "Servo — Sweep",
+      "description": "A servo moves to the exact angle you command. Include the Servo library, attach pin 9, and sweep the horn from 0° to 180° and back.",
+      "source": "Paul McWhorter, Arduino servo tutorials — toptechboy.com",
+      "featuredComponent": "servo",
+      "circuit": {
+        "palette": ["servo"],
+        "required": ["servo"],
+        "notes": "Servo wiring: GND → GND, V+ → 5V, PWM (signal) → pin 9."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "// The Servo library turns angles into control pulses\n\nvoid setup() {\n  // Attach the servo to pin 9\n}\n\nvoid loop() {\n  // Sweep 0 -> 180 and back\n}"
+      },
+      "hints": [
+        "#include <Servo.h>",
+        "Servo myServo;",
+        "myServo.attach(9);",
+        "for (int angle = 0; angle <= 180; angle += 2) {",
+        "myServo.write(angle);\ndelay(15);\n}",
+        "for (int angle = 180; angle >= 0; angle -= 2) {"
+      ],
+      "output": { "initial": "Servo at 0°", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 16,
+      "phase": "control",
+      "title": "Servo + Potentiometer — Steering",
+      "description": "Close the loop with your own hand: map the pot's 0–1023 onto 0–180° and the servo horn follows the knob.",
+      "source": "Paul McWhorter, Arduino servo knob tutorials — toptechboy.com",
+      "featuredComponent": "servo",
+      "circuit": {
+        "palette": ["servo", "potentiometer"],
+        "required": ["servo", "potentiometer"],
+        "notes": "Servo: GND→GND, V+→5V, PWM→pin 9. Pot: VCC→5V, GND→GND, SIG→A0."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Servo.h>\n\nServo myServo;\n\nvoid setup() {\n  myServo.attach(9);\n}\n\nvoid loop() {\n  // Read the pot, map it to an angle, write it to the servo\n}"
+      },
+      "hints": [
+        "int value = analogRead(A0);",
+        "int angle = map(value, 0, 1023, 0, 180);",
+        "myServo.write(angle);",
+        "delay(20);"
+      ],
+      "output": { "initial": "Servo at 0°", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 17,
+      "phase": "control",
+      "title": "DC Motor — Fan Speed",
+      "description": "PWM sets the motor's average voltage, and average voltage is speed. The pot becomes a fan-speed dial.",
+      "source": "Paul McWhorter, Arduino DC motor tutorials — toptechboy.com",
+      "featuredComponent": "motor",
+      "circuit": {
+        "palette": ["motor", "potentiometer"],
+        "required": ["motor", "potentiometer"],
+        "notes": "Motor: terminal 1 → pin 9 (~), terminal 2 → GND. Pot: VCC→5V, GND→GND, SIG→A0. (Real builds add a transistor driver + flyback diode.)"
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int motorPin = 9;\n\nvoid setup() {\n  pinMode(motorPin, OUTPUT);\n}\n\nvoid loop() {\n  // Read the pot and use it as motor speed 0-255\n}"
+      },
+      "hints": [
+        "int value = analogRead(A0);",
+        "int speed = map(value, 0, 1023, 0, 255);",
+        "analogWrite(motorPin, speed);",
+        "delay(20);"
+      ],
+      "output": { "initial": "Motor stopped", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 18,
+      "phase": "control",
+      "title": "LCD — Hello, World!",
+      "description": "Ten wires and your project can talk. Wire the 16×2 display and print text plus a live seconds counter.",
+      "source": "Paul McWhorter, Arduino LCD tutorials — toptechboy.com",
+      "featuredComponent": "lcd",
+      "circuit": {
+        "palette": ["lcd"],
+        "required": ["lcd"],
+        "notes": "Power: VSS→GND, VDD→5V, V0→GND, RW→GND, A→5V, K→GND. Signals: RS→12, E→11, D4→5, D5→4, D6→3, D7→2."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "// LiquidCrystal(rs, en, d4, d5, d6, d7)\n\nvoid setup() {\n  // Start the display and print a greeting\n}\n\nvoid loop() {\n  // Show seconds since start on line 2\n}"
+      },
+      "hints": [
+        "#include <LiquidCrystal.h>",
+        "LiquidCrystal lcd(12, 11, 5, 4, 3, 2);",
+        "lcd.begin(16, 2);",
+        "lcd.print(\"Hello, world!\");",
+        "lcd.setCursor(0, 1);\nlcd.print(millis() / 1000);"
+      ],
+      "output": { "initial": "LCD blank", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 19,
+      "phase": "control",
+      "title": "LCD Thermometer",
+      "description": "Combine the temp sensor with the display: a self-contained instrument that shows °C with no computer attached.",
+      "source": "Paul McWhorter, Arduino LCD + sensor tutorials — toptechboy.com",
+      "featuredComponent": "lcd",
+      "circuit": {
+        "palette": ["lcd", "ntc"],
+        "required": ["lcd", "ntc"],
+        "notes": "LCD wired as in Lesson 18 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2). Temp sensor: VCC→5V, GND→GND, OUT→A0."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <LiquidCrystal.h>\n\nLiquidCrystal lcd(12, 11, 5, 4, 3, 2);\n\nvoid setup() {\n  lcd.begin(16, 2);\n  lcd.print(\"Temp:\");\n}\n\nvoid loop() {\n  // Read A0, map to degrees C, print at column 6\n}"
+      },
+      "hints": [
+        "int raw = analogRead(A0);",
+        "int tempC = map(raw, 0, 1023, -24, 80);",
+        "lcd.setCursor(6, 0);",
+        "lcd.print(tempC);\nlcd.print(\" C \");",
+        "delay(500);"
+      ],
+      "output": { "initial": "Thermometer idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 20,
+      "phase": "control",
+      "title": "Capstone — Parking Radar",
+      "description": "Everything at once: sonar measures distance, the LCD reports it, and the RGB LED glows green → amber → red as you get close.",
+      "source": "Paul McWhorter, Arduino capstone-style projects — toptechboy.com",
+      "featuredComponent": "ultrasonic",
+      "circuit": {
+        "palette": ["ultrasonic", "lcd", "rgbled"],
+        "required": ["ultrasonic", "lcd", "rgbled"],
+        "notes": "Sonar: TRIG→8, ECHO→10. LCD: RS→12, E→11, D4→7, D5→6, D6→4, D7→2. RGB: R leg→3, G leg→5, COM→GND."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <LiquidCrystal.h>\n\nLiquidCrystal lcd(12, 11, 7, 6, 4, 2);\nint trigPin = 8;\nint echoPin = 10;\n\nvoid setup() {\n  lcd.begin(16, 2);\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  int cm = pulseIn(echoPin, HIGH) / 58;\n  // Show cm on the LCD, then color the RGB by distance\n}"
+      },
+      "hints": [
+        "lcd.setCursor(0, 0);\nlcd.print(\"Dist: \");\nlcd.print(cm);\nlcd.print(\" cm  \");",
+        "if (cm < 15) {\n  analogWrite(3, 255);\n  analogWrite(5, 0);",
+        "} else if (cm < 40) {\n  analogWrite(3, 255);\n  analogWrite(5, 120);",
+        "} else {\n  analogWrite(3, 0);\n  analogWrite(5, 255);\n}",
+        "delay(200);"
+      ],
+      "output": { "initial": "Radar idle", "status": "Waiting for sketch..." }
     }
   ]
 }

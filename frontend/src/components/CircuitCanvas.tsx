@@ -16,6 +16,10 @@ const SCALE: Record<string, number> = {
   photoresistor: 0.85,
   ntc: 0.85,
   ultrasonic: 0.7,
+  rgbled: 1.2,
+  servo: 0.75,
+  motor: 1,
+  lcd: 0.75,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -26,7 +30,61 @@ const ID_PREFIX: Record<PartType, string> = {
   photoresistor: "LDR",
   ntc: "TMP",
   ultrasonic: "SONAR",
+  rgbled: "RGB",
+  servo: "SERVO",
+  motor: "MOTOR",
+  lcd: "LCD",
 };
+
+/** Custom parts without wokwi elements provide their own pin anchors. */
+const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
+  motor: [
+    { name: "1", x: 14, y: 66 },
+    { name: "2", x: 50, y: 66 },
+  ],
+};
+
+/** Simple DC motor visual: a can with a fan that spins at PWM speed. */
+function MotorVisual({ speed }: { speed: number }) {
+  return (
+    <svg width="64" height="70" viewBox="0 0 64 70">
+      <circle cx="32" cy="32" r="28" fill="#8a8a8a" stroke="#555" strokeWidth="2" />
+      <circle cx="32" cy="32" r="9" fill="#444" />
+      <g
+        style={{
+          transformOrigin: "32px 32px",
+          animation: speed > 0 ? `motor-spin ${Math.max(0.15, 1.3 - speed * 1.15)}s linear infinite` : "none",
+        }}
+      >
+        {[0, 120, 240].map((deg) => (
+          <ellipse
+            key={deg}
+            cx="32"
+            cy="15"
+            rx="6"
+            ry="14"
+            fill="#d8d2c0"
+            stroke="#777"
+            transform={`rotate(${deg} 32 32)`}
+          />
+        ))}
+      </g>
+      <rect x="10" y="60" width="8" height="10" fill="#c0392b" />
+      <rect x="46" y="60" width="8" height="10" fill="#2c3e50" />
+    </svg>
+  );
+}
+
+/** 16x2 character buffer for the wokwi LCD element. */
+function lcdCharacters(lines: [string, string]): Uint8Array {
+  const buf = new Uint8Array(32).fill(32);
+  for (let row = 0; row < 2; row++)
+    for (let col = 0; col < 16; col++) {
+      const ch = lines[row]?.charCodeAt(col);
+      if (ch && ch < 256) buf[row * 16 + col] = ch;
+    }
+  return buf;
+}
 
 interface PinAnchor {
   x: number;
@@ -44,8 +102,13 @@ interface CircuitCanvasProps {
   palette: PartType[];
   circuit: CircuitState;
   onCircuitChange: (next: CircuitState) => void;
-  litLeds: Set<string>;
+  /** LED id -> brightness 0..1 */
+  ledLevels: Map<string, number>;
   currentWires: Map<number, boolean>;
+  rgbLevels: Map<string, { r: number; g: number; b: number }>;
+  servoAngles: Map<string, number>;
+  motorSpeeds: Map<string, number>;
+  lcdLines: [string, string] | null;
   selected: string | null;
   onSelect: (partId: string | null) => void;
   onButtonChange: (partId: string, pressed: boolean) => void;
@@ -58,8 +121,12 @@ export default function CircuitCanvas({
   palette,
   circuit,
   onCircuitChange,
-  litLeds,
+  ledLevels,
   currentWires,
+  rgbLevels,
+  servoAngles,
+  motorSpeeds,
+  lcdLines,
   selected,
   onSelect,
   onButtonChange,
@@ -84,7 +151,9 @@ export default function CircuitCanvas({
     container.querySelectorAll<HTMLElement>("[data-part-id]").forEach((wrapper) => {
       const id = wrapper.dataset.partId!;
       const el = wrapper.firstElementChild as (HTMLElement & { pinInfo?: WokwiPinInfo[] }) | null;
-      const pinInfo = el?.pinInfo;
+      let pinInfo = el?.pinInfo;
+      if (!pinInfo || !pinInfo.length)
+        pinInfo = FALLBACK_PINS[wrapper.dataset.partType as PartType];
       if (!pinInfo || !pinInfo.length) {
         missing = true;
         return;
@@ -336,10 +405,12 @@ export default function CircuitCanvas({
   const renderPart = (id: string, type: PartType | "uno", x: number, y: number) => {
     const scale = SCALE[type] ?? 1;
     const isSelected = selected === id;
+    const rgb = rgbLevels.get(id);
     return (
       <div
         key={id}
         data-part-id={id}
+        data-part-type={type}
         data-scale={scale}
         draggable={false}
         className={`part${isSelected ? " selected" : ""}`}
@@ -347,13 +418,32 @@ export default function CircuitCanvas({
         onPointerDown={(e) => onPartPointerDown(e, id)}
       >
         {type === "uno" && <wokwi-arduino-uno led13={boardLed} ledPower={true} />}
-        {type === "led" && <wokwi-led color="red" value={litLeds.has(id)} label={id} />}
+        {type === "led" && (
+          <wokwi-led
+            color="red"
+            value={(ledLevels.get(id) ?? 0) > 0}
+            brightness={ledLevels.get(id) ?? 0}
+            label={id}
+          />
+        )}
         {type === "resistor" && <wokwi-resistor value="220" />}
         {type === "potentiometer" && <wokwi-potentiometer />}
         {type === "pushbutton" && <wokwi-pushbutton color="green" />}
         {type === "photoresistor" && <wokwi-photoresistor-sensor />}
         {type === "ntc" && <wokwi-ntc-temperature-sensor />}
         {type === "ultrasonic" && <wokwi-hc-sr04 />}
+        {type === "rgbled" && (
+          <wokwi-rgb-led ledRed={rgb?.r ?? 0} ledGreen={rgb?.g ?? 0} ledBlue={rgb?.b ?? 0} />
+        )}
+        {type === "servo" && <wokwi-servo angle={servoAngles.get(id) ?? 0} />}
+        {type === "motor" && <MotorVisual speed={motorSpeeds.get(id) ?? 0} />}
+        {type === "lcd" && (
+          <wokwi-lcd1602
+            pins="full"
+            backlight={true}
+            characters={lcdCharacters(lcdLines ?? ["", ""])}
+          />
+        )}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

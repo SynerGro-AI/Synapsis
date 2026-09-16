@@ -124,6 +124,70 @@
       },
       "notes": "Wire VCC to 5V, GND to GND, TRIG to a digital output pin, ECHO to a digital input pin. Code: pulse TRIG high for 10µs, then pulseIn(echoPin, HIGH) returns the round-trip microseconds.",
       "terminals": "VCC, TRIG, ECHO, GND"
+    },
+    {
+      "id": "rgbled",
+      "name": "RGB LED (common cathode)",
+      "category": "output",
+      "function": "Three LEDs in one package — red, green, and blue. Mix their brightnesses with PWM and you can make any color.",
+      "science": "Your eye has three kinds of color receptors (cones), roughly tuned to red, green, and blue light. The RGB LED exploits that: it can't make yellow light, but red + green photons hitting your eye together are indistinguishable from true yellow. PWM sets each channel's average brightness: analogWrite(pin, 128) pulses the LED on/off 490 times a second — far too fast to see — so your eye averages it to half brightness. 256 levels × 3 channels = 16.7 million colors, the same math as a screen pixel.",
+      "specs": {
+        "type": "common cathode (shared −)",
+        "forwardVoltage": "red ~2.0V, green/blue ~3.0V",
+        "maxCurrent": "20mA per channel",
+        "resistorNeeded": "220Ω per color leg"
+      },
+      "notes": "COM (the longest leg) goes to GND. Each color leg goes through its own resistor to a PWM pin (~3, 5, 6, 9, 10, 11). analogWrite each leg 0–255 to mix colors.",
+      "symbol": "kicad-symbols/LED_RGB.kicad_sym",
+      "terminals": "R, COM (cathode −), G, B"
+    },
+    {
+      "id": "servo",
+      "name": "Micro Servo (SG90)",
+      "category": "output",
+      "function": "A motor that moves to the exact angle you ask for, 0–180°, and holds it. Robots, steering, and camera mounts are built from these.",
+      "science": "Inside is a DC motor, a gearbox, a potentiometer, and a control circuit — a complete feedback loop. The pot measures the horn's current angle; the circuit compares it to the angle you requested and drives the motor until they match. That is closed-loop control, the core idea of robotics. Your request arrives as a pulse every 20ms: a 1ms pulse means 0°, 2ms means 180°. The Servo library generates those pulses for you — servo.write(90) sends 1.5ms pulses.",
+      "specs": {
+        "range": "0–180°",
+        "torque": "~1.8 kg·cm",
+        "pulse": "1–2ms every 20ms (50Hz)",
+        "current": "100–250mA under load"
+      },
+      "notes": "Brown/black wire → GND, red → 5V, orange/yellow (signal) → any digital pin. In code: #include <Servo.h>, myServo.attach(pin), myServo.write(angle).",
+      "symbol": "kicad-symbols/Motor_Servo.kicad_sym",
+      "terminals": "GND, V+ (5V), PWM (signal)"
+    },
+    {
+      "id": "motor",
+      "name": "DC Motor",
+      "category": "output",
+      "function": "Spins continuously — fans, wheels, pumps. Speed follows the average voltage you give it, which is exactly what PWM provides.",
+      "science": "Current through the motor's coil creates a magnetic field that pushes against permanent magnets, spinning the shaft; a commutator flips the current direction every half turn so the push never stops. Physics to respect: a motor is mostly wire, so it draws FAR more current than an Arduino pin's 40mA limit — real builds put a transistor between pin and motor as an electronic valve. And when a spinning motor is switched off, its collapsing magnetic field generates a reverse voltage spike (back-EMF) — a flyback diode across the motor absorbs it. The simulator forgives both so you can focus on the code.",
+      "specs": {
+        "type": "brushed DC",
+        "voltage": "3–6V",
+        "stallCurrent": "hundreds of mA — never drive directly from a pin in real life",
+        "speedControl": "PWM duty cycle = average voltage"
+      },
+      "notes": "One terminal to a PWM pin (via a driver transistor in real builds), the other to GND. analogWrite(pin, 0–255) sets speed.",
+      "symbol": "kicad-symbols/Motor_DC.kicad_sym",
+      "terminals": "1, 2 (either way — swapping reverses spin)"
+    },
+    {
+      "id": "lcd",
+      "name": "LCD Display — 16×2 characters",
+      "category": "output",
+      "function": "Shows two lines of 16 characters — your project's face to the world, no computer required.",
+      "science": "Each character cell is a 5×8 grid of liquid crystal pixels. Liquid crystals twist polarized light; applying a voltage untwists them, blocking the light path and making a dark pixel. The onboard HD44780 controller chip stores a font of 5×8 patterns for every printable character, so your Arduino only sends character codes, not pixels. Data travels over a 4-bit parallel bus: each byte is split into two 4-bit halves clocked in by the E (enable) pin, while RS tells the controller whether the byte is a command or a character.",
+      "specs": {
+        "size": "16 columns × 2 rows",
+        "controller": "HD44780",
+        "interface": "4-bit parallel (RS, E, D4–D7)",
+        "power": "5V, backlight LED"
+      },
+      "notes": "Power: VSS→GND, VDD→5V, V0 (contrast)→GND, RW→GND, backlight A→5V and K→GND. Signals: RS, E, D4–D7 → six digital pins matching LiquidCrystal(rs, en, d4, d5, d6, d7) in code.",
+      "symbol": "kicad-symbols/WC1602A.kicad_sym",
+      "terminals": "VSS, VDD, V0, RS, RW, E, D4–D7, A, K"
     }
   ]
 }

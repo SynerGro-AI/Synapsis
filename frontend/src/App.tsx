@@ -50,8 +50,12 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [ranClean, setRanClean] = useState(false);
   const [serial, setSerial] = useState<string[]>([]);
-  const [litLeds, setLitLeds] = useState<Set<string>>(new Set());
+  const [ledLevels, setLedLevels] = useState<Map<string, number>>(new Map());
   const [currentWires, setCurrentWires] = useState<Map<number, boolean>>(new Map());
+  const [rgbLevels, setRgbLevels] = useState<Map<string, { r: number; g: number; b: number }>>(new Map());
+  const [servoAngles, setServoAngles] = useState<Map<string, number>>(new Map());
+  const [motorSpeeds, setMotorSpeeds] = useState<Map<string, number>>(new Map());
+  const [lcdLines, setLcdLines] = useState<[string, string] | null>(null);
   const [boardLed, setBoardLed] = useState(false);
 
   // World: what physically surrounds the circuit
@@ -122,8 +126,12 @@ export default function App() {
     engineRef.current = null;
     runtimeRef.current = null;
     setRunning(false);
-    setLitLeds(new Set());
+    setLedLevels(new Map());
     setCurrentWires(new Map());
+    setRgbLevels(new Map());
+    setServoAngles(new Map());
+    setMotorSpeeds(new Map());
+    setLcdLines(null);
     setBoardLed(false);
   }, []);
 
@@ -141,9 +149,13 @@ export default function App() {
   const refreshOutputs = useCallback(() => {
     const rt = runtimeRef.current;
     if (!rt) return;
-    const { lit, current } = rt.outputs();
-    setLitLeds(lit);
-    setCurrentWires(current);
+    const out = rt.outputs();
+    setLedLevels(out.led);
+    setCurrentWires(out.current);
+    setRgbLevels(out.rgb);
+    setServoAngles(out.servo);
+    setMotorSpeeds(out.motor);
+    setLcdLines(out.lcd ? out.lcd.lines : null);
   }, []);
 
   const onButtonChange = useCallback(
@@ -171,6 +183,22 @@ export default function App() {
           setRanClean(true);
           rt.setPin(pin, high);
           if (pin === 13) setBoardLed(high);
+          refreshOutputs();
+        },
+        analogWrite: (pin, duty) => {
+          setRanClean(true);
+          rt.setDuty(pin, duty);
+          if (pin === 13) setBoardLed(duty > 0);
+          refreshOutputs();
+        },
+        servoWrite: (pin, angle) => {
+          setRanClean(true);
+          rt.servoWrite(pin, angle);
+          refreshOutputs();
+        },
+        lcd: (op, a, b) => {
+          setRanClean(true);
+          rt.lcdOp(op, a, b);
           refreshOutputs();
         },
         digitalRead: (pin, mode) => rt.digitalRead(pin, mode),
@@ -315,8 +343,12 @@ export default function App() {
                 palette={lesson.circuit.palette as PartType[]}
                 circuit={circuit}
                 onCircuitChange={setCircuit}
-                litLeds={litLeds}
+                ledLevels={ledLevels}
                 currentWires={currentWires}
+                rgbLevels={rgbLevels}
+                servoAngles={servoAngles}
+                motorSpeeds={motorSpeeds}
+                lcdLines={lcdLines}
                 selected={selected}
                 onSelect={setSelected}
                 onButtonChange={onButtonChange}

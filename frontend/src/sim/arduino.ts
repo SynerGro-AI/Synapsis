@@ -5,9 +5,12 @@
 
 export interface SimIO {
   digitalWrite(pin: number, high: boolean): void;
+  analogWrite(pin: number, duty: number): void;
   digitalRead(pin: number, mode: string | undefined): number;
   analogRead(pin: number): number;
   pulseIn(pin: number): number;
+  servoWrite(pin: number, angle: number): void;
+  lcd(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void;
   serial(line: string): void;
   onError(message: string): void;
 }
@@ -23,9 +26,12 @@ interface Token {
 
 function tokenize(source: string): Token[] {
   const tokens: Token[] = [];
-  const s = source.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const s = source
+    .replace(/^[ \t]*#[^\n]*/gm, "") // preprocessor lines (#include <Servo.h>)
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
   let i = 0;
-  const puncts = [">=", "<=", "==", "!=", "&&", "||"];
+  const puncts = [">=", "<=", "==", "!=", "&&", "||", "++", "--", "+=", "-="];
   while (i < s.length) {
     const ch = s[i];
     if (/\s/.test(ch)) {
@@ -79,9 +85,12 @@ type Expr =
 
 type Stmt =
   | { kind: "decl"; name: string; init?: Expr }
-  | { kind: "assign"; name: string; expr: Expr }
+  | { kind: "objdecl"; type: string; name: string; args: Expr[] }
+  | { kind: "assign"; name: string; op: "=" | "+=" | "-="; expr: Expr }
   | { kind: "expr"; expr: Expr }
-  | { kind: "if"; cond: Expr; then: Stmt[]; else?: Stmt[] };
+  | { kind: "if"; cond: Expr; then: Stmt[]; else?: Stmt[] }
+  | { kind: "while"; cond: Expr; body: Stmt[] }
+  | { kind: "for"; init?: Stmt; cond?: Expr; post?: Stmt; body: Stmt[] };
 
 interface Program {
   globals: Stmt[];
@@ -92,6 +101,7 @@ interface Program {
 // ---------- Parser ----------
 
 const TYPE_KEYWORDS = ["int", "long", "float", "double", "bool", "byte", "unsigned"];
+const OBJECT_TYPES = ["Servo", "LiquidCrystal"];
 
 class Parser {
   private pos = 0;
@@ -146,6 +156,8 @@ class Parser {
         // other functions: parsed but ignored for now
       } else if (TYPE_KEYWORDS.includes(t.value)) {
         program.globals.push(this.parseDecl());
+      } else if (OBJECT_TYPES.includes(t.value)) {
+        program.globals.push(this.parseObjDecl());
       } else {
         throw new SimError(`Unexpected '${t.value}' at the top of the sketch`);
       }
@@ -172,38 +184,85 @@ class Parser {
     return stmts;
   }
 
+  private parseObjDecl(): Stmt {
+    const type = this.next().value;
+    const name = this.next().value;
+    const args: Expr[] = [];
+    if (this.eat("(")) {
+      if (!this.at(")")) {
+        args.push(this.parseExpr());
+        while (this.eat(",")) args.push(this.parseExpr());
+      }
+      this.expect(")");
+    }
+    this.expect(";");
+    return { kind: "objdecl", type, name, args };
+  }
+
+  private blockOrStmt(): Stmt[] {
+    return this.at("{") ? this.parseBlock() : [this.parseStmt()];
+  }
+
+  /** name = expr | name += expr | name -= expr | name++ | name-- */
+  private parseAssignLike(consumeSemi: boolean): Stmt {
+    const name = this.next().value;
+    const op = this.next().value;
+    let stmt: Stmt;
+    if (op === "++")
+      stmt = { kind: "assign", name, op: "+=", expr: { kind: "num", value: 1 } };
+    else if (op === "--")
+      stmt = { kind: "assign", name, op: "-=", expr: { kind: "num", value: 1 } };
+    else if (op === "=" || op === "+=" || op === "-=")
+      stmt = { kind: "assign", name, op, expr: this.parseExpr() };
+    else throw new SimError(`Expected an assignment after '${name}' but found '${op}'`);
+    if (consumeSemi) this.expect(";");
+    return stmt;
+  }
+
   private parseStmt(): Stmt {
     const t = this.peek()!;
     if (TYPE_KEYWORDS.includes(t.value)) return this.parseDecl();
+    if (OBJECT_TYPES.includes(t.value)) return this.parseObjDecl();
     if (t.value === "if") {
       this.next();
       this.expect("(");
       const cond = this.parseExpr();
       this.expect(")");
-      const then = this.at("{") ? this.parseBlock() : [this.parseStmt()];
+      const then = this.blockOrStmt();
       let elseBranch: Stmt[] | undefined;
-      if (this.eat("else"))
-        elseBranch = this.at("{")
-          ? this.parseBlock()
-          : this.at("if")
-            ? [this.parseStmt()]
-            : [this.parseStmt()];
+      if (this.eat("else")) elseBranch = this.blockOrStmt();
       return { kind: "if", cond, then, else: elseBranch };
     }
-    if (t.value === "for" || t.value === "while")
-      throw new SimError(`'${t.value}' loops aren't supported yet — loop() already repeats forever`);
+    if (t.value === "while") {
+      this.next();
+      this.expect("(");
+      const cond = this.parseExpr();
+      this.expect(")");
+      return { kind: "while", cond, body: this.blockOrStmt() };
+    }
+    if (t.value === "for") {
+      this.next();
+      this.expect("(");
+      let init: Stmt | undefined;
+      if (!this.eat(";"))
+        init = TYPE_KEYWORDS.includes(this.peek()?.value ?? "")
+          ? this.parseDecl()
+          : this.parseAssignLike(true);
+      let cond: Expr | undefined;
+      if (!this.at(";")) cond = this.parseExpr();
+      this.expect(";");
+      let post: Stmt | undefined;
+      if (!this.at(")")) post = this.parseAssignLike(false);
+      this.expect(")");
+      return { kind: "for", init, cond, post, body: this.blockOrStmt() };
+    }
 
     // assignment or expression statement
     if (
       t.type === "id" &&
-      this.tokens[this.pos + 1]?.value === "="
-    ) {
-      const name = this.next().value;
-      this.next(); // =
-      const expr = this.parseExpr();
-      this.expect(";");
-      return { kind: "assign", name, expr };
-    }
+      ["=", "+=", "-=", "++", "--"].includes(this.tokens[this.pos + 1]?.value)
+    )
+      return this.parseAssignLike(true);
     const expr = this.parseExpr();
     this.expect(";");
     return { kind: "expr", expr };
@@ -313,6 +372,8 @@ export class ArduinoSim {
   private serialBuffer = "";
   private startTime = 0;
   private stepsSinceYield = 0;
+  private stepsSinceDelay = 0;
+  private objects = new Map<string, { type: string; args: number[]; pin?: number }>();
 
   stop(): void {
     this.stopped = true;
@@ -365,6 +426,10 @@ export class ArduinoSim {
       this.stepsSinceYield = 0;
       await sleep(0);
     }
+    if (++this.stepsSinceDelay > 300_000)
+      throw new SimError(
+        "Your sketch seems stuck in an endless loop — add a delay() so the simulation can breathe.",
+      );
     switch (stmt.kind) {
       case "decl":
         scopes[scopes.length - 1].set(
@@ -372,10 +437,21 @@ export class ArduinoSim {
           stmt.init ? await this.evalExpr(stmt.init, scopes, io) : 0,
         );
         return;
+      case "objdecl": {
+        const args: number[] = [];
+        for (const a of stmt.args) args.push(Number(await this.evalExpr(a, scopes, io)));
+        this.objects.set(stmt.name, { type: stmt.type, args });
+        return;
+      }
       case "assign": {
         for (let i = scopes.length - 1; i >= 0; i--) {
           if (scopes[i].has(stmt.name)) {
-            scopes[i].set(stmt.name, await this.evalExpr(stmt.expr, scopes, io));
+            const value = await this.evalExpr(stmt.expr, scopes, io);
+            if (stmt.op === "=") scopes[i].set(stmt.name, value);
+            else {
+              const old = Number(scopes[i].get(stmt.name));
+              scopes[i].set(stmt.name, stmt.op === "+=" ? old + Number(value) : old - Number(value));
+            }
             return;
           }
         }
@@ -394,6 +470,30 @@ export class ArduinoSim {
           await this.execBlock(branch, scopes, io);
           scopes.pop();
         }
+        return;
+      }
+      case "while": {
+        while (!this.stopped && Number(await this.evalExpr(stmt.cond, scopes, io)) !== 0) {
+          scopes.push(new Map());
+          await this.execBlock(stmt.body, scopes, io);
+          scopes.pop();
+        }
+        return;
+      }
+      case "for": {
+        scopes.push(new Map());
+        if (stmt.init) await this.execStmt(stmt.init, scopes, io);
+        while (
+          !this.stopped &&
+          (stmt.cond === undefined ||
+            Number(await this.evalExpr(stmt.cond, scopes, io)) !== 0)
+        ) {
+          scopes.push(new Map());
+          await this.execBlock(stmt.body, scopes, io);
+          scopes.pop();
+          if (stmt.post) await this.execStmt(stmt.post, scopes, io);
+        }
+        scopes.pop();
         return;
       }
     }
@@ -453,6 +553,58 @@ export class ArduinoSim {
     const arg = async (i: number) => this.evalExpr(expr.args[i], scopes, io);
     const num = async (i: number) => Number(await arg(i));
 
+    // Object methods: myServo.write(...), lcd.print(...)
+    const dot = expr.name.indexOf(".");
+    if (dot > 0) {
+      const objName = expr.name.slice(0, dot);
+      const method = expr.name.slice(dot + 1);
+      const obj = this.objects.get(objName);
+      if (obj) {
+        if (obj.type === "Servo") {
+          switch (method) {
+            case "attach":
+              obj.pin = await num(0);
+              return 0;
+            case "write": {
+              if (obj.pin === undefined)
+                throw new SimError(
+                  `${objName}.attach(pin) must be called in setup() before ${objName}.write()`,
+                );
+              const angle = Math.max(0, Math.min(180, await num(0)));
+              io.servoWrite(obj.pin, angle);
+              obj.args = [angle];
+              return 0;
+            }
+            case "read":
+              return obj.args[0] ?? 0;
+          }
+        }
+        if (obj.type === "LiquidCrystal") {
+          switch (method) {
+            case "begin":
+              return 0;
+            case "clear":
+              io.lcd("clear");
+              return 0;
+            case "setCursor":
+              io.lcd("setCursor", await num(0), await num(1));
+              return 0;
+            case "print": {
+              const v = expr.args.length ? await arg(0) : "";
+              io.lcd(
+                "print",
+                typeof v === "number" && !Number.isInteger(v)
+                  ? v.toFixed(2)
+                  : String(v),
+              );
+              return 0;
+            }
+          }
+        }
+        throw new SimError(`'${objName}.${method}()' isn't supported yet`);
+      }
+    }
+
     switch (expr.name) {
       case "pinMode": {
         this.pinModes.set(await num(0), await num(1));
@@ -483,10 +635,12 @@ export class ArduinoSim {
         return 0;
       case "analogWrite": {
         const pin = await num(0);
-        io.digitalWrite(pin, (await num(1)) > 127);
+        const duty = Math.max(0, Math.min(255, await num(1)));
+        io.analogWrite(pin, duty);
         return 0;
       }
       case "delay": {
+        this.stepsSinceDelay = 0;
         const ms = await num(0);
         const end = Date.now() + Math.min(ms, 10_000);
         while (!this.stopped && Date.now() < end)
@@ -536,7 +690,10 @@ export interface SketchAnalysis {
   digitalWrites: number[];
   digitalReads: number[];
   analogReads: number[];
+  analogWrites: number[];
   pulseIns: number[];
+  servoPins: number[];
+  lcdPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -550,7 +707,10 @@ export function analyzeSketch(code: string): SketchAnalysis {
     digitalWrites: [],
     digitalReads: [],
     analogReads: [],
+    analogWrites: [],
     pulseIns: [],
+    servoPins: [],
+    lcdPins: [],
     pinModes: new Map(),
   };
 
@@ -604,7 +764,9 @@ export function analyzeSketch(code: string): SketchAnalysis {
         if (expr.name === "digitalWrite") addUnique(result.digitalWrites, pin);
         else if (expr.name === "digitalRead") addUnique(result.digitalReads, pin);
         else if (expr.name === "analogRead") addUnique(result.analogReads, pin);
+        else if (expr.name === "analogWrite") addUnique(result.analogWrites, pin);
         else if (expr.name === "pulseIn") addUnique(result.pulseIns, pin);
+        else if (expr.name.endsWith(".attach")) addUnique(result.servoPins, pin);
         else if (expr.name === "pinMode" && pin !== null && expr.args.length > 1) {
           const mode = staticEval(expr.args[1]);
           if (mode !== null && MODE_NAMES[mode]) result.pinModes.set(pin, MODE_NAMES[mode]);
@@ -632,6 +794,12 @@ export function analyzeSketch(code: string): SketchAnalysis {
             visitExpr(s.init);
           }
           break;
+        case "objdecl":
+          if (s.type === "LiquidCrystal")
+            result.lcdPins = s.args
+              .map(staticEval)
+              .filter((v): v is number => v !== null);
+          break;
         case "assign":
           visitExpr(s.expr);
           break;
@@ -642,6 +810,16 @@ export function analyzeSketch(code: string): SketchAnalysis {
           visitExpr(s.cond);
           visitStmts(s.then);
           if (s.else) visitStmts(s.else);
+          break;
+        case "while":
+          visitExpr(s.cond);
+          visitStmts(s.body);
+          break;
+        case "for":
+          if (s.init) visitStmts([s.init]);
+          if (s.cond) visitExpr(s.cond);
+          if (s.post) visitStmts([s.post]);
+          visitStmts(s.body);
           break;
       }
     }
