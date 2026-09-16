@@ -29,6 +29,7 @@ declare module "react/jsx-runtime" {
       "wokwi-ntc-temperature-sensor": WokwiProps<{ value?: number }>;
       "wokwi-hc-sr04": WokwiProps<{ distance?: number }>;
       "wokwi-servo": WokwiProps<{ angle?: number; horn?: string; hornColor?: string }>;
+      "wokwi-buzzer": WokwiProps<{ hasSignal?: boolean }>;
       "wokwi-rgb-led": WokwiProps<{ ledRed?: number; ledGreen?: number; ledBlue?: number }>;
       "wokwi-lcd1602": WokwiProps<{
         characters?: Uint8Array;

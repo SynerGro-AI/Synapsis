@@ -14,6 +14,7 @@ export type PartType =
   | "rgbled"
   | "servo"
   | "motor"
+  | "buzzer"
   | "lcd";
 
 export interface PlacedPart {
@@ -52,6 +53,7 @@ export interface SketchInfo {
   analogWrites: number[];
   pulseIns: number[];
   servoPins: number[];
+  tonePins: number[];
   lcdPins: number[];
   pinModes: Map<number, string>;
 }
@@ -75,6 +77,7 @@ export const PART_PINS: Record<PartType, string[]> = {
   rgbled: ["R", "COM", "G", "B"],
   servo: ["GND", "V+", "PWM"],
   motor: ["1", "2"],
+  buzzer: ["1", "2"],
   lcd: ["VSS", "VDD", "V0", "RS", "RW", "E", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "A", "K"],
 };
 
@@ -89,6 +92,7 @@ export const PART_LABELS: Record<PartType, string> = {
   rgbled: "RGB LED",
   servo: "Servo",
   motor: "DC Motor",
+  buzzer: "Buzzer",
   lcd: "LCD 16x2",
 };
 
@@ -324,6 +328,7 @@ export function validate(
     rgbled: ["COM"],
     servo: ["GND", "V+", "PWM"],
     motor: ["1", "2"],
+    buzzer: ["1", "2"],
     lcd: ["VSS", "VDD", "RS", "E", "D4", "D5", "D6", "D7"],
   };
   const wiredTerminals = new Set<string>();
@@ -563,6 +568,36 @@ export function validate(
         }
       }
 
+      // Buzzer: one pin driven by a digital pin, the other to GND. tone()
+      // and digitalWrite both work; the pin driving it must match the code.
+      for (const buzzer of c.partsByType("buzzer")) {
+        const net1 = c.netOf(buzzer.id, "1");
+        const net2 = c.netOf(buzzer.id, "2");
+        if (!isTerminalWired(buzzer.id, "1", "buzzer") || !isTerminalWired(buzzer.id, "2", "buzzer"))
+          continue; // floating already reported
+        const gndSide = net1 === c.gnd ? "1" : net2 === c.gnd ? "2" : null;
+        if (!gndSide) {
+          err("circuit", `${buzzer.id}: one pin must go to GND to complete the loop.`);
+          continue;
+        }
+        const driveNet = gndSide === "1" ? net2 : net1;
+        const drivePins = c.unoPinsOnNet(driveNet).filter((n) => n <= 13);
+        const driven = [...new Set([...sketch.digitalWrites, ...sketch.tonePins])];
+        if (driveNet === c.v5) {
+          out.push({
+            level: "info",
+            source: "circuit",
+            message: `${buzzer.id}: wired straight to 5V it just drones at one pitch. Drive it from a digital pin with tone(pin, frequency) to play notes.`,
+          });
+        } else if (!drivePins.length) {
+          err("circuit", `${buzzer.id}: the + pin must reach a digital pin so your code can sound it.`);
+        } else if (driven.length && !drivePins.some((p) => driven.includes(p))) {
+          err("both", `${buzzer.id} is on pin ${pinLabel(drivePins[0])}, but your code never drives that pin — tone(${pinLabel(drivePins[0])}, ...) or digitalWrite(${pinLabel(drivePins[0])}, HIGH) will make it sound.`);
+        }
+      }
+      if (sketch.tonePins.length && !c.partsByType("buzzer").length && required.includes("buzzer"))
+        err("circuit", "Your code calls tone(), but there's no buzzer in the circuit yet.");
+
       // LCD: signal wires must match LiquidCrystal(rs, en, d4, d5, d6, d7)
       for (const lcd of c.partsByType("lcd")) {
         const signals: [string, number][] = [
@@ -621,6 +656,8 @@ export interface CircuitOutputs {
   servo: Map<string, number>;
   /** motor id -> speed 0..1 */
   motor: Map<string, number>;
+  /** buzzer id -> tone frequency in Hz (0/absent = silent) */
+  buzzer: Map<string, number>;
   /** 16x2 text (two lines) when a powered LCD is present */
   lcd: { lines: [string, string] } | null;
 }
@@ -630,6 +667,7 @@ export class CircuitRuntime {
   private world: WorldState;
   private duties = new Map<number, number>();
   private servoByPin = new Map<number, number>();
+  private tonePins = new Map<number, number>();
   private lcdLines: [string, string] = ["", ""];
   private lcdCursor = { x: 0, y: 0 };
   private lcdUsed = false;
@@ -649,6 +687,14 @@ export class CircuitRuntime {
 
   servoWrite(pin: number, angle: number): void {
     this.servoByPin.set(pin, angle);
+  }
+
+  tone(pin: number, freq: number): void {
+    this.tonePins.set(pin, Math.max(0, Math.round(freq)));
+  }
+
+  noTone(pin: number): void {
+    this.tonePins.set(pin, 0);
   }
 
   lcdOp(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void {
@@ -731,6 +777,28 @@ export class CircuitRuntime {
       if (speed !== null && speed > 0) motor.set(part.id, speed);
     }
 
+    // Buzzer: a + pin driven (tone, digitalWrite HIGH, or raw 5V) with its
+    // other pin to GND makes sound. Active buzzers beep on any HIGH; tone()
+    // sets a specific pitch. Orientation is forgiven, like the motor.
+    const buzzer = new Map<string, number>();
+    for (const part of this.circuit.partsByType("buzzer")) {
+      const netPlus = this.circuit.netOf(part.id, "1");
+      const netMinus = this.circuit.netOf(part.id, "2");
+      const freqOf = (driveNet: string, gndNet: string): number | null => {
+        if (gndNet !== this.circuit.gnd) return null;
+        if (driveNet === this.circuit.v5) return 2000; // active buzzer on raw 5V
+        const pins = this.circuit.unoPinsOnNet(driveNet).filter((n) => n <= 13);
+        if (!pins.length) return null;
+        const pin = pins[0];
+        const t = this.tonePins.get(pin) ?? 0;
+        if (t > 0) return t; // tone(pin, freq)
+        if ((this.duties.get(pin) ?? 0) > 0) return 2000; // digitalWrite HIGH beep
+        return 0;
+      };
+      const freq = freqOf(netPlus, netMinus) ?? freqOf(netMinus, netPlus);
+      if (freq !== null && freq > 0) buzzer.set(part.id, freq);
+    }
+
     let lcd: CircuitOutputs["lcd"] = null;
     for (const part of this.circuit.partsByType("lcd")) {
       const powered =
@@ -739,7 +807,7 @@ export class CircuitRuntime {
       if (powered && this.lcdUsed) lcd = { lines: [...this.lcdLines] as [string, string] };
     }
 
-    return { led, current, rgb, servo, motor, lcd };
+    return { led, current, rgb, servo, motor, buzzer, lcd };
   }
 
   digitalRead(pin: number, mode: string | undefined): number {

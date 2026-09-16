@@ -72,6 +72,7 @@ export default function App() {
   const [rgbLevels, setRgbLevels] = useState<Map<string, { r: number; g: number; b: number }>>(new Map());
   const [servoAngles, setServoAngles] = useState<Map<string, number>>(new Map());
   const [motorSpeeds, setMotorSpeeds] = useState<Map<string, number>>(new Map());
+  const [buzzerFreqs, setBuzzerFreqs] = useState<Map<string, number>>(new Map());
   const [lcdLines, setLcdLines] = useState<[string, string] | null>(null);
   const [boardLed, setBoardLed] = useState(false);
 
@@ -84,6 +85,7 @@ export default function App() {
   const editorRef = useRef<CodeEditorHandle | null>(null);
   const engineRef = useRef<ArduinoSim | null>(null);
   const runtimeRef = useRef<CircuitRuntime | null>(null);
+  const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode; gain: GainNode } | null>(null);
   const worldRef = useRef<WorldState>({
     pressed: new Set<string>(),
     potValue: 512,
@@ -95,6 +97,39 @@ export default function App() {
   worldRef.current.lightPct = lightPct;
   worldRef.current.tempC = tempC;
   worldRef.current.distanceCm = distanceCm;
+
+  // Piezo buzzer audio: play the highest active buzzer's pitch through a
+  // WebAudio oscillator so the simulated circuit actually beeps.
+  useEffect(() => {
+    const freq = Math.max(0, ...buzzerFreqs.values());
+    if (freq > 0) {
+      let node = audioRef.current;
+      if (!node) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        gain.gain.value = 0.05;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        node = { ctx, osc, gain };
+        audioRef.current = node;
+      }
+      if (node.ctx.state === "suspended") void node.ctx.resume();
+      node.osc.frequency.setValueAtTime(freq, node.ctx.currentTime);
+      node.gain.gain.setValueAtTime(0.05, node.ctx.currentTime);
+    } else if (audioRef.current) {
+      audioRef.current.gain.gain.setValueAtTime(0, audioRef.current.ctx.currentTime);
+    }
+  }, [buzzerFreqs]);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.osc.stop();
+      void audioRef.current?.ctx.close();
+      audioRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     fetchLessonData().then(setData).catch(() => setOffline(true));
@@ -206,6 +241,7 @@ export default function App() {
     setRgbLevels(new Map());
     setServoAngles(new Map());
     setMotorSpeeds(new Map());
+    setBuzzerFreqs(new Map());
     setLcdLines(null);
     setBoardLed(false);
   }, []);
@@ -230,6 +266,7 @@ export default function App() {
     setRgbLevels(out.rgb);
     setServoAngles(out.servo);
     setMotorSpeeds(out.motor);
+    setBuzzerFreqs(out.buzzer);
     setLcdLines(out.lcd ? out.lcd.lines : null);
   }, []);
 
@@ -269,6 +306,15 @@ export default function App() {
         servoWrite: (pin, angle) => {
           setRanClean(true);
           rt.servoWrite(pin, angle);
+          refreshOutputs();
+        },
+        tone: (pin, freq) => {
+          setRanClean(true);
+          rt.tone(pin, freq);
+          refreshOutputs();
+        },
+        noTone: (pin) => {
+          rt.noTone(pin);
           refreshOutputs();
         },
         lcd: (op, a, b) => {
@@ -516,6 +562,7 @@ export default function App() {
                 rgbLevels={rgbLevels}
                 servoAngles={servoAngles}
                 motorSpeeds={motorSpeeds}
+                buzzerFreqs={buzzerFreqs}
                 lcdLines={lcdLines}
                 selected={selected}
                 onSelect={setSelected}

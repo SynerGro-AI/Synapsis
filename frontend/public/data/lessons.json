@@ -81,8 +81,8 @@
       "id": "control",
       "track": "arduino",
       "name": "Control",
-      "range": "13-20",
-      "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display"]
+      "range": "13-22",
+      "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display", "Piezo buzzer"]
     },
     {
       "id": "expert",
@@ -770,6 +770,57 @@
         "delay(200);"
       ],
       "output": { "initial": "Radar idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 21,
+      "phase": "control",
+      "title": "Piezo Buzzer — First Beep",
+      "description": "Give your projects a voice. One new part, two commands: tone() picks a pitch and noTone() cuts it. Build a little two-note alarm you can hear.",
+      "source": "Paul McWhorter, Arduino tone()/buzzer tutorials — toptechboy.com",
+      "featuredComponent": "buzzer",
+      "circuit": {
+        "palette": ["buzzer"],
+        "required": ["buzzer"],
+        "notes": "Buzzer: + terminal (pin 1) → Arduino pin 8. – terminal (pin 2) → GND. A piezo buzzer needs no resistor and no pinMode — tone() drives the pin for you."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int buzzer = 8;\n\nvoid setup() {\n  // Nothing to set up — tone() takes care of the pin\n}\n\nvoid loop() {\n  // Two-tone alarm: high note, low note, then a short silence\n}"
+      },
+      "hints": [
+        "tone(buzzer, 880);",
+        "delay(200);",
+        "tone(buzzer, 660);",
+        "noTone(buzzer);",
+        "delay(400);"
+      ],
+      "output": { "initial": "Buzzer silent", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 22,
+      "phase": "control",
+      "title": "Reverse Parking Beeper",
+      "description": "Keep the sonar from the radar build and add the buzzer: the closer an object gets, the higher and faster it beeps — exactly like a car's reverse sensor. Under 10 cm it holds a solid warning tone.",
+      "source": "Paul McWhorter, Arduino sonar + buzzer projects — toptechboy.com",
+      "featuredComponent": "buzzer",
+      "circuit": {
+        "palette": ["ultrasonic", "buzzer"],
+        "required": ["ultrasonic", "buzzer"],
+        "notes": "Sonar: VCC→5V, GND→GND, TRIG→8, ECHO→10. Buzzer: + (pin 1) → pin 9, – (pin 2) → GND. Drag the distance slider while it runs to hear the pitch change."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int trigPin = 8;\nint echoPin = 10;\nint buzzer = 9;\n\nvoid setup() {\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  int cm = pulseIn(echoPin, HIGH) / 58;\n  // Closer = higher pitch. Under 10 cm hold a solid tone; far away, silence.\n}"
+      },
+      "hints": [
+        "if (cm < 10) {\n  tone(buzzer, 2000);",
+        "} else if (cm < 50) {\n  tone(buzzer, map(cm, 10, 50, 2000, 400));",
+        "} else {\n  noTone(buzzer);\n}",
+        "delay(60);"
+      ],
+      "output": { "initial": "Beeper idle", "status": "Waiting for sketch..." }
     },
     {
       "id": 101,

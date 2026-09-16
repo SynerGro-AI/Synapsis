@@ -10,6 +10,8 @@ export interface SimIO {
   analogRead(pin: number): number;
   pulseIn(pin: number): number;
   servoWrite(pin: number, angle: number): void;
+  tone(pin: number, freq: number): void;
+  noTone(pin: number): void;
   lcd(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void;
   serial(line: string): void;
   onError(message: string): void;
@@ -629,6 +631,24 @@ export class ArduinoSim {
         const pin = await num(0);
         return io.pulseIn(pin);
       }
+      case "tone": {
+        const pin = await num(0);
+        const freq = await num(1);
+        io.tone(pin, freq);
+        // tone(pin, freq, duration): the note plays for `duration` ms then stops.
+        if (expr.args.length >= 3) {
+          const dur = await num(2);
+          const end = Date.now() + Math.min(dur, 10_000);
+          while (!this.stopped && Date.now() < end)
+            await sleep(Math.min(50, end - Date.now()));
+          io.noTone(pin);
+        }
+        return 0;
+      }
+      case "noTone": {
+        io.noTone(await num(0));
+        return 0;
+      }
       case "delayMicroseconds":
         // Microseconds are below our simulation resolution; treat as instant.
         await num(0);
@@ -693,6 +713,7 @@ export interface SketchAnalysis {
   analogWrites: number[];
   pulseIns: number[];
   servoPins: number[];
+  tonePins: number[];
   lcdPins: number[];
   pinModes: Map<number, string>;
 }
@@ -710,6 +731,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
     analogWrites: [],
     pulseIns: [],
     servoPins: [],
+    tonePins: [],
     lcdPins: [],
     pinModes: new Map(),
   };
@@ -766,6 +788,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
         else if (expr.name === "analogRead") addUnique(result.analogReads, pin);
         else if (expr.name === "analogWrite") addUnique(result.analogWrites, pin);
         else if (expr.name === "pulseIn") addUnique(result.pulseIns, pin);
+        else if (expr.name === "tone") addUnique(result.tonePins, pin);
         else if (expr.name.endsWith(".attach")) addUnique(result.servoPins, pin);
         else if (expr.name === "pinMode" && pin !== null && expr.args.length > 1) {
           const mode = staticEval(expr.args[1]);

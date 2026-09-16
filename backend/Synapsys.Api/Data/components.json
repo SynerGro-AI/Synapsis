@@ -174,6 +174,21 @@
       "terminals": "1, 2 (either way — swapping reverses spin)"
     },
     {
+      "id": "buzzer",
+      "name": "Piezo Buzzer",
+      "category": "output",
+      "function": "Makes sound. Send it a frequency with tone() and it plays that pitch; noTone() stops it. Great for alarms, feedback beeps, and simple melodies.",
+      "science": "Inside is a thin disc of piezoelectric ceramic bonded to a metal plate. Piezo materials flex when a voltage is applied — apply a voltage, the disc bends; remove it, the disc springs back. Drive it with a square wave that switches thousands of times per second and the disc vibrates, pushing air into sound waves you hear as a tone. The pitch is set purely by how fast you toggle the voltage: 440 times a second (440 Hz) is a musical A, 2000 Hz is a shrill beep. tone(pin, freq) generates that square wave in the background so your loop() keeps running; tone(pin, freq, duration) plays for a set number of milliseconds then stops itself. Because a piezo moves almost no current, you can drive it straight from a pin — no resistor needed.",
+      "specs": {
+        "type": "piezoelectric (active/passive)",
+        "voltage": "3–5V",
+        "current": "a few mA — safe to drive directly from a pin",
+        "toneRange": "≈31 Hz – 65535 Hz via tone()"
+      },
+      "notes": "Wire the + terminal (pin 1) to a digital pin and the – terminal (pin 2) to GND. Play a pitch with tone(pin, frequency); stop it with noTone(pin). tone(pin, freq, ms) auto-stops after ms milliseconds. Orientation is forgiving in the simulator.",
+      "terminals": "1 (+ signal), 2 (– to GND)"
+    },
+    {
       "id": "lcd",
       "name": "LCD Display — 16×2 characters",
       "category": "output",

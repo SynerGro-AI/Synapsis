@@ -19,6 +19,7 @@ const SCALE: Record<string, number> = {
   rgbled: 1.2,
   servo: 0.75,
   motor: 1,
+  buzzer: 0.9,
   lcd: 0.75,
 };
 
@@ -33,6 +34,7 @@ const ID_PREFIX: Record<PartType, string> = {
   rgbled: "RGB",
   servo: "SERVO",
   motor: "MOTOR",
+  buzzer: "BUZZ",
   lcd: "LCD",
 };
 
@@ -108,6 +110,7 @@ interface CircuitCanvasProps {
   rgbLevels: Map<string, { r: number; g: number; b: number }>;
   servoAngles: Map<string, number>;
   motorSpeeds: Map<string, number>;
+  buzzerFreqs: Map<string, number>;
   lcdLines: [string, string] | null;
   selected: string | null;
   onSelect: (partId: string | null) => void;
@@ -126,6 +129,7 @@ export default function CircuitCanvas({
   rgbLevels,
   servoAngles,
   motorSpeeds,
+  buzzerFreqs,
   lcdLines,
   selected,
   onSelect,
@@ -437,6 +441,7 @@ export default function CircuitCanvas({
         )}
         {type === "servo" && <wokwi-servo angle={servoAngles.get(id) ?? 0} />}
         {type === "motor" && <MotorVisual speed={motorSpeeds.get(id) ?? 0} />}
+        {type === "buzzer" && <wokwi-buzzer hasSignal={(buzzerFreqs.get(id) ?? 0) > 0} />}
         {type === "lcd" && (
           <wokwi-lcd1602
             pins="full"
