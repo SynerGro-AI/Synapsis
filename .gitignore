@@ -28,3 +28,4 @@ npm-debug.log*
 # Agent tooling (installed per-machine via npx skills)
 .agents/
 .claude/
+.wrangler/
