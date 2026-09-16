@@ -280,6 +280,14 @@
   overflow: hidden;
   background: #252525;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wokwi-canvas svg,
+.wokwi-canvas img {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .circuit-area {

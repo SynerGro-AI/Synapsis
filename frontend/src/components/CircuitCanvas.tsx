@@ -341,6 +341,7 @@ export default function CircuitCanvas({
         key={id}
         data-part-id={id}
         data-scale={scale}
+        draggable={false}
         className={`part${isSelected ? " selected" : ""}`}
         style={{ left: x, top: y, transform: `scale(${scale})` }}
         onPointerDown={(e) => onPartPointerDown(e, id)}
@@ -381,6 +382,10 @@ export default function CircuitCanvas({
         className="wokwi-canvas"
         onPointerMove={onPointerMove}
         onPointerDown={onCanvasPointerDown}
+        onPointerLeave={() => {
+          if (!dragWireRef.current && !dragPartRef.current) setHoverPin(null);
+        }}
+        onDragStart={(e) => e.preventDefault()}
       >
         {renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
         {circuit.parts.map((p) => renderPart(p.id, p.type, p.x, p.y))}
