@@ -11,33 +11,68 @@
     "license": "CC-BY-SA 4.0 (with KiCad libraries exception)",
     "path": "frontend/public/kicad-symbols/"
   },
+  "tracks": [
+    {
+      "id": "arduino",
+      "name": "Arduino Electronics",
+      "icon": "⚡",
+      "blurb": "Build real circuits and write the C++ that drives them — LEDs, sensors, servos, motors, and displays.",
+      "accent": "#e8a33d"
+    },
+    {
+      "id": "devsetup",
+      "name": "Build on Your Computer",
+      "icon": "⌨",
+      "blurb": "Leave the sandbox: set up your own machine. The command line, git, compilers, and running real projects — typed, not clicked.",
+      "accent": "#5cc8ff"
+    },
+    {
+      "id": "python",
+      "name": "Python & Raspberry Pi",
+      "icon": "🐍",
+      "blurb": "Carry your electronics instincts into Python — same circuits, new language, on a Raspberry Pi.",
+      "accent": "#7fbf7f"
+    },
+    {
+      "id": "ai",
+      "name": "AI & Machine Learning",
+      "icon": "🧠",
+      "blurb": "From sensors to smarts: teach your projects to see, classify, and decide.",
+      "accent": "#c58cff"
+    }
+  ],
   "phases": [
     {
       "id": "foundation",
+      "track": "arduino",
       "name": "Foundation",
       "range": "1-5",
       "concepts": ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"]
     },
     {
       "id": "sensing",
+      "track": "arduino",
       "name": "Sensing",
       "range": "6-12",
       "concepts": ["Buttons", "Debouncing", "Light sensor", "Temp sensor", "Ultrasonic"]
     },
     {
       "id": "control",
+      "track": "arduino",
       "name": "Control",
       "range": "13-20",
       "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display"]
     },
     {
       "id": "python_bridge",
+      "track": "python",
       "name": "Python Bridge",
       "range": "21-28",
       "concepts": ["Python syntax", "Raspberry Pi crossover", "Circuit parity with Arduino"]
     },
     {
       "id": "expert",
+      "track": "arduino",
       "name": "Expert",
       "range": "29+",
       "concepts": ["Wire gauge physics", "Signal calibration", "Interrupts", "I2C"]

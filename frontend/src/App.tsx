@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import AccountPanel from "./components/AccountPanel";
+import ActivityBar from "./components/ActivityBar";
 import CircuitCanvas from "./components/CircuitCanvas";
 import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
+import Transcript from "./components/Transcript";
 import { ArduinoSim, analyzeSketch } from "./sim/arduino";
 import {
   CircuitRuntime,
@@ -45,6 +47,8 @@ export default function App() {
   const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [parts, setParts] = useState<PartInfo[]>(FALLBACK_PARTS);
   const [lessonId, setLessonId] = useState(1);
+  const [activeTrack, setActiveTrack] = useState("arduino");
+  const [view, setView] = useState<"workspace" | "transcript">("workspace");
   const [offline, setOffline] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
@@ -132,6 +136,40 @@ export default function App() {
 
   const lesson = data.lessons.find((l) => l.id === lessonId) ?? data.lessons[0];
   const starter = saved[lesson.id]?.sketch ?? lesson.codeTemplate.starter;
+
+  // ---- Track organisation: phases belong to tracks; progress rolls up by track ----
+  const phaseTrack = useMemo(
+    () => new Map(data.phases.map((p) => [p.id, p.track])),
+    [data.phases],
+  );
+  const liveTracks = useMemo(() => {
+    const s = new Set<string>();
+    for (const l of data.lessons) s.add(phaseTrack.get(l.phase) ?? "arduino");
+    return s;
+  }, [data.lessons, phaseTrack]);
+  const completedIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const [id, v] of Object.entries(saved)) if (v.completed) s.add(Number(id));
+    return s;
+  }, [saved]);
+  const activeTrackInfo = data.tracks.find((t) => t.id === activeTrack);
+  const sidebarPhases = data.phases.filter(
+    (p) => p.track === activeTrack && data.lessons.some((l) => l.phase === p.id),
+  );
+  const trackLessons = data.lessons.filter((l) => phaseTrack.get(l.phase) === activeTrack);
+
+  const selectTrack = (id: string) => {
+    setView("workspace");
+    setActiveTrack(id);
+    const first = data.lessons.find((l) => phaseTrack.get(l.phase) === id);
+    if (first) setLessonId(first.id);
+    setNavOpen(false);
+  };
+  const openLesson = (trackId: string, id: number) => {
+    setActiveTrack(trackId);
+    setLessonId(id);
+    setView("workspace");
+  };
 
   const stopSim = useCallback(() => {
     engineRef.current?.stop();
@@ -304,13 +342,31 @@ export default function App() {
       </div>
 
       <div className="app">
+        <ActivityBar
+          tracks={data.tracks}
+          liveTracks={liveTracks}
+          activeTrack={activeTrack}
+          view={view}
+          onSelectTrack={selectTrack}
+          onOpenTranscript={() => {
+            setView("transcript");
+            setNavOpen(false);
+          }}
+        />
         {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
         <aside className={`sidebar${navOpen ? " open" : ""}`}>
-          <h2>Synapsys</h2>
+          <h2>
+            <span className="sidebar-track-icon">{activeTrackInfo?.icon}</span>
+            {activeTrackInfo?.name ?? "Synapsys"}
+          </h2>
           <div className="sidebar-lessons">
-            {data.phases
-              .filter((phase) => data.lessons.some((l) => l.phase === phase.id))
-              .map((phase) => (
+            {sidebarPhases.length === 0 ? (
+              <div className="sidebar-soon">
+                <p>{activeTrackInfo?.blurb}</p>
+                <span className="cs-tag">Lessons coming soon</span>
+              </div>
+            ) : (
+              sidebarPhases.map((phase) => (
                 <div key={phase.id}>
                   <div className="phase-header">
                     {phase.name} ({phase.range})
@@ -321,9 +377,12 @@ export default function App() {
                       .map((l) => (
                         <li
                           key={l.id}
-                          className={l.id === lesson.id ? "active" : ""}
+                          className={
+                            view === "workspace" && l.id === lesson.id ? "active" : ""
+                          }
                           onClick={() => {
                             setLessonId(l.id);
+                            setView("workspace");
                             setNavOpen(false);
                           }}
                         >
@@ -335,11 +394,34 @@ export default function App() {
                       ))}
                   </ul>
                 </div>
-              ))}
+              ))
+            )}
           </div>
           <AccountPanel user={user} onAuth={applyProgress} />
         </aside>
 
+        {view === "transcript" ? (
+          <Transcript
+            tracks={data.tracks}
+            phases={data.phases}
+            lessons={data.lessons}
+            completedIds={completedIds}
+            user={user}
+            credit={CREDIT}
+            onOpenLesson={openLesson}
+          />
+        ) : trackLessons.length === 0 ? (
+          <main className="main coming-soon-main">
+            <div className="coming-soon">
+              <span className="cs-icon" style={{ color: activeTrackInfo?.accent }}>
+                {activeTrackInfo?.icon}
+              </span>
+              <h2>{activeTrackInfo?.name}</h2>
+              <p>{activeTrackInfo?.blurb}</p>
+              <span className="cs-tag">Coming soon</span>
+            </div>
+          </main>
+        ) : (
         <main className={`main m-${mobileTab}`}>
           <header className="topbar">
             <button
@@ -521,6 +603,7 @@ export default function App() {
             </div>
           </footer>
         </main>
+        )}
       </div>
     </div>
   );

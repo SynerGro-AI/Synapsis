@@ -1,5 +1,14 @@
+export interface Track {
+  id: string;
+  name: string;
+  icon: string;
+  blurb: string;
+  accent: string;
+}
+
 export interface Phase {
   id: string;
+  track: string;
   name: string;
   range: string;
   concepts: string[];
@@ -50,6 +59,7 @@ export interface Attribution {
 export interface LessonData {
   version: number;
   attribution?: Attribution;
+  tracks: Track[];
   phases: Phase[];
   lessons: Lesson[];
 }
@@ -64,9 +74,40 @@ export const CREDIT: Attribution = {
 // Fallbacks let the UI run standalone (backend not started yet).
 export const FALLBACK_DATA: LessonData = {
   version: 2,
+  tracks: [
+    {
+      id: "arduino",
+      name: "Arduino Electronics",
+      icon: "⚡",
+      blurb: "Build real circuits and write the C++ that drives them.",
+      accent: "#e8a33d",
+    },
+    {
+      id: "devsetup",
+      name: "Build on Your Computer",
+      icon: "⌨",
+      blurb: "Set up your own machine: the command line, git, compilers.",
+      accent: "#5cc8ff",
+    },
+    {
+      id: "python",
+      name: "Python & Raspberry Pi",
+      icon: "🐍",
+      blurb: "Carry your electronics instincts into Python on a Raspberry Pi.",
+      accent: "#7fbf7f",
+    },
+    {
+      id: "ai",
+      name: "AI & Machine Learning",
+      icon: "🧠",
+      blurb: "From sensors to smarts: see, classify, and decide.",
+      accent: "#c58cff",
+    },
+  ],
   phases: [
     {
       id: "foundation",
+      track: "arduino",
       name: "Foundation",
       range: "1-5",
       concepts: ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"],
