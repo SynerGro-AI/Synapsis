@@ -126,6 +126,8 @@ class Parser {
 
   parseProgram(): Program {
     const program: Program = { globals: [], setup: [], loop: [] };
+    let sawSetup = false;
+    let sawLoop = false;
     while (this.peek()) {
       const t = this.peek()!;
       if (t.value === "void") {
@@ -134,8 +136,13 @@ class Parser {
         this.expect("(");
         this.expect(")");
         const body = this.parseBlock();
-        if (name === "setup") program.setup = body;
-        else if (name === "loop") program.loop = body;
+        if (name === "setup") {
+          program.setup = body;
+          sawSetup = true;
+        } else if (name === "loop") {
+          program.loop = body;
+          sawLoop = true;
+        }
         // other functions: parsed but ignored for now
       } else if (TYPE_KEYWORDS.includes(t.value)) {
         program.globals.push(this.parseDecl());
@@ -143,7 +150,7 @@ class Parser {
         throw new SimError(`Unexpected '${t.value}' at the top of the sketch`);
       }
     }
-    if (!program.setup.length && !program.loop.length)
+    if (!sawSetup && !sawLoop)
       throw new SimError("A sketch needs a void setup() and a void loop()");
     return program;
   }
