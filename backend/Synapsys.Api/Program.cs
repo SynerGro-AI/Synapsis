@@ -162,7 +162,7 @@ app.MapGet("/api/progress", (ClaimsPrincipal user) =>
     using (var cmd = conn.CreateCommand())
     {
         cmd.CommandText = """
-            SELECT lesson_id, completed, sketch
+            SELECT lesson_id, completed, sketch, circuit
             FROM progress WHERE user_id = $u ORDER BY lesson_id
             """;
         cmd.Parameters.AddWithValue("$u", userId);
@@ -173,6 +173,7 @@ app.MapGet("/api/progress", (ClaimsPrincipal user) =>
                 lessonId = reader.GetInt64(0),
                 completed = reader.GetInt64(1) != 0,
                 sketch = reader.IsDBNull(2) ? null : reader.GetString(2),
+                circuit = reader.IsDBNull(3) ? null : reader.GetString(3),
             });
     }
 
@@ -187,17 +188,19 @@ app.MapPut("/api/progress/{lessonId:int}", (int lessonId, ProgressUpdate update,
     using (var cmd = conn.CreateCommand())
     {
         cmd.CommandText = """
-            INSERT INTO progress (user_id, lesson_id, completed, sketch, updated_at)
-            VALUES ($u, $l, $c, $s, $t)
+            INSERT INTO progress (user_id, lesson_id, completed, sketch, circuit, updated_at)
+            VALUES ($u, $l, $c, $s, $k, $t)
             ON CONFLICT (user_id, lesson_id) DO UPDATE SET
                 completed = MAX(progress.completed, excluded.completed),
                 sketch = excluded.sketch,
+                circuit = excluded.circuit,
                 updated_at = excluded.updated_at
             """;
         cmd.Parameters.AddWithValue("$u", userId);
         cmd.Parameters.AddWithValue("$l", lessonId);
         cmd.Parameters.AddWithValue("$c", update.Completed ? 1 : 0);
         cmd.Parameters.AddWithValue("$s", (object?)update.Sketch ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$k", (object?)update.Circuit ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("o"));
         cmd.ExecuteNonQuery();
     }
@@ -218,4 +221,4 @@ app.Run();
 
 record Credentials(string? Username, string? Password);
 
-record ProgressUpdate(bool Completed, string? Sketch, bool Current);
+record ProgressUpdate(bool Completed, string? Sketch, string? Circuit, bool Current);

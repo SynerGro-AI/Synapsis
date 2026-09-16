@@ -10,7 +10,6 @@ declare module "react/jsx-runtime" {
   namespace JSX {
     interface IntrinsicElements {
       "wokwi-arduino-uno": WokwiProps<{ led13?: boolean; ledPower?: boolean }>;
-      "wokwi-breadboard": WokwiProps;
       "wokwi-led": WokwiProps<{
         value?: boolean;
         color?: string;
@@ -25,6 +24,10 @@ declare module "react/jsx-runtime" {
         max?: number;
         step?: number;
       }>;
+      "wokwi-pushbutton": WokwiProps<{ color?: string; pressed?: boolean; label?: string }>;
+      "wokwi-photoresistor-sensor": WokwiProps<{ value?: number }>;
+      "wokwi-ntc-temperature-sensor": WokwiProps<{ value?: number }>;
+      "wokwi-hc-sr04": WokwiProps<{ distance?: number }>;
     }
   }
 }

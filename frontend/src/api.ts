@@ -11,14 +11,11 @@ export interface Lesson {
   title: string;
   description: string;
   source?: string;
+  featuredComponent: string;
   circuit: {
-    components: string[];
+    palette: string[];
+    required: string[];
     notes: string;
-  };
-  componentGuide: {
-    name: string;
-    symbol?: string;
-    info: Record<string, string>;
   };
   codeTemplate: {
     language: string;
@@ -29,6 +26,18 @@ export interface Lesson {
     initial: string;
     status: string;
   };
+}
+
+export interface PartInfo {
+  id: string;
+  name: string;
+  category: string;
+  function: string;
+  science: string;
+  specs: Record<string, string>;
+  notes: string;
+  symbol?: string;
+  terminals: string;
 }
 
 export interface Attribution {
@@ -52,21 +61,15 @@ export const CREDIT: Attribution = {
   note: "Lesson curriculum based on Paul McWhorter's Arduino tutorial series at toptechboy.com.",
 };
 
-// Fallback lets the UI run standalone (backend not started yet).
+// Fallbacks let the UI run standalone (backend not started yet).
 export const FALLBACK_DATA: LessonData = {
-  version: 1,
+  version: 2,
   phases: [
     {
       id: "foundation",
       name: "Foundation",
       range: "1-5",
-      concepts: [
-        "Digital out",
-        "Analog in",
-        "Serial monitor",
-        "Variables",
-        "Conditionals",
-      ],
+      concepts: ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"],
     },
   ],
   lessons: [
@@ -75,22 +78,13 @@ export const FALLBACK_DATA: LessonData = {
       phase: "foundation",
       title: "Digital Output — LED Blink",
       description:
-        "Learn how to control a digital pin and blink an LED using pinMode() and digitalWrite().",
+        "Control a digital pin and blink an LED using pinMode() and digitalWrite(). Build the circuit: pin 13 → resistor → LED → GND.",
+      featuredComponent: "led",
       circuit: {
-        components: ["Arduino Uno", "Breadboard", "LED", "220Ω resistor"],
+        palette: ["led", "resistor"],
+        required: ["led", "resistor"],
         notes:
-          "An Arduino Uno connected to a breadboard containing a 220Ω resistor and an LED.",
-      },
-      componentGuide: {
-        name: "LED — Light Emitting Diode",
-        info: {
-          forwardVoltage: "2.0–2.2V",
-          maxCurrent: "20mA",
-          resistorNeeded: "220Ω",
-          wavelength: "≈625nm (red)",
-          polarityNotes:
-            "The longer leg is the anode (+), shorter leg is the cathode (–).",
-        },
+          "Wire pin 13 to one side of the resistor, the other side to the LED anode (A), and the LED cathode (C) to GND.",
       },
       codeTemplate: {
         language: "cpp",
@@ -100,18 +94,43 @@ export const FALLBACK_DATA: LessonData = {
       hints: [
         "pinMode(13, OUTPUT);",
         "digitalWrite(13, HIGH);",
+        "delay(500);",
         "digitalWrite(13, LOW);",
       ],
-      output: {
-        initial: "PIN 13 OFF",
-        status: "Waiting for sketch...",
-      },
+      output: { initial: "PIN 13 OFF", status: "Waiting for sketch..." },
     },
   ],
 };
+
+export const FALLBACK_PARTS: PartInfo[] = [
+  {
+    id: "led",
+    name: "LED — Light Emitting Diode",
+    category: "output",
+    function: "Turns current into light. Use it to SEE what your code is doing.",
+    science:
+      "A semiconductor diode: current flowing forward across the junction releases energy as photons. Being a diode, current only flows one way.",
+    specs: {
+      forwardVoltage: "2.0–2.2V",
+      maxCurrent: "20mA",
+      resistorNeeded: "220Ω",
+    },
+    notes:
+      "The longer leg is the anode (+) — wire it toward the pin. The shorter leg is the cathode (–) — wire it toward GND.",
+    symbol: "kicad-symbols/LED.kicad_sym",
+    terminals: "A (anode +), C (cathode –)",
+  },
+];
 
 export async function fetchLessonData(): Promise<LessonData> {
   const res = await fetch("/api/lessons");
   if (!res.ok) throw new Error(`GET /api/lessons → ${res.status}`);
   return res.json();
+}
+
+export async function fetchParts(): Promise<PartInfo[]> {
+  const res = await fetch("/api/components");
+  if (!res.ok) throw new Error(`GET /api/components → ${res.status}`);
+  const data = await res.json();
+  return data.components;
 }

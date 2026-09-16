@@ -24,11 +24,24 @@ public static class Db
                 lesson_id INTEGER NOT NULL,
                 completed INTEGER NOT NULL DEFAULT 0,
                 sketch TEXT,
+                circuit TEXT,
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (user_id, lesson_id)
             );
             """;
         cmd.ExecuteNonQuery();
+
+        // Older databases predate the circuit column.
+        try
+        {
+            using var migrate = conn.CreateCommand();
+            migrate.CommandText = "ALTER TABLE progress ADD COLUMN circuit TEXT";
+            migrate.ExecuteNonQuery();
+        }
+        catch (SqliteException)
+        {
+            // column already exists
+        }
     }
 
     public static SqliteConnection Open()

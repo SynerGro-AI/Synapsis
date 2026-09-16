@@ -6,6 +6,7 @@ export interface LessonProgress {
   lessonId: number;
   completed: boolean;
   sketch: string | null;
+  circuit: string | null;
 }
 
 export interface ProgressData {
@@ -60,7 +61,7 @@ export const getProgress = () => request<ProgressData>("/api/progress");
 
 export const saveProgress = (
   lessonId: number,
-  body: { completed: boolean; sketch: string; current: boolean },
+  body: { completed: boolean; sketch: string; circuit: string; current: boolean },
 ) =>
   request<void>(`/api/progress/${lessonId}`, {
     method: "PUT",

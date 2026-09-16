@@ -5,7 +5,9 @@
 
 export interface SimIO {
   digitalWrite(pin: number, high: boolean): void;
+  digitalRead(pin: number, mode: string | undefined): number;
   analogRead(pin: number): number;
+  pulseIn(pin: number): number;
   serial(line: string): void;
   onError(message: string): void;
 }
@@ -291,6 +293,12 @@ const CONSTANTS: Record<string, number> = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const MODE_NAMES: Record<number, string> = {
+  0: "INPUT",
+  1: "OUTPUT",
+  2: "INPUT_PULLUP",
+};
+
 export class ArduinoSim {
   private stopped = false;
   private pinModes = new Map<number, number>();
@@ -411,7 +419,12 @@ export class ArduinoSim {
           case "+": return l + r;
           case "-": return l - r;
           case "*": return l * r;
-          case "/": return r === 0 ? 0 : Math.trunc(l / r);
+          case "/":
+            if (r === 0) return 0;
+            // C semantics: int/int truncates, anything with a float stays float.
+            return Number.isInteger(l) && Number.isInteger(r)
+              ? Math.trunc(l / r)
+              : l / r;
           case "%": return r === 0 ? 0 : l % r;
           case ">": return l > r ? 1 : 0;
           case "<": return l < r ? 1 : 0;
@@ -447,10 +460,20 @@ export class ArduinoSim {
         io.digitalWrite(pin, (await num(1)) !== 0);
         return 0;
       }
-      case "digitalRead":
-        return 0;
+      case "digitalRead": {
+        const pin = await num(0);
+        return io.digitalRead(pin, MODE_NAMES[this.pinModes.get(pin) ?? -1]);
+      }
       case "analogRead":
         return io.analogRead(await num(0));
+      case "pulseIn": {
+        const pin = await num(0);
+        return io.pulseIn(pin);
+      }
+      case "delayMicroseconds":
+        // Microseconds are below our simulation resolution; treat as instant.
+        await num(0);
+        return 0;
       case "analogWrite": {
         const pin = await num(0);
         io.digitalWrite(pin, (await num(1)) > 127);
@@ -482,7 +505,11 @@ export class ArduinoSim {
             "Serial isn't started — add Serial.begin(9600); in setup()",
           );
         const value = expr.args.length ? await arg(0) : "";
-        this.serialBuffer += String(value);
+        const text =
+          typeof value === "number" && !Number.isInteger(value)
+            ? value.toFixed(2)
+            : String(value);
+        this.serialBuffer += text;
         if (expr.name === "Serial.println") {
           io.serial(this.serialBuffer);
           this.serialBuffer = "";
@@ -493,4 +520,128 @@ export class ArduinoSim {
         throw new SimError(`'${expr.name}()' isn't supported yet`);
     }
   }
+}
+
+// ---------- Static sketch analysis (for circuit cross-checking) ----------
+
+export interface SketchAnalysis {
+  parseError?: string;
+  digitalWrites: number[];
+  digitalReads: number[];
+  analogReads: number[];
+  pulseIns: number[];
+  pinModes: Map<number, string>;
+}
+
+/**
+ * Statically walk the sketch to find which pins the code uses, resolving
+ * simple constant variables (int ledPin = 13;). Used by the diagnostics
+ * panel to explain code/circuit mismatches without running the sketch.
+ */
+export function analyzeSketch(code: string): SketchAnalysis {
+  const result: SketchAnalysis = {
+    digitalWrites: [],
+    digitalReads: [],
+    analogReads: [],
+    pulseIns: [],
+    pinModes: new Map(),
+  };
+
+  let program: Program;
+  try {
+    program = new Parser(tokenize(code)).parseProgram();
+  } catch (e) {
+    result.parseError = e instanceof Error ? e.message : String(e);
+    return result;
+  }
+
+  const consts = new Map<string, number>();
+
+  function staticEval(expr: Expr): number | null {
+    switch (expr.kind) {
+      case "num":
+        return expr.value;
+      case "var":
+        if (consts.has(expr.name)) return consts.get(expr.name)!;
+        if (expr.name in CONSTANTS) return CONSTANTS[expr.name];
+        return null;
+      case "unary": {
+        const v = staticEval(expr.operand);
+        return v === null ? null : expr.op === "-" ? -v : v === 0 ? 1 : 0;
+      }
+      case "bin": {
+        const l = staticEval(expr.left);
+        const r = staticEval(expr.right);
+        if (l === null || r === null) return null;
+        switch (expr.op) {
+          case "+": return l + r;
+          case "-": return l - r;
+          case "*": return l * r;
+          case "/": return r === 0 ? 0 : Math.trunc(l / r);
+        }
+        return null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  const addUnique = (list: number[], v: number | null) => {
+    if (v !== null && !list.includes(v)) list.push(v);
+  };
+
+  function visitExpr(expr: Expr): void {
+    switch (expr.kind) {
+      case "call": {
+        const pin = expr.args.length ? staticEval(expr.args[0]) : null;
+        if (expr.name === "digitalWrite") addUnique(result.digitalWrites, pin);
+        else if (expr.name === "digitalRead") addUnique(result.digitalReads, pin);
+        else if (expr.name === "analogRead") addUnique(result.analogReads, pin);
+        else if (expr.name === "pulseIn") addUnique(result.pulseIns, pin);
+        else if (expr.name === "pinMode" && pin !== null && expr.args.length > 1) {
+          const mode = staticEval(expr.args[1]);
+          if (mode !== null && MODE_NAMES[mode]) result.pinModes.set(pin, MODE_NAMES[mode]);
+        }
+        expr.args.forEach(visitExpr);
+        return;
+      }
+      case "bin":
+        visitExpr(expr.left);
+        visitExpr(expr.right);
+        return;
+      case "unary":
+        visitExpr(expr.operand);
+        return;
+    }
+  }
+
+  function visitStmts(stmts: Stmt[]): void {
+    for (const s of stmts) {
+      switch (s.kind) {
+        case "decl":
+          if (s.init) {
+            const v = staticEval(s.init);
+            if (v !== null) consts.set(s.name, v);
+            visitExpr(s.init);
+          }
+          break;
+        case "assign":
+          visitExpr(s.expr);
+          break;
+        case "expr":
+          visitExpr(s.expr);
+          break;
+        case "if":
+          visitExpr(s.cond);
+          visitStmts(s.then);
+          if (s.else) visitStmts(s.else);
+          break;
+      }
+    }
+  }
+
+  visitStmts(program.globals);
+  visitStmts(program.setup);
+  visitStmts(program.loop);
+  return result;
 }
