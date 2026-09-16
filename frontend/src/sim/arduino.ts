@@ -10,6 +10,8 @@ export interface SimIO {
   analogRead(pin: number): number;
   pulseIn(pin: number): number;
   dhtRead(pin: number, kind: "temp" | "humidity"): number;
+  /** Next IR command byte waiting on a receiver whose DAT reaches `pin`, or -1. */
+  irDecode(pin: number): number;
   servoWrite(pin: number, angle: number): void;
   tone(pin: number, freq: number): void;
   noTone(pin: number): void;
@@ -25,6 +27,24 @@ class SimError extends Error {}
 interface Token {
   type: "num" | "str" | "id" | "punct";
   value: string;
+}
+
+/**
+ * Expand object-like `#define NAME value` macros before tokenizing. The
+ * tokenizer strips every # line, so without this a `#define IR_RECEIVE_PIN 7`
+ * would vanish and later references would look undeclared. Only simple
+ * (non-function) macros are handled; the value is wrapped in parens so it
+ * stays a single operand in expressions.
+ */
+function preprocess(source: string): string {
+  const macros: [string, string][] = [];
+  const re = /^[ \t]*#[ \t]*define[ \t]+([A-Za-z_]\w*)[ \t]+([^\n]+)$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(source))) macros.push([m[1], m[2].trim()]);
+  let out = source;
+  for (const [name, value] of macros)
+    out = out.replace(new RegExp(`\\b${name}\\b`, "g"), `(${value})`);
+  return out;
 }
 
 function tokenize(source: string): Token[] {
@@ -324,7 +344,8 @@ class Parser {
     }
     if (t.type === "id") {
       let name = t.value;
-      if (this.eat(".")) name += "." + this.next().value; // Serial.begin etc.
+      // Serial.begin, lcd.print, IrReceiver.decodedIRData.command — allow any depth.
+      while (this.eat(".")) name += "." + this.next().value;
       if (this.eat("(")) {
         const args: Expr[] = [];
         if (!this.at(")")) {
@@ -360,6 +381,8 @@ const CONSTANTS: Record<string, number> = {
   A5: 19,
   DHT11: 11,
   DHT22: 22,
+  ENABLE_LED_FEEDBACK: 1,
+  DISABLE_LED_FEEDBACK: 0,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -379,6 +402,9 @@ export class ArduinoSim {
   private stepsSinceYield = 0;
   private stepsSinceDelay = 0;
   private objects = new Map<string, { type: string; args: number[]; pin?: number }>();
+  // IrReceiver is a library-provided global singleton (not a user object).
+  private irReceivePin = -1;
+  private irCommand = 0;
 
   stop(): void {
     this.stopped = true;
@@ -391,7 +417,7 @@ export class ArduinoSim {
   async run(code: string, io: SimIO): Promise<void> {
     let program: Program;
     try {
-      program = new Parser(tokenize(code)).parseProgram();
+      program = new Parser(tokenize(preprocess(code))).parseProgram();
     } catch (e) {
       io.onError(e instanceof Error ? e.message : String(e));
       this.stopped = true;
@@ -511,6 +537,7 @@ export class ArduinoSim {
       case "str":
         return expr.value;
       case "var": {
+        if (expr.name === "IrReceiver.decodedIRData.command") return this.irCommand;
         for (let i = scopes.length - 1; i >= 0; i--)
           if (scopes[i].has(expr.name)) return scopes[i].get(expr.name)!;
         if (expr.name in CONSTANTS) return CONSTANTS[expr.name];
@@ -618,6 +645,26 @@ export class ArduinoSim {
           }
         }
         throw new SimError(`'${objName}.${method}()' isn't supported yet`);
+      }
+      // IrReceiver is a global singleton from the IRremote library.
+      if (objName === "IrReceiver") {
+        switch (method) {
+          case "begin":
+            this.irReceivePin = await num(0);
+            return 0;
+          case "decode": {
+            const code = io.irDecode(this.irReceivePin);
+            if (code >= 0) {
+              this.irCommand = code;
+              return 1;
+            }
+            return 0;
+          }
+          case "resume":
+          case "end":
+            return 0;
+        }
+        throw new SimError(`'IrReceiver.${method}()' isn't supported yet`);
       }
     }
 
@@ -730,6 +777,7 @@ export interface SketchAnalysis {
   tonePins: number[];
   lcdPins: number[];
   dhtPins: number[];
+  irPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -749,12 +797,13 @@ export function analyzeSketch(code: string): SketchAnalysis {
     tonePins: [],
     lcdPins: [],
     dhtPins: [],
+    irPins: [],
     pinModes: new Map(),
   };
 
   let program: Program;
   try {
-    program = new Parser(tokenize(code)).parseProgram();
+    program = new Parser(tokenize(preprocess(code))).parseProgram();
   } catch (e) {
     result.parseError = e instanceof Error ? e.message : String(e);
     return result;
@@ -805,6 +854,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
         else if (expr.name === "analogWrite") addUnique(result.analogWrites, pin);
         else if (expr.name === "pulseIn") addUnique(result.pulseIns, pin);
         else if (expr.name === "tone") addUnique(result.tonePins, pin);
+        else if (expr.name === "IrReceiver.begin") addUnique(result.irPins, pin);
         else if (expr.name.endsWith(".attach")) addUnique(result.servoPins, pin);
         else if (expr.name === "pinMode" && pin !== null && expr.args.length > 1) {
           const mode = staticEval(expr.args[1]);

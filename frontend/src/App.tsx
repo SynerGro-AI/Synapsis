@@ -94,6 +94,7 @@ export default function App() {
     tempC: 22,
     humidityPct: 50,
     distanceCm: 50,
+    irQueue: [],
   });
   worldRef.current.potValue = potValue;
   worldRef.current.lightPct = lightPct;
@@ -282,6 +283,11 @@ export default function App() {
     [refreshOutputs],
   );
 
+  // A remote key-press queues its NEC command byte for IrReceiver.decode().
+  const onIrButton = useCallback((code: number) => {
+    worldRef.current.irQueue.push(code);
+  }, []);
+
   function runSketch() {
     stopSim();
     const sketch = editorRef.current?.getValue() ?? code;
@@ -289,6 +295,7 @@ export default function App() {
     engineRef.current = sim;
     const rt = new CircuitRuntime(circuit, worldRef.current);
     runtimeRef.current = rt;
+    worldRef.current.irQueue.length = 0; // drop stale remote presses
     setSerial([]);
     setRunning(true);
 
@@ -329,6 +336,7 @@ export default function App() {
         analogRead: (pin) => rt.analogRead(pin),
         pulseIn: (pin) => rt.pulseIn(pin),
         dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
+        irDecode: (pin) => rt.irDecode(pin),
         serial: (line) => {
           setRanClean(true);
           setSerial((s) => [...s.slice(-30), line]);
@@ -571,6 +579,7 @@ export default function App() {
                 selected={selected}
                 onSelect={setSelected}
                 onButtonChange={onButtonChange}
+                onIrButton={onIrButton}
                 boardLed={running && boardLed}
               />
               <div className="world-controls">
@@ -616,6 +625,9 @@ export default function App() {
                 )}
                 {hasType("pushbutton") && (
                   <span className="world-hint">Click & hold the button on the canvas to press it</span>
+                )}
+                {hasType("irremote") && (
+                  <span className="world-hint">Click a key on the remote to beam its code to the receiver</span>
                 )}
               </div>
               <div className="circuit-notes">{lesson.circuit.notes}</div>

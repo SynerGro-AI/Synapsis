@@ -93,7 +93,7 @@
       "id": "control",
       "track": "arduino",
       "name": "Control",
-      "range": "13-23",
+      "range": "13-24",
       "concepts": [
         "Servos",
         "DC motors",
@@ -101,7 +101,8 @@
         "RGB LED",
         "LCD display",
         "Piezo buzzer",
-        "DHT11 sensor"
+        "DHT11 sensor",
+        "IR remote"
       ]
     },
     {
@@ -1151,6 +1152,42 @@
       ],
       "output": {
         "initial": "Weather station idle",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 24,
+      "phase": "control",
+      "title": "Remote Control",
+      "description": "Keep the 16×2 LCD and add an infrared receiver so your project can take orders from a TV-style remote. A library decodes the invisible pulses for you: each time a key arrives you read its command byte and print it to the screen. Run the sketch, then click keys on the remote to watch their codes appear — power is 162, the number keys each have their own value.",
+      "source": "Paul McWhorter, Arduino IR remote lessons — toptechboy.com",
+      "featuredComponent": "irrecv",
+      "circuit": {
+        "palette": [
+          "lcd",
+          "irrecv",
+          "irremote"
+        ],
+        "required": [
+          "lcd",
+          "irrecv",
+          "irremote"
+        ],
+        "notes": "LCD wired as in Lesson 19 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2; VSS/V0/RW/K→GND, VDD/A→5V). IR receiver: VCC→5V, GND→GND, DAT→7 (matches IR_RECEIVE_PIN in the code). Drop the remote on the canvas — it needs no wires, it beams infrared through the air."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <LiquidCrystal.h>\n#include <IRremote.hpp>\n\n#define IR_RECEIVE_PIN 7\n\nLiquidCrystal lcd(12, 11, 5, 4, 3, 2);\n\nvoid setup() {\n  lcd.begin(16, 2);\n  lcd.print(\"Point remote...\");\n  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);\n}\n\nvoid loop() {\n  // When a code arrives, decode it, show the command byte on the LCD,\n  // then call resume() so the receiver is ready for the next key.\n}"
+      },
+      "hints": [
+        "if (IrReceiver.decode()) {",
+        "lcd.clear();",
+        "lcd.print(\"Key: \");",
+        "lcd.print(IrReceiver.decodedIRData.command);",
+        "IrReceiver.resume();"
+      ],
+      "output": {
+        "initial": "IR receiver idle",
         "status": "Waiting for sketch..."
       }
     },

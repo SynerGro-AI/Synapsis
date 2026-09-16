@@ -22,6 +22,8 @@ const SCALE: Record<string, number> = {
   buzzer: 0.9,
   lcd: 0.75,
   dht: 0.85,
+  irrecv: 0.9,
+  irremote: 0.7,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -38,6 +40,8 @@ const ID_PREFIX: Record<PartType, string> = {
   buzzer: "BUZZ",
   lcd: "LCD",
   dht: "DHT",
+  irrecv: "IR",
+  irremote: "REMOTE",
 };
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
@@ -117,6 +121,8 @@ interface CircuitCanvasProps {
   selected: string | null;
   onSelect: (partId: string | null) => void;
   onButtonChange: (partId: string, pressed: boolean) => void;
+  /** Fired when a remote button is pressed, carrying its NEC command byte. */
+  onIrButton: (code: number) => void;
   boardLed: boolean;
 }
 
@@ -136,6 +142,7 @@ export default function CircuitCanvas({
   selected,
   onSelect,
   onButtonChange,
+  onIrButton,
   boardLed,
 }: CircuitCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -156,6 +163,7 @@ export default function CircuitCanvas({
     let missing = false;
     container.querySelectorAll<HTMLElement>("[data-part-id]").forEach((wrapper) => {
       const id = wrapper.dataset.partId!;
+      if (wrapper.dataset.partType === "irremote") return; // remote has no wiring pins
       const el = wrapper.firstElementChild as (HTMLElement & { pinInfo?: WokwiPinInfo[] }) | null;
       let pinInfo = el?.pinInfo;
       if (!pinInfo || !pinInfo.length)
@@ -372,7 +380,7 @@ export default function CircuitCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!dragWire, !!dragPart]);
 
-  // ---- Pushbutton press events from the wokwi element ----
+  // ---- Pushbutton press + IR remote events from the wokwi elements ----
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -380,19 +388,28 @@ export default function CircuitCanvas({
     container.querySelectorAll<HTMLElement>("[data-part-id]").forEach((wrapper) => {
       const id = wrapper.dataset.partId!;
       const part = circuit.parts.find((p) => p.id === id);
-      if (part?.type !== "pushbutton") return;
       const el = wrapper.firstElementChild as HTMLElement;
-      const press = () => onButtonChange(id, true);
-      const release = () => onButtonChange(id, false);
-      el.addEventListener("button-press", press);
-      el.addEventListener("button-release", release);
-      cleanups.push(() => {
-        el.removeEventListener("button-press", press);
-        el.removeEventListener("button-release", release);
-      });
+      if (part?.type === "pushbutton") {
+        const press = () => onButtonChange(id, true);
+        const release = () => onButtonChange(id, false);
+        el.addEventListener("button-press", press);
+        el.addEventListener("button-release", release);
+        cleanups.push(() => {
+          el.removeEventListener("button-press", press);
+          el.removeEventListener("button-release", release);
+        });
+      } else if (part?.type === "irremote") {
+        // wokwi-ir-remote fires button-press with detail.irCode = NEC command byte.
+        const press = (e: Event) => {
+          const code = (e as CustomEvent).detail?.irCode;
+          if (typeof code === "number") onIrButton(code);
+        };
+        el.addEventListener("button-press", press);
+        cleanups.push(() => el.removeEventListener("button-press", press));
+      }
     });
     return () => cleanups.forEach((fn) => fn());
-  }, [circuit.parts, onButtonChange]);
+  }, [circuit.parts, onButtonChange, onIrButton]);
 
   // ---- Wire path rendering ----
   function wirePath(a: PinAnchor, b: PinAnchor): string {
@@ -452,6 +469,8 @@ export default function CircuitCanvas({
           />
         )}
         {type === "dht" && <wokwi-dht22 />}
+        {type === "irrecv" && <wokwi-ir-receiver />}
+        {type === "irremote" && <wokwi-ir-remote />}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

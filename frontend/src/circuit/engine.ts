@@ -16,7 +16,9 @@ export type PartType =
   | "motor"
   | "buzzer"
   | "lcd"
-  | "dht";
+  | "dht"
+  | "irrecv"
+  | "irremote";
 
 export interface PlacedPart {
   id: string;
@@ -57,6 +59,7 @@ export interface SketchInfo {
   tonePins: number[];
   lcdPins: number[];
   dhtPins: number[];
+  irPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -67,6 +70,7 @@ export interface WorldState {
   tempC: number; // -24..80
   humidityPct: number; // 0..100 (DHT11)
   distanceCm: number; // 2..400
+  irQueue: number[]; // pending IR command bytes from the remote (FIFO)
 }
 
 export const PART_PINS: Record<PartType, string[]> = {
@@ -83,6 +87,8 @@ export const PART_PINS: Record<PartType, string[]> = {
   buzzer: ["1", "2"],
   lcd: ["VSS", "VDD", "V0", "RS", "RW", "E", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "A", "K"],
   dht: ["VCC", "SDA", "NC", "GND"],
+  irrecv: ["GND", "VCC", "DAT"],
+  irremote: [],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -99,6 +105,8 @@ export const PART_LABELS: Record<PartType, string> = {
   buzzer: "Buzzer",
   lcd: "LCD 16x2",
   dht: "DHT11 temp/humidity",
+  irrecv: "IR receiver",
+  irremote: "IR remote",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -336,6 +344,7 @@ export function validate(
     buzzer: ["1", "2"],
     lcd: ["VSS", "VDD", "RS", "E", "D4", "D5", "D6", "D7"],
     dht: ["VCC", "SDA", "GND"],
+    irrecv: ["GND", "VCC", "DAT"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -369,6 +378,7 @@ export function validate(
       servo: ["V+", "GND"],
       lcd: ["VDD", "VSS"],
       dht: ["VCC", "GND"],
+      irrecv: ["VCC", "GND"],
     };
     const pins = powered[p.type];
     if (pins) {
@@ -646,6 +656,17 @@ export function validate(
       }
       if (sketch.dhtPins.length && !c.partsByType("dht").length && required.includes("dht"))
         err("circuit", "Your code creates a DHT sensor, but there's no DHT11 in the circuit yet.");
+
+      // IR receiver: the DAT (signal) wire must reach IrReceiver.begin(pin)
+      for (const ir of c.partsByType("irrecv")) {
+        const dataPins = c.unoPinsOnNet(c.netOf(ir.id, "DAT")).filter((n) => n <= 13);
+        if (isTerminalWired(ir.id, "DAT", "irrecv") && !dataPins.length)
+          err("circuit", `${ir.id}: the DAT (signal) pin must go to a digital pin so the Uno can read the remote.`);
+        if (dataPins.length && sketch.irPins.length && !sketch.irPins.includes(dataPins[0]))
+          err("both", `${ir.id}'s DAT line is on pin ${dataPins[0]}, but your code calls IrReceiver.begin(${sketch.irPins.map(pinLabel).join(", ")}, ...). Match the pin numbers.`);
+      }
+      if (sketch.irPins.length && !c.partsByType("irrecv").length && required.includes("irrecv"))
+        err("circuit", "Your code starts IrReceiver, but there's no IR receiver in the circuit yet.");
     }
   }
 
@@ -881,5 +902,20 @@ export class CircuitRuntime {
       return kind === "temp" ? this.world.tempC : this.world.humidityPct;
     }
     return NaN;
+  }
+
+  /** Next IR command byte waiting on a receiver whose DAT line reaches this
+   *  pin, or -1 if none is queued (or the receiver is unwired/unpowered). */
+  irDecode(pin: number): number {
+    const net = this.circuit.netOf("uno", pinLabel(pin));
+    for (const s of this.circuit.partsByType("irrecv")) {
+      if (this.circuit.netOf(s.id, "DAT") !== net) continue;
+      const powered =
+        this.circuit.netOf(s.id, "VCC") === this.circuit.v5 &&
+        this.circuit.netOf(s.id, "GND") === this.circuit.gnd;
+      if (!powered) return -1;
+      return this.world.irQueue.shift() ?? -1;
+    }
+    return -1;
   }
 }

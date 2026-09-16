@@ -219,6 +219,38 @@
       },
       "notes": "Wire VCC→5V, GND→GND, and DATA→any digital pin. In code: create the object with DHT dht(pin, DHT11); call dht.begin() once in setup(); then read with dht.readTemperature() and dht.readHumidity(). Don't poll faster than once a second or the readings go stale.",
       "terminals": "VCC (5V), SDA/DATA (to a digital pin), NC (unused), GND"
+    },
+    {
+      "id": "irrecv",
+      "name": "Infrared Receiver (38 kHz)",
+      "category": "input",
+      "function": "Listens for the invisible infrared light a remote control flashes at it and turns that flicker into a clean digital signal your Arduino can read. The IRremote library decodes the pulse train into a single command number for whichever button was pressed.",
+      "science": "A remote's LED doesn't glow steadily — it flickers on and off about 38,000 times a second, and that fast flicker is switched in longer and shorter bursts to spell out a number in binary (the NEC protocol). This little receiver has a photodiode tuned to 38 kHz and a demodulator chip that ignores ordinary room light and sunlight (which don't flicker at that rate) and passes only the 38 kHz bursts. It hands the Arduino a stream of clean HIGH/LOW pulses on its OUT pin. Decoding the exact widths of those pulses by hand would be maddening, so you install the IRremote library once: each pass through loop() you ask IrReceiver.decode(), and if a full code has arrived it fills in IrReceiver.decodedIRData.command with the button's number.",
+      "specs": {
+        "type": "38 kHz IR demodulator (VS1838B-class)",
+        "supply": "2.7–5.5 V",
+        "output": "single active-low digital line",
+        "range": "up to ~8 m, line of sight",
+        "protocols": "NEC and most consumer-remote formats"
+      },
+      "notes": "Three pins: DAT (signal → any digital pin), VCC → 5V, GND → GND. In code: #include <IRremote.hpp>, #define IR_RECEIVE_PIN 7, then IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK) in setup(). Each loop: if (IrReceiver.decode()) { read IrReceiver.decodedIRData.command; IrReceiver.resume(); }.",
+      "terminals": "DAT (to a digital pin), VCC (5V), GND"
+    },
+    {
+      "id": "irremote",
+      "name": "Infrared Remote Control",
+      "category": "input",
+      "function": "The handheld transmitter — a grid of buttons that beam commands to the receiver. Every key flashes an infrared LED with its own unique pattern of pulses, so the board can tell exactly which button you pressed. There are no wires: the signal travels through the air as invisible light.",
+      "science": "Press a key and a tiny microcontroller inside drives an infrared LED, flickering it at 38 kHz and chopping that carrier into a burst pattern that encodes an 8-bit address plus an 8-bit command (the NEC protocol). Different keys send different command bytes — power is 0xA2, the number 1 is 0x30, and so on. Infrared sits just past the red end of the spectrum, so your eyes can't see it, but the receiver's photodiode can. Because it's light, it only works in line of sight and gets swamped if you point two remotes at once.",
+      "specs": {
+        "type": "NEC infrared transmitter",
+        "carrier": "38 kHz",
+        "keys": "21 buttons (power, 0–9, +/−, arrows…)",
+        "power": "coin cell (simulated here)",
+        "link": "one-way, line of sight"
+      },
+      "notes": "Not wired into the circuit — just drop it on the canvas and click its keys while the sketch runs. Each key sends a command byte (power = 0xA2, 1 = 0x30, …) that shows up in IrReceiver.decodedIRData.command.",
+      "terminals": "none — wireless infrared"
     }
   ]
 }
