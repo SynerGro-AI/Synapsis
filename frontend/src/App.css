@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background: #1e1e1e;
   color: white;
   font-family: sans-serif;
@@ -759,3 +760,160 @@
   color: #7fbf7f;
   font-size: 13px;
 }
+
+/* ---- Mobile scaffolding (hidden on desktop) ---- */
+.nav-toggle,
+.mobile-tabs,
+.nav-backdrop {
+  display: none;
+}
+
+/* Bigger invisible hit area on touch/coarse pointers so pins are finger-friendly. */
+@media (pointer: coarse) {
+  .pin {
+    stroke-width: 16;
+  }
+}
+
+@media (max-width: 820px) {
+  .credits {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .credits-text {
+    order: 3;
+    flex-basis: 100%;
+    text-align: left;
+  }
+  .credits .donate {
+    margin-left: auto;
+  }
+
+  /* Sidebar becomes a slide-in drawer behind the ☰ button. */
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #e8a33d;
+    font-size: 22px;
+    line-height: 1;
+    padding: 0 12px 0 0;
+    cursor: pointer;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    max-width: 82vw;
+    z-index: 60;
+    transform: translateX(-102%);
+    transition: transform 0.2s ease;
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.5);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 55;
+  }
+
+  /* Tab bar chooses which single panel is visible. */
+  .mobile-tabs {
+    display: flex;
+    border-bottom: 1px solid #333;
+    background: #1a1a1a;
+  }
+  .mobile-tabs button {
+    flex: 1;
+    position: relative;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #999;
+    padding: 10px 4px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .mobile-tabs button.active {
+    color: #e8a33d;
+    border-bottom-color: #e8a33d;
+    background: #221b0f;
+  }
+  .tab-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 5px;
+    border-radius: 50%;
+    background: #7fbf7f;
+    vertical-align: middle;
+  }
+
+  .topbar {
+    padding: 8px 12px;
+  }
+  .topbar h3 {
+    font-size: 15px;
+  }
+
+  /* Show exactly one region for the active tab; the rest collapse. */
+  .content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 8px;
+    gap: 0;
+  }
+  .canvas,
+  .guide,
+  .editor,
+  .console {
+    display: none;
+  }
+  .main.m-canvas .canvas {
+    display: flex;
+    flex: 1;
+  }
+  .main.m-guide .guide {
+    display: block;
+    flex: 1;
+  }
+  .main.m-editor .editor {
+    display: flex;
+    flex: 1;
+  }
+  .main.m-console .content {
+    display: none;
+  }
+  .main.m-console .console {
+    display: flex;
+    flex: 1;
+    height: auto;
+    flex-direction: row;
+  }
+
+  /* Stack serial + diagnostics vertically on narrow screens. */
+  .console-pane.diagnostics {
+    border-left: none;
+    border-top: 1px solid #333;
+  }
+}
+
+@media (max-width: 560px) {
+  .main.m-console .console {
+    flex-direction: column;
+  }
+}
+

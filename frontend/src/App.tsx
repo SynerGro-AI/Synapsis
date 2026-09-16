@@ -27,6 +27,14 @@ const HINT_LABELS = "ABCDEFGH";
 const normalize = (s: string) => s.replace(/\s+/g, "");
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
 
+type MobileTab = "canvas" | "editor" | "guide" | "console";
+const MOBILE_TABS: { id: MobileTab; label: string }[] = [
+  { id: "canvas", label: "◆ Circuit" },
+  { id: "editor", label: "‹› Code" },
+  { id: "guide", label: "ℹ Guide" },
+  { id: "console", label: "▤ Console" },
+];
+
 interface SavedLesson {
   completed: boolean;
   sketch: string | null;
@@ -46,6 +54,10 @@ export default function App() {
   const [code, setCode] = useState("");
   const [circuit, setCircuit] = useState<CircuitState>(EMPTY_CIRCUIT);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Mobile: which single panel is showing, and whether the lesson drawer is open.
+  const [mobileTab, setMobileTab] = useState<MobileTab>("canvas");
+  const [navOpen, setNavOpen] = useState(false);
 
   const [running, setRunning] = useState(false);
   const [ranClean, setRanClean] = useState(false);
@@ -292,7 +304,8 @@ export default function App() {
       </div>
 
       <div className="app">
-        <aside className="sidebar">
+        {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} />}
+        <aside className={`sidebar${navOpen ? " open" : ""}`}>
           <h2>Synapsys</h2>
           <div className="sidebar-lessons">
             {data.phases
@@ -309,7 +322,10 @@ export default function App() {
                         <li
                           key={l.id}
                           className={l.id === lesson.id ? "active" : ""}
-                          onClick={() => setLessonId(l.id)}
+                          onClick={() => {
+                            setLessonId(l.id);
+                            setNavOpen(false);
+                          }}
                         >
                           <span className="lesson-check">
                             {saved[l.id]?.completed ? "✓" : ""}
@@ -324,8 +340,15 @@ export default function App() {
           <AccountPanel user={user} onAuth={applyProgress} />
         </aside>
 
-        <main className="main">
+        <main className={`main m-${mobileTab}`}>
           <header className="topbar">
+            <button
+              className="nav-toggle"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open lessons"
+            >
+              ☰
+            </button>
             <h3>
               Lesson {lesson.id} — {lesson.title}
             </h3>
@@ -334,6 +357,19 @@ export default function App() {
               <span className="offline">backend offline — using built-in data</span>
             )}
           </header>
+
+          <nav className="mobile-tabs">
+            {MOBILE_TABS.map((t) => (
+              <button
+                key={t.id}
+                className={mobileTab === t.id ? "active" : ""}
+                onClick={() => setMobileTab(t.id)}
+              >
+                {t.label}
+                {t.id === "console" && running && <span className="tab-dot" />}
+              </button>
+            ))}
+          </nav>
 
           <section className="content">
             <div className="canvas">
