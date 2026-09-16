@@ -1,0 +1,346 @@
+{
+  "version": 2,
+  "attribution": {
+    "author": "Paul McWhorter",
+    "website": "https://toptechboy.com/arduino-lessons/",
+    "donate": "https://www.patreon.com/PaulMcWhorter",
+    "note": "Lesson curriculum based on Paul McWhorter's Arduino tutorial series at toptechboy.com. Please support his free educational work on Patreon."
+  },
+  "symbolLibrary": {
+    "source": "KiCad official symbol libraries",
+    "license": "CC-BY-SA 4.0 (with KiCad libraries exception)",
+    "path": "frontend/public/kicad-symbols/"
+  },
+  "phases": [
+    {
+      "id": "foundation",
+      "name": "Foundation",
+      "range": "1-5",
+      "concepts": ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"]
+    },
+    {
+      "id": "sensing",
+      "name": "Sensing",
+      "range": "6-12",
+      "concepts": ["Buttons", "Debouncing", "Light sensor", "Temp sensor", "Ultrasonic"]
+    },
+    {
+      "id": "control",
+      "name": "Control",
+      "range": "13-20",
+      "concepts": ["Servos", "DC motors", "PWM", "RGB LED", "LCD display"]
+    },
+    {
+      "id": "python_bridge",
+      "name": "Python Bridge",
+      "range": "21-28",
+      "concepts": ["Python syntax", "Raspberry Pi crossover", "Circuit parity with Arduino"]
+    },
+    {
+      "id": "expert",
+      "name": "Expert",
+      "range": "29+",
+      "concepts": ["Wire gauge physics", "Signal calibration", "Interrupts", "I2C"]
+    }
+  ],
+
+  "lessons": [
+    {
+      "id": 1,
+      "phase": "foundation",
+      "title": "Digital Output — LED Blink",
+      "description": "Control a digital pin and blink an LED using pinMode() and digitalWrite(). Build the circuit: pin 13 → resistor → LED → GND.",
+      "source": "Paul McWhorter, Arduino Tutorials 1–2 — toptechboy.com",
+      "featuredComponent": "led",
+      "circuit": {
+        "palette": ["led", "resistor"],
+        "required": ["led", "resistor"],
+        "notes": "Wire pin 13 to one side of the resistor, the other side to the LED anode (A), and the LED cathode (C) to GND."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  // One-time configuration\n}\n\nvoid loop() {\n  // Blink LED\n}"
+      },
+      "hints": [
+        "pinMode(13, OUTPUT);",
+        "digitalWrite(13, HIGH);",
+        "delay(500);",
+        "digitalWrite(13, LOW);"
+      ],
+      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 2,
+      "phase": "foundation",
+      "title": "Analog Input — Potentiometer",
+      "description": "Read a potentiometer, map its value, and print to the serial monitor. Wire the pot: VCC→5V, GND→GND, SIG→A0.",
+      "source": "Paul McWhorter, Arduino Tutorial 10 — toptechboy.com",
+      "featuredComponent": "potentiometer",
+      "circuit": {
+        "palette": ["potentiometer"],
+        "required": ["potentiometer"],
+        "notes": "The wiper (SIG) picks off a voltage between 0V and 5V. Wire it to analog pin A0."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  // Start the serial monitor\n}\n\nvoid loop() {\n  // Read A0, map it, print it\n}"
+      },
+      "hints": [
+        "Serial.begin(9600);",
+        "int value = analogRead(A0);",
+        "int mapped = map(value, 0, 1023, 0, 255);",
+        "Serial.println(mapped);"
+      ],
+      "output": { "initial": "Reading potentiometer...", "status": "Serial idle" }
+    },
+
+    {
+      "id": 3,
+      "phase": "foundation",
+      "title": "Serial Monitor — Talking to Your Arduino",
+      "description": "Use Serial.begin(), Serial.print(), and Serial.println() to send readable data to your computer. No external circuit needed.",
+      "source": "Paul McWhorter, Arduino serial tutorials — toptechboy.com",
+      "featuredComponent": "uno",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "No external parts — the serial monitor communicates over the USB cable."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  // Start serial communication\n}\n\nvoid loop() {\n  // Print a message every second\n}"
+      },
+      "hints": [
+        "Serial.begin(9600);",
+        "Serial.println(\"Hello, world!\");",
+        "delay(1000);"
+      ],
+      "output": { "initial": "Serial monitor idle", "status": "Waiting for Serial.begin()..." }
+    },
+
+    {
+      "id": 4,
+      "phase": "foundation",
+      "title": "Variables — Making Code Adjustable",
+      "description": "Replace magic numbers with named int variables so one edit changes the whole sketch. Same LED circuit as Lesson 1.",
+      "source": "Paul McWhorter, Arduino Tutorial 4 (Variables) — toptechboy.com",
+      "featuredComponent": "resistor",
+      "circuit": {
+        "palette": ["led", "resistor"],
+        "required": ["led", "resistor"],
+        "notes": "Rebuild the Lesson 1 circuit: pin → resistor → LED anode, cathode → GND."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 13;\nint onTime = 500;\nint offTime = 500;\n\nvoid setup() {\n  // Configure ledPin as an output\n}\n\nvoid loop() {\n  // Blink using the variables\n}"
+      },
+      "hints": [
+        "pinMode(ledPin, OUTPUT);",
+        "digitalWrite(ledPin, HIGH);",
+        "delay(onTime);"
+      ],
+      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 5,
+      "phase": "foundation",
+      "title": "Conditionals — Making Decisions",
+      "description": "Use if/else to switch the LED based on the potentiometer: turn it past halfway and the light comes on.",
+      "source": "Paul McWhorter, Arduino if-statement tutorials — toptechboy.com",
+      "featuredComponent": "potentiometer",
+      "circuit": {
+        "palette": ["potentiometer", "led", "resistor"],
+        "required": ["potentiometer", "led", "resistor"],
+        "notes": "Two sub-circuits: the pot (VCC/GND/SIG→A0) for input, and pin 13 → resistor → LED → GND for output."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  int value = analogRead(A0);\n  // Turn the LED on when value is past halfway\n}"
+      },
+      "hints": [
+        "if (value > 512) {",
+        "digitalWrite(ledPin, HIGH);",
+        "} else {",
+        "digitalWrite(ledPin, LOW);"
+      ],
+      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 6,
+      "phase": "sensing",
+      "title": "Digital Input — Pushbutton",
+      "description": "Read a pushbutton with INPUT_PULLUP and light the LED while it's held. Remember: with a pullup, pressed reads LOW.",
+      "source": "Paul McWhorter, Arduino button tutorials — toptechboy.com",
+      "featuredComponent": "pushbutton",
+      "circuit": {
+        "palette": ["pushbutton", "led", "resistor"],
+        "required": ["pushbutton", "led", "resistor"],
+        "notes": "Button between pin 2 and GND (INPUT_PULLUP handles the rest internally). LED circuit on pin 13 as usual."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int buttonPin = 2;\nint ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  // Configure the button pin with the internal pullup\n}\n\nvoid loop() {\n  // Read the button; LOW means pressed\n}"
+      },
+      "hints": [
+        "pinMode(buttonPin, INPUT_PULLUP);",
+        "int state = digitalRead(buttonPin);",
+        "if (state == LOW) {",
+        "digitalWrite(ledPin, HIGH);"
+      ],
+      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 7,
+      "phase": "sensing",
+      "title": "Debouncing — Clean Button Presses",
+      "description": "Metal contacts bounce. Use millis() to ignore changes for 50ms so one press counts exactly once — toggle the LED per press.",
+      "source": "Paul McWhorter, Arduino debounce tutorials — toptechboy.com",
+      "featuredComponent": "pushbutton",
+      "circuit": {
+        "palette": ["pushbutton", "led", "resistor"],
+        "required": ["pushbutton", "led", "resistor"],
+        "notes": "Same wiring as Lesson 6: button on pin 2 to GND, LED circuit on pin 13."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int buttonPin = 2;\nint ledPin = 13;\nint ledState = 0;\nint lastReading = 1;\nunsigned long lastChange = 0;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  pinMode(buttonPin, INPUT_PULLUP);\n}\n\nvoid loop() {\n  int reading = digitalRead(buttonPin);\n  // If the reading changed and 50ms have passed, act on it\n}"
+      },
+      "hints": [
+        "if (reading != lastReading && millis() - lastChange > 50) {",
+        "lastChange = millis();",
+        "if (reading == LOW) { ledState = !ledState; }",
+        "digitalWrite(ledPin, ledState);"
+      ],
+      "output": { "initial": "PIN 13 OFF", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 8,
+      "phase": "sensing",
+      "title": "Light Sensor — Photoresistor",
+      "description": "Read the light level with a photoresistor module and print it to the serial monitor. Cover the sensor and watch the numbers fall.",
+      "source": "Paul McWhorter, Arduino photoresistor tutorials — toptechboy.com",
+      "featuredComponent": "photoresistor",
+      "circuit": {
+        "palette": ["photoresistor"],
+        "required": ["photoresistor"],
+        "notes": "Module wiring: VCC→5V, GND→GND, AO→A0. The AO voltage rises with brightness."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  // Read the light level on A0 and print it\n}"
+      },
+      "hints": [
+        "int light = analogRead(A0);",
+        "Serial.println(light);",
+        "delay(200);"
+      ],
+      "output": { "initial": "Light sensor idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 9,
+      "phase": "sensing",
+      "title": "Night Light — Light + LED",
+      "description": "Combine sensing and output: when it gets dark, the LED turns on automatically — a real night light.",
+      "source": "Paul McWhorter, Arduino light-meter tutorials — toptechboy.com",
+      "featuredComponent": "photoresistor",
+      "circuit": {
+        "palette": ["photoresistor", "led", "resistor"],
+        "required": ["photoresistor", "led", "resistor"],
+        "notes": "Photoresistor module AO→A0, plus the LED circuit on pin 13."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  int light = analogRead(A0);\n  Serial.println(light);\n  // Turn the LED on when it is dark (low reading)\n}"
+      },
+      "hints": [
+        "if (light < 300) {",
+        "digitalWrite(ledPin, HIGH);",
+        "} else {",
+        "digitalWrite(ledPin, LOW);"
+      ],
+      "output": { "initial": "Night light armed", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 10,
+      "phase": "sensing",
+      "title": "Temperature — NTC Thermistor",
+      "description": "Read temperature with an NTC thermistor module and print approximate °C using map().",
+      "source": "Paul McWhorter, Arduino thermistor tutorials — toptechboy.com",
+      "featuredComponent": "ntc",
+      "circuit": {
+        "palette": ["ntc"],
+        "required": ["ntc"],
+        "notes": "Module wiring: VCC→5V, GND→GND, OUT→A0."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  int raw = analogRead(A0);\n  // Map the raw reading to approximate degrees C and print it\n}"
+      },
+      "hints": [
+        "int tempC = map(raw, 0, 1023, -24, 80);",
+        "Serial.print(tempC);",
+        "Serial.println(\" C\");",
+        "delay(500);"
+      ],
+      "output": { "initial": "Thermometer idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 11,
+      "phase": "sensing",
+      "title": "Ultrasonic Distance — HC-SR04",
+      "description": "Measure distance like a bat: ping with TRIG, time the echo with pulseIn(), and convert microseconds to centimeters.",
+      "source": "Paul McWhorter, Arduino HC-SR04 tutorials — toptechboy.com",
+      "featuredComponent": "ultrasonic",
+      "circuit": {
+        "palette": ["ultrasonic"],
+        "required": ["ultrasonic"],
+        "notes": "Wiring: VCC→5V, GND→GND, TRIG→pin 9, ECHO→pin 10."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int trigPin = 9;\nint echoPin = 10;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n}\n\nvoid loop() {\n  // Send a 10 microsecond ping, then time the echo\n}"
+      },
+      "hints": [
+        "digitalWrite(trigPin, HIGH);",
+        "delayMicroseconds(10);",
+        "digitalWrite(trigPin, LOW);",
+        "int cm = pulseIn(echoPin, HIGH) / 58;",
+        "Serial.println(cm);"
+      ],
+      "output": { "initial": "Sonar idle", "status": "Waiting for sketch..." }
+    },
+
+    {
+      "id": 12,
+      "phase": "sensing",
+      "title": "Distance Alarm — Sonar + LED",
+      "description": "The capstone: when something comes closer than 20cm, the warning LED lights — a parking sensor.",
+      "source": "Paul McWhorter, Arduino distance-alarm tutorials — toptechboy.com",
+      "featuredComponent": "ultrasonic",
+      "circuit": {
+        "palette": ["ultrasonic", "led", "resistor"],
+        "required": ["ultrasonic", "led", "resistor"],
+        "notes": "HC-SR04 wiring (TRIG→9, ECHO→10) plus the LED circuit on pin 13."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "int trigPin = 9;\nint echoPin = 10;\nint ledPin = 13;\n\nvoid setup() {\n  Serial.begin(9600);\n  pinMode(trigPin, OUTPUT);\n  pinMode(echoPin, INPUT);\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(trigPin, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(trigPin, LOW);\n  int cm = pulseIn(echoPin, HIGH) / 58;\n  Serial.println(cm);\n  // Light the LED when closer than 20cm\n}"
+      },
+      "hints": [
+        "if (cm < 20) {",
+        "digitalWrite(ledPin, HIGH);",
+        "} else {",
+        "digitalWrite(ledPin, LOW);"
+      ],
+      "output": { "initial": "Alarm armed", "status": "Waiting for sketch..." }
+    }
+  ]
+}

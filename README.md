@@ -53,6 +53,33 @@ npm run dev
 5. **Expert (29+):** wire gauge physics, signal calibration, interrupts, I2C
    (planned: [avr8js](https://github.com/wokwi/avr8js) for cycle-accurate AVR simulation)
 
+## Deployment — synapsis.school (Cloudflare)
+
+The site deploys as a single Cloudflare Worker: the built frontend is served
+as static assets and `cloudflare/src/worker.ts` implements the same API as
+the .NET backend, storing accounts/progress in D1 (Cloudflare's SQLite).
+
+One-time setup (from `cloudflare/`):
+
+```bash
+npx wrangler login                       # opens browser, sign in to Cloudflare
+npx wrangler d1 create synapsis          # copy the database_id it prints
+#   -> paste the id into wrangler.jsonc (d1_databases[0].database_id)
+npx wrangler d1 execute synapsis --remote --file schema.sql
+npx wrangler secret put SESSION_SECRET   # paste any long random string
+```
+
+Deploy (any time after `npm run build` in frontend/):
+
+```bash
+cd frontend && npm run build && cd ../cloudflare && npx wrangler deploy
+```
+
+The `routes` in `wrangler.jsonc` bind the worker to **synapsis.school** and
+**www.synapsis.school** (the zone must be in the same Cloudflare account).
+There is also a manual GitHub Actions deploy (`.github/workflows/deploy.yml`)
+— add a `CLOUDFLARE_API_TOKEN` repo secret and run it from the Actions tab.
+
 ## Planned features
 
 - **Profiles with sign-up / sign-in** so learners can continue where they

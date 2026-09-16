@@ -1,0 +1,129 @@
+{
+  "components": [
+    {
+      "id": "uno",
+      "name": "Arduino Uno R3",
+      "category": "controller",
+      "function": "The brain of the circuit. Runs your sketch, drives output pins HIGH (5V) or LOW (0V), and measures voltages on input pins.",
+      "science": "Inside is an ATmega328P microcontroller — millions of transistors switching at 16 MHz. A digital pin is a transistor switch connecting the pin to 5V or GND. Analog pins use an ADC (analog-to-digital converter) that compares an input voltage against 5V and reports it as a number from 0 to 1023 — each step is about 4.9 millivolts.",
+      "specs": {
+        "microcontroller": "ATmega328P @ 16 MHz",
+        "digitalPins": "14 (D0–D13)",
+        "analogInputs": "6 (A0–A5, 10-bit ADC)",
+        "pinCurrent": "20mA recommended, 40mA absolute max",
+        "logicLevel": "5V"
+      },
+      "notes": "Pin 13 also drives the onboard 'L' LED. Never connect a pin directly to GND or 5V while it is an OUTPUT — that is a short circuit through the chip.",
+      "symbol": "kicad-symbols/Arduino_UNO_R3.kicad_sym",
+      "terminals": "0–13 (digital), A0–A5 (analog), 5V, 3.3V, GND"
+    },
+    {
+      "id": "led",
+      "name": "LED — Light Emitting Diode",
+      "category": "output",
+      "function": "Turns current into light. Use it to SEE what your code is doing — on, off, blinking, or dimmed with PWM.",
+      "science": "An LED is a semiconductor diode: a junction between two doped materials. When current flows forward across the junction, electrons fall into 'holes' and release their extra energy as photons — light. The energy gap of the material sets the color: red ≈ 1.9eV (~625nm), blue ≈ 2.7eV. Because it is a diode, current only flows one way — reversed, the junction blocks and no light appears.",
+      "specs": {
+        "forwardVoltage": "2.0–2.2V (red)",
+        "maxCurrent": "20mA",
+        "resistorNeeded": "220Ω at 5V",
+        "wavelength": "≈625nm (red)"
+      },
+      "notes": "Polarity matters! The longer leg is the anode (+) — wire it toward the pin. The shorter leg is the cathode (–) — wire it toward GND. Reversed = no light. Never connect without a resistor: the LED has almost no resistance of its own once conducting.",
+      "symbol": "kicad-symbols/LED.kicad_sym",
+      "terminals": "A (anode +), C (cathode –)"
+    },
+    {
+      "id": "resistor",
+      "name": "Resistor — 220Ω",
+      "category": "passive",
+      "function": "Limits how much current flows. In an LED circuit it is the safety valve that keeps the LED under its 20mA maximum.",
+      "science": "Ohm's Law: V = I × R. Current equals voltage across the resistor divided by resistance. With 5V from the pin, minus ~2V dropped by the LED, the resistor sees 3V: I = 3V ÷ 220Ω ≈ 13.6mA — comfortably under 20mA. Electrons colliding with the resistor's carbon lattice convert the excess energy to heat instead of destroying the LED. The colored bands encode the value: red-red-brown = 2, 2, ×10 = 220Ω.",
+      "specs": {
+        "resistance": "220Ω",
+        "tolerance": "±5% (gold band)",
+        "powerRating": "1/4W",
+        "colorBands": "red, red, brown, gold"
+      },
+      "notes": "No polarity — either direction works. It limits current for the whole series path, so it can go on either side of the LED.",
+      "symbol": "kicad-symbols/R.kicad_sym",
+      "terminals": "1, 2 (interchangeable)"
+    },
+    {
+      "id": "potentiometer",
+      "name": "Potentiometer — 10kΩ",
+      "category": "input",
+      "function": "A knob your code can read. Turn it and analogRead() reports a number from 0 to 1023.",
+      "science": "Inside is a resistive track with a sliding contact (the wiper). With the outer pins on 5V and GND, the track forms a voltage divider: the wiper picks off a voltage proportional to its position — 0V at one end, 5V at the other, smoothly in between. V_out = 5V × (position). The Arduino's ADC converts that voltage to 0–1023.",
+      "specs": {
+        "resistance": "0–10kΩ (variable)",
+        "type": "rotary, linear taper",
+        "terminals": "3 (VCC, SIG wiper, GND)"
+      },
+      "notes": "Outer pins go to 5V and GND (either order — swapping just reverses the knob direction). The middle pin (SIG) is the signal: wire it to an analog pin like A0.",
+      "symbol": "kicad-symbols/R_Potentiometer.kicad_sym",
+      "terminals": "VCC, SIG (wiper), GND"
+    },
+    {
+      "id": "pushbutton",
+      "name": "Pushbutton (momentary)",
+      "category": "input",
+      "function": "A switch your code can read. Pressed = the two sides connect; released = they disconnect.",
+      "science": "Two springy metal contacts sit a fraction of a millimeter apart; pressing forces them together, completing the circuit. But metal contacts BOUNCE — they physically vibrate on impact, connecting and disconnecting dozens of times in a few milliseconds. Your code runs fast enough to see every bounce as a separate press, which is why debouncing (ignoring changes for ~50ms) matters. A 'floating' unconnected input pin picks up radio noise and reads randomly — that is why we use INPUT_PULLUP, which connects an internal ~20kΩ resistor to 5V so the pin reads a solid HIGH until the button pulls it to GND.",
+      "specs": {
+        "type": "momentary, normally open",
+        "bounceTime": "1–10ms typical",
+        "contacts": "4 legs — each side pair is internally connected"
+      },
+      "notes": "With INPUT_PULLUP wiring (button between pin and GND), the logic is inverted: digitalRead() returns LOW when PRESSED and HIGH when released.",
+      "symbol": "kicad-symbols/SW_Push.kicad_sym",
+      "terminals": "1.l/1.r (side 1), 2.l/2.r (side 2)"
+    },
+    {
+      "id": "photoresistor",
+      "name": "Photoresistor Module (LDR)",
+      "category": "sensor",
+      "function": "Senses light level. Bright light = high reading, darkness = low reading on the AO pin.",
+      "science": "The sensor is a Light-Dependent Resistor made of cadmium sulfide. Photons hitting the material knock electrons free, creating charge carriers — so MORE light means LESS resistance (from ~1MΩ in darkness to ~1kΩ in bright light). The module pairs the LDR with a fixed resistor as a voltage divider, so the AO pin's voltage rises and falls with light. This is the same physics as a solar panel, except here light controls conductivity instead of generating power.",
+      "specs": {
+        "material": "CdS (cadmium sulfide)",
+        "darkResistance": "~1MΩ",
+        "brightResistance": "~1kΩ",
+        "responseTime": "20–30ms (slow — it 'remembers' light briefly)"
+      },
+      "notes": "Wire VCC to 5V, GND to GND, and AO (analog out) to an analog pin like A0. The DO pin is a digital threshold output — we use AO for real measurements.",
+      "symbol": "kicad-symbols/R_Photo.kicad_sym",
+      "terminals": "VCC, GND, AO (analog out), DO (unused)"
+    },
+    {
+      "id": "ntc",
+      "name": "NTC Thermistor Module (temperature)",
+      "category": "sensor",
+      "function": "Senses temperature. The OUT pin voltage changes as the sensor warms or cools.",
+      "science": "NTC means Negative Temperature Coefficient: resistance DROPS as temperature rises. Heat gives the semiconductor's electrons enough energy to jump into conduction — roughly, resistance halves for every 20°C rise (described precisely by the Steinhart–Hart equation). The module's voltage divider converts the changing resistance into a changing voltage your ADC can read. This is the same sensor inside digital thermometers and battery packs that stop charging when hot.",
+      "specs": {
+        "type": "NTC 10kΩ @ 25°C",
+        "range": "-40°C to +125°C",
+        "beta": "≈3950K (steepness of the resistance curve)"
+      },
+      "notes": "Wire VCC to 5V, GND to GND, OUT to an analog pin. Readings are not linear in temperature — for lessons we map the raw 0–1023 value to an approximate °C.",
+      "symbol": "kicad-symbols/Thermistor_NTC.kicad_sym",
+      "terminals": "VCC, GND, OUT"
+    },
+    {
+      "id": "ultrasonic",
+      "name": "HC-SR04 Ultrasonic Distance Sensor",
+      "category": "sensor",
+      "function": "Measures distance by echo — like a bat. Your code sends a ping and times how long the echo takes to return.",
+      "science": "One transducer chirps 8 pulses at 40kHz — sound too high for humans to hear. The sound travels at ≈343 m/s (about 29µs per centimeter), bounces off the nearest object, and returns to the second transducer. The ECHO pin goes HIGH for exactly as long as the round trip took. Distance = (time × speed of sound) ÷ 2 — divide by 2 because the sound travels there AND back. In code: cm = microseconds / 58. Sonar, medical ultrasound, and parking sensors all use this same time-of-flight principle.",
+      "specs": {
+        "range": "2cm – 400cm",
+        "accuracy": "±3mm",
+        "frequency": "40kHz",
+        "triggerPulse": "10µs HIGH on TRIG"
+      },
+      "notes": "Wire VCC to 5V, GND to GND, TRIG to a digital output pin, ECHO to a digital input pin. Code: pulse TRIG high for 10µs, then pulseIn(echoPin, HIGH) returns the round-trip microseconds.",
+      "terminals": "VCC, TRIG, ECHO, GND"
+    }
+  ]
+}
