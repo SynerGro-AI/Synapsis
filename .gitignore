@@ -24,3 +24,7 @@ npm-debug.log*
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Agent tooling (installed per-machine via npx skills)
+.agents/
+.claude/

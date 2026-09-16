@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "synapsis",
-      "database_id": "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+      "database_id": "3ce992de-a857-40fe-8495-761c7bbb84e1"
     }
   ],
   "routes": [
