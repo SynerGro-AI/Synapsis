@@ -244,10 +244,20 @@ export default function App() {
   return (
     <div className="page">
       <div className="credits">
-        Lessons based on the Arduino tutorials of{" "}
-        <a href={CREDIT.website} target="_blank" rel="noreferrer">
-          {CREDIT.author} — toptechboy.com
+        <a
+          className="sponsor"
+          href="https://synergroaicorp.net"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Sponsored by <strong>SynerGro.Ai Corp</strong>
         </a>
+        <span className="credits-text">
+          Lessons based on the Arduino tutorials of{" "}
+          <a href={CREDIT.website} target="_blank" rel="noreferrer">
+            {CREDIT.author} — toptechboy.com
+          </a>
+        </span>
         <a className="donate" href={CREDIT.donate} target="_blank" rel="noreferrer">
           ❤ Support Paul on Patreon
         </a>

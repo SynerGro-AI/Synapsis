@@ -28,6 +28,29 @@
   text-decoration: underline;
 }
 
+.credits .sponsor {
+  background: #1e1e1e;
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 3px 12px;
+  color: #d8c9a8;
+  white-space: nowrap;
+}
+
+.credits .sponsor strong {
+  color: #e8a33d;
+}
+
+.credits .sponsor:hover {
+  border-color: #e8a33d;
+  text-decoration: none;
+}
+
+.credits-text {
+  flex: 1;
+  text-align: center;
+}
+
 .credits .donate {
   margin-left: auto;
   background: #e8a33d;
