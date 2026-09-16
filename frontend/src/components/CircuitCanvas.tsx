@@ -185,67 +185,117 @@ export default function CircuitCanvas({
     return () => window.removeEventListener("keydown", handler);
   });
 
-  // ---- Part dragging + wire drawing (pointer events on container) ----
+  // ---- Part dragging + wire drawing ----
+  // Grabs are "global": pointerdown anywhere near a pin (even over a part
+  // body) starts a wire, and moves/releases are tracked on window so the
+  // drag survives leaving the canvas. While dragging, the wire end snaps
+  // onto the candidate pin so it sits straight before you release.
+  const GRAB_RADIUS = 14;
+  const SNAP_RADIUS = 22;
+
   function containerPoint(e: { clientX: number; clientY: number }) {
     const rect = containerRef.current!.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  const dragWireRef = useRef(dragWire);
+  dragWireRef.current = dragWire;
+  const dragPartRef = useRef(dragPart);
+  dragPartRef.current = dragPart;
+  const nearestPinRef = useRef(nearestPin);
+  nearestPinRef.current = nearestPin;
+
+  function startWireAt(pt: { x: number; y: number }): boolean {
+    const near = nearestPin(pt, GRAB_RADIUS);
+    if (!near) return false;
+    setDragWire({ from: near.t, x: near.x, y: near.y });
+    setSelectedWire(null);
+    setHoverPin({ t: near.t, x: near.x, y: near.y });
+    return true;
+  }
+
   function onPartPointerDown(e: React.PointerEvent, partId: string) {
+    e.stopPropagation();
+    const pt = containerPoint(e);
+    if (startWireAt(pt)) return; // pins win over part-dragging
     if (partId === "uno") {
       onSelect("uno");
       return;
     }
     const part = circuit.parts.find((p) => p.id === partId)!;
-    const pt = containerPoint(e);
     setDragPart({ id: partId, dx: pt.x - part.x, dy: pt.y - part.y });
     onSelect(partId);
     setSelectedWire(null);
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
   }
 
-  function onPinPointerDown(e: React.PointerEvent, t: Terminal) {
-    e.stopPropagation();
+  function onCanvasPointerDown(e: React.PointerEvent) {
     const pt = containerPoint(e);
-    setDragWire({ from: t, x: pt.x, y: pt.y });
+    if (startWireAt(pt)) return;
+    onSelect(null);
+    setSelectedWire(null);
   }
 
+  // Hover magnifier while idle (drags are handled by the window listeners).
   function onPointerMove(e: React.PointerEvent) {
-    const pt = containerPoint(e);
-    if (dragPart) {
-      onCircuitChange({
-        ...circuitRef.current,
-        parts: circuitRef.current.parts.map((p) =>
-          p.id === dragPart.id
-            ? { ...p, x: Math.max(0, pt.x - dragPart.dx), y: Math.max(0, pt.y - dragPart.dy) }
-            : p,
-        ),
-      });
-      setHoverPin(null);
-      return;
-    }
-    if (dragWire) setDragWire({ ...dragWire, x: pt.x, y: pt.y });
-    // Magnifier: show which pin the cursor (or wire end) would connect to.
-    const near = nearestPin(pt);
+    if (dragWireRef.current || dragPartRef.current) return;
+    const near = nearestPin(containerPoint(e), SNAP_RADIUS);
     setHoverPin(near ? { t: near.t, x: near.x, y: near.y } : null);
   }
 
-  function onPointerUp(e: React.PointerEvent) {
-    if (dragWire) {
-      const near = nearestPin(containerPoint(e));
-      if (
-        near &&
-        !(near.t.part === dragWire.from.part && near.t.pin === dragWire.from.pin)
-      ) {
+  // Global move/up while a drag is active.
+  useEffect(() => {
+    if (!dragWire && !dragPart) return;
+
+    const move = (e: PointerEvent) => {
+      const pt = containerPoint(e);
+      const part = dragPartRef.current;
+      if (part) {
         onCircuitChange({
-          ...circuit,
-          wires: [...circuit.wires, { from: dragWire.from, to: near.t }],
+          ...circuitRef.current,
+          parts: circuitRef.current.parts.map((p) =>
+            p.id === part.id
+              ? { ...p, x: Math.max(0, pt.x - part.dx), y: Math.max(0, pt.y - part.dy) }
+              : p,
+          ),
         });
+        setHoverPin(null);
+        return;
       }
-      setDragWire(null);
-    }
-    setDragPart(null);
-  }
+      const wire = dragWireRef.current;
+      if (wire) {
+        const near = nearestPinRef.current(pt, SNAP_RADIUS);
+        // Snap the wire end onto the candidate pin.
+        setDragWire({ ...wire, x: near ? near.x : pt.x, y: near ? near.y : pt.y });
+        setHoverPin(near ? { t: near.t, x: near.x, y: near.y } : null);
+      }
+    };
+
+    const up = (e: PointerEvent) => {
+      const wire = dragWireRef.current;
+      if (wire) {
+        const near = nearestPinRef.current(containerPoint(e), SNAP_RADIUS);
+        if (
+          near &&
+          !(near.t.part === wire.from.part && near.t.pin === wire.from.pin)
+        ) {
+          onCircuitChange({
+            ...circuitRef.current,
+            wires: [...circuitRef.current.wires, { from: wire.from, to: near.t }],
+          });
+        }
+        setDragWire(null);
+      }
+      setDragPart(null);
+    };
+
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!dragWire, !!dragPart]);
 
   // ---- Pushbutton press events from the wokwi element ----
   useEffect(() => {
@@ -330,11 +380,7 @@ export default function CircuitCanvas({
         ref={containerRef}
         className="wokwi-canvas"
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerDown={() => {
-          onSelect(null);
-          setSelectedWire(null);
-        }}
+        onPointerDown={onCanvasPointerDown}
       >
         {renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
         {circuit.parts.map((p) => renderPart(p.id, p.type, p.x, p.y))}
@@ -380,7 +426,7 @@ export default function CircuitCanvas({
               className="wire dragging"
             />
           )}
-          {/* Pin hit targets */}
+          {/* Pin markers (grabbing is global: pointerdown near any pin starts a wire) */}
           {Object.entries(anchors).map(([part, pins]) =>
             pins.map((pin) => (
               <circle
@@ -389,7 +435,6 @@ export default function CircuitCanvas({
                 cy={pin.y}
                 r={5}
                 className={`pin${dragWire ? " pin-active" : ""}`}
-                onPointerDown={(e) => onPinPointerDown(e, { part, pin: pin.name })}
               >
                 <title>{part === "uno" ? pin.name : `${part}.${pin.name}`}</title>
               </circle>
