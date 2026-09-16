@@ -76,6 +76,13 @@
       "name": "Expert",
       "range": "29+",
       "concepts": ["Wire gauge physics", "Signal calibration", "Interrupts", "I2C"]
+    },
+    {
+      "id": "cli_basics",
+      "track": "devsetup",
+      "name": "Command Line Basics",
+      "range": "101-104",
+      "concepts": ["Navigation", "Files & folders", "Git version control", "Compilers & first program"]
     }
   ],
 
@@ -583,6 +590,110 @@
         "delay(200);"
       ],
       "output": { "initial": "Radar idle", "status": "Waiting for sketch..." }
+    },
+    {
+      "id": 101,
+      "phase": "cli_basics",
+      "kind": "terminal",
+      "title": "Meet the Command Line",
+      "description": "The terminal lets you drive your computer with words instead of clicks — the way every professional developer works. Type each command, press Enter, and watch the machine respond. Same 'type it, see it' loop as the Arduino track, now for your own PC.",
+      "source": "Synapsys Dev-Setup track",
+      "terminal": {
+        "shell": "bash",
+        "cwd": "~/projects",
+        "intro": "This is a safe practice terminal. Nothing here touches your real computer, but every command behaves exactly like the real thing. Work down the checklist on the right — type each command yourself.",
+        "steps": [
+          { "cmd": "pwd", "why": "Print Working Directory — asks the shell 'where am I right now?' It answers with your current folder's path." },
+          { "cmd": "ls", "why": "List the files and folders in the current directory. Right now it's empty, so nothing prints." },
+          { "cmd": "mkdir hello-cli", "why": "MaKe DIRectory — create a new folder named hello-cli." },
+          { "cmd": "ls", "why": "List again. Now you can see the hello-cli folder you just made." },
+          { "cmd": "cd hello-cli", "why": "Change Directory — step inside the folder." },
+          { "cmd": "pwd", "why": "Confirm you moved. The path now ends in /hello-cli." }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": { "palette": [], "required": [], "notes": "" },
+      "codeTemplate": { "language": "bash", "starter": "" },
+      "hints": [],
+      "output": { "initial": "", "status": "" }
+    },
+    {
+      "id": 102,
+      "phase": "cli_basics",
+      "kind": "terminal",
+      "title": "Files & Folders",
+      "description": "Creating, reading, and organising files from the keyboard. These four commands — echo, cat, touch, mkdir — are the bread and butter of working in a project folder.",
+      "source": "Synapsys Dev-Setup track",
+      "terminal": {
+        "shell": "bash",
+        "cwd": "~/projects/hello-cli",
+        "intro": "You're inside the hello-cli folder from the last lesson. Let's put some files in it. The > symbol means 'send this output into a file' instead of printing it to the screen.",
+        "steps": [
+          { "cmd": "echo \"Hello, terminal!\" > notes.txt", "why": "echo prints text; > redirects that text into a new file called notes.txt." },
+          { "cmd": "ls", "why": "List the folder — notes.txt now exists." },
+          { "cmd": "cat notes.txt", "why": "conCATenate — dump a file's contents to the screen. You'll see your saved line." },
+          { "cmd": "mkdir src", "why": "Make a src folder to hold source code — a very common project layout." },
+          { "cmd": "touch src/app.js", "why": "touch creates an empty file. Here it makes app.js inside src/." },
+          { "cmd": "tree", "why": "Show the folder as a tree so you can see the whole structure at a glance." }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": { "palette": [], "required": [], "notes": "" },
+      "codeTemplate": { "language": "bash", "starter": "" },
+      "hints": [],
+      "output": { "initial": "", "status": "" }
+    },
+    {
+      "id": 103,
+      "phase": "cli_basics",
+      "kind": "terminal",
+      "title": "Git — Version Control",
+      "description": "Git is the time machine every developer relies on: it snapshots your project so you can never truly lose work. Here you'll turn a folder into a Git repository and record your first commit.",
+      "source": "Synapsys Dev-Setup track",
+      "terminal": {
+        "shell": "bash",
+        "cwd": "~/projects/hello-cli",
+        "intro": "A 'repository' is a folder Git is watching. You initialise it once, then 'stage' the files you want to save and 'commit' them as a permanent snapshot.",
+        "steps": [
+          { "cmd": "git --version", "why": "Check that Git is installed and see which version you have." },
+          { "cmd": "git init", "why": "Turn this folder into a Git repository — it creates a hidden .git folder to store history." },
+          { "cmd": "git status", "why": "Ask Git what it sees: which files are new, changed, or already saved." },
+          { "cmd": "git add .", "why": "Stage every file (the . means 'everything here') — mark it to be included in the next snapshot." },
+          { "cmd": "git commit -m \"first commit\"", "why": "Save a permanent snapshot. The -m message describes what this snapshot is." },
+          { "cmd": "git log", "why": "View the history. Your first commit is now recorded forever." }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": { "palette": [], "required": [], "notes": "" },
+      "codeTemplate": { "language": "bash", "starter": "" },
+      "hints": [],
+      "output": { "initial": "", "status": "" }
+    },
+    {
+      "id": 104,
+      "phase": "cli_basics",
+      "kind": "terminal",
+      "title": "Your First Real Program",
+      "description": "Bring it all together: use a compiler toolchain (.NET) to scaffold, then build and run a genuine program from the command line — the exact workflow you'd use on a real project.",
+      "source": "Synapsys Dev-Setup track",
+      "terminal": {
+        "shell": "bash",
+        "cwd": "~/projects",
+        "intro": "A compiler turns human-readable code into a program your machine can run. The dotnet tool scaffolds a starter project, then builds and runs it for you.",
+        "steps": [
+          { "cmd": "dotnet --version", "why": "Confirm the .NET compiler toolchain is installed." },
+          { "cmd": "dotnet new console -n hello", "why": "Scaffold a new console app named hello — it writes Program.cs and a project file for you." },
+          { "cmd": "cd hello", "why": "Step into the project folder that was just created." },
+          { "cmd": "ls", "why": "See what the template made: Program.cs (your code) and hello.csproj (the project settings)." },
+          { "cmd": "cat Program.cs", "why": "Read the starter code — a single line that prints Hello, World!." },
+          { "cmd": "dotnet run", "why": "Compile and run the program. 'Hello, World!' is your machine running code you built." }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": { "palette": [], "required": [], "notes": "" },
+      "codeTemplate": { "language": "bash", "starter": "" },
+      "hints": [],
+      "output": { "initial": "", "status": "" }
     }
   ]
 }

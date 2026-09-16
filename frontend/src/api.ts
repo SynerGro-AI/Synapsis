@@ -14,12 +14,27 @@ export interface Phase {
   concepts: string[];
 }
 
+/** One typed command the learner is guided to enter, with the "why" behind it. */
+export interface TerminalStep {
+  cmd: string;
+  why: string;
+}
+
 export interface Lesson {
   id: number;
   phase: string;
   title: string;
   description: string;
   source?: string;
+  /** Defaults to "arduino" when absent. "terminal" lessons render the shell course. */
+  kind?: "arduino" | "terminal";
+  terminal?: {
+    shell: string;
+    /** Starting working directory, e.g. "~/projects". */
+    cwd: string;
+    intro: string;
+    steps: TerminalStep[];
+  };
   featuredComponent: string;
   circuit: {
     palette: string[];
@@ -112,6 +127,13 @@ export const FALLBACK_DATA: LessonData = {
       range: "1-5",
       concepts: ["Digital out", "Analog in", "Serial monitor", "Variables", "Conditionals"],
     },
+    {
+      id: "cli_basics",
+      track: "devsetup",
+      name: "Command Line Basics",
+      range: "101-104",
+      concepts: ["Navigation", "Files & folders", "Git", "Compilers"],
+    },
   ],
   lessons: [
     {
@@ -138,6 +160,32 @@ export const FALLBACK_DATA: LessonData = {
         "digitalWrite(13, LOW);\ndelay(500);",
       ],
       output: { initial: "PIN 13 OFF", status: "Waiting for sketch..." },
+    },
+    {
+      id: 101,
+      phase: "cli_basics",
+      title: "Meet the Command Line",
+      description:
+        "The terminal is how professionals drive their computer with words instead of clicks. Type each command, press Enter, and watch it work — exactly like the Arduino track, but for your own machine.",
+      kind: "terminal",
+      terminal: {
+        shell: "bash",
+        cwd: "~/projects",
+        intro:
+          "This is a safe practice terminal. Nothing here touches your real computer — but every command behaves just like the real thing. Type the commands on the right, one at a time.",
+        steps: [
+          { cmd: "pwd", why: "Print Working Directory — asks the shell 'where am I right now?'" },
+          { cmd: "ls", why: "List the files and folders in the current directory." },
+          { cmd: "mkdir hello-cli", why: "Make a new directory (folder) called hello-cli." },
+          { cmd: "cd hello-cli", why: "Change Directory — step inside the folder you just made." },
+          { cmd: "pwd", why: "Confirm you moved. The path now ends in /hello-cli." },
+        ],
+      },
+      featuredComponent: "terminal",
+      circuit: { palette: [], required: [], notes: "" },
+      codeTemplate: { language: "bash", starter: "" },
+      hints: [],
+      output: { initial: "", status: "" },
     },
   ],
 };

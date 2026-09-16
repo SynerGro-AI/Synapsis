@@ -5,6 +5,7 @@ import ActivityBar from "./components/ActivityBar";
 import CircuitCanvas from "./components/CircuitCanvas";
 import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
+import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import { ArduinoSim, analyzeSketch } from "./sim/arduino";
 import {
@@ -170,6 +171,30 @@ export default function App() {
     setLessonId(id);
     setView("workspace");
   };
+
+  // Terminal lessons drive their own completion (all steps typed & run).
+  const completeTerminalLesson = useCallback(
+    (id: number) => {
+      setSaved((s) =>
+        s[id]?.completed
+          ? s
+          : {
+              ...s,
+              [id]: {
+                completed: true,
+                sketch: s[id]?.sketch ?? null,
+                circuit: s[id]?.circuit ?? null,
+              },
+            },
+      );
+      if (user) {
+        saveProgress(id, { completed: true, sketch: "", circuit: "", current: true }).catch(
+          () => {},
+        );
+      }
+    },
+    [user],
+  );
 
   const stopSim = useCallback(() => {
     engineRef.current?.stop();
@@ -420,6 +445,31 @@ export default function App() {
               <p>{activeTrackInfo?.blurb}</p>
               <span className="cs-tag">Coming soon</span>
             </div>
+          </main>
+        ) : lesson.kind === "terminal" ? (
+          <main className="main terminal-main">
+            <header className="topbar">
+              <button
+                className="nav-toggle"
+                onClick={() => setNavOpen(true)}
+                aria-label="Open lessons"
+              >
+                ☰
+              </button>
+              <h3>
+                Lesson {lesson.id} — {lesson.title}
+              </h3>
+              {completed && <span className="lesson-done">✓ completed</span>}
+              {offline && (
+                <span className="offline">backend offline — using built-in data</span>
+              )}
+            </header>
+            <TerminalCourse
+              lesson={lesson}
+              completed={completed}
+              onComplete={completeTerminalLesson}
+              restoreKey={`${lesson.id}:${restoreCount}`}
+            />
           </main>
         ) : (
         <main className={`main m-${mobileTab}`}>
