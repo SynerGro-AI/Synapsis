@@ -456,7 +456,7 @@ export default function App() {
         <aside className={`sidebar${navOpen ? " open" : ""}`}>
           <h2>
             <span className="sidebar-track-icon">{activeTrackInfo?.icon}</span>
-            {activeTrackInfo?.name ?? "Synapsys"}
+            {activeTrackInfo?.name ?? "Synapsis"}
           </h2>
           <div className="sidebar-lessons">
             {sidebarPhases.length === 0 ? (

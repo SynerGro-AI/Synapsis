@@ -1269,7 +1269,7 @@
       "kind": "terminal",
       "title": "Meet the Command Line",
       "description": "The terminal lets you drive your computer with words instead of clicks — the way every professional developer works. Type each command, press Enter, and watch the machine respond. Same 'type it, see it' loop as the Arduino track, now for your own PC.",
-      "source": "Synapsys Dev-Setup track",
+      "source": "Synapsis Dev-Setup track",
       "terminal": {
         "shell": "bash",
         "cwd": "~/projects",
@@ -1323,7 +1323,7 @@
       "kind": "terminal",
       "title": "Files & Folders",
       "description": "Creating, reading, and organising files from the keyboard. These four commands — echo, cat, touch, mkdir — are the bread and butter of working in a project folder.",
-      "source": "Synapsys Dev-Setup track",
+      "source": "Synapsis Dev-Setup track",
       "terminal": {
         "shell": "bash",
         "cwd": "~/projects/hello-cli",
@@ -1377,7 +1377,7 @@
       "kind": "terminal",
       "title": "Git — Version Control",
       "description": "Git is the time machine every developer relies on: it snapshots your project so you can never truly lose work. Here you'll turn a folder into a Git repository and record your first commit.",
-      "source": "Synapsys Dev-Setup track",
+      "source": "Synapsis Dev-Setup track",
       "terminal": {
         "shell": "bash",
         "cwd": "~/projects/hello-cli",
@@ -1431,7 +1431,7 @@
       "kind": "terminal",
       "title": "Your First Real Program",
       "description": "Bring it all together: use a compiler toolchain (.NET) to scaffold, then build and run a genuine program from the command line — the exact workflow you'd use on a real project.",
-      "source": "Synapsys Dev-Setup track",
+      "source": "Synapsis Dev-Setup track",
       "terminal": {
         "shell": "bash",
         "cwd": "~/projects",

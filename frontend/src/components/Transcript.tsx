@@ -165,7 +165,7 @@ export default function Transcript({
           <div className="cert-modal" onClick={(e) => e.stopPropagation()}>
             <div className="certificate-sheet">
               <div className="cert-border">
-                <div className="cert-brand">SYNAPSYS ACADEMY</div>
+                <div className="cert-brand">SYNAPSIS ACADEMY</div>
                 <div className="cert-title">Certificate of Completion</div>
                 <div className="cert-presented">This certifies that</div>
                 <div className="cert-name">{user?.username ?? "Learner"}</div>
