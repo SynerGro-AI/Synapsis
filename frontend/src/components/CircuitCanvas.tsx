@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "@wokwi/elements";
 import {
   PART_LABELS,
@@ -151,6 +151,50 @@ export default function CircuitCanvas({
   const [dragPart, setDragPart] = useState<{ id: string; dx: number; dy: number } | null>(null);
   const [selectedWire, setSelectedWire] = useState<number | null>(null);
   const [hoverPin, setHoverPin] = useState<{ t: Terminal; x: number; y: number } | null>(null);
+  // Board headers are dense (Uno digital pins sit ~6px apart at base scale),
+  // so let the learner zoom in to target one pin without hitting its neighbor.
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const zoomFocusRef = useRef<{ sx: number; sy: number; cx: number; cy: number } | null>(null);
+
+  // Zoom about a focal point: keep stage coords (sx,sy) under canvas point
+  // (cx,cy). Defaults to the visible center (used by the +/- buttons).
+  const applyZoom = useCallback((next: number, cx?: number, cy?: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const z = zoomRef.current;
+    const nz = Math.min(3, Math.max(1, Math.round(next * 100) / 100));
+    if (nz === z) return;
+    const fx = cx ?? el.clientWidth / 2;
+    const fy = cy ?? el.clientHeight / 2;
+    zoomFocusRef.current = { sx: (el.scrollLeft + fx) / z, sy: (el.scrollTop + fy) / z, cx: fx, cy: fy };
+    setZoom(nz);
+  }, []);
+
+  // After the zoom transform re-renders, pan so the focal point stays put.
+  useLayoutEffect(() => {
+    const f = zoomFocusRef.current;
+    const el = containerRef.current;
+    if (!f || !el) return;
+    el.scrollLeft = f.sx * zoom - f.cx;
+    el.scrollTop = f.sy * zoom - f.cy;
+    zoomFocusRef.current = null;
+  }, [zoom]);
+
+  // Ctrl/⌘ + wheel zooms toward the cursor; plain wheel scrolls the canvas.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      applyZoom(zoomRef.current - Math.sign(e.deltaY) * 0.25, e.clientX - rect.left, e.clientY - rect.top);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [applyZoom]);
 
   const circuitRef = useRef(circuit);
   circuitRef.current = circuit;
@@ -277,8 +321,15 @@ export default function CircuitCanvas({
   const SNAP_RADIUS = 22;
 
   function containerPoint(e: { clientX: number; clientY: number }) {
-    const rect = containerRef.current!.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const el = containerRef.current!;
+    const rect = el.getBoundingClientRect();
+    const z = zoomRef.current;
+    // Map screen point -> unscaled stage coords (anchors live in stage space,
+    // which the zoom transform scales from the top-left; scroll pans it).
+    return {
+      x: (e.clientX - rect.left + el.scrollLeft) / z,
+      y: (e.clientY - rect.top + el.scrollTop) / z,
+    };
   }
 
   const dragWireRef = useRef(dragWire);
@@ -491,6 +542,14 @@ export default function CircuitCanvas({
             ✕ Delete {selectedWire !== null ? "wire" : selected}
           </button>
         ) : null}
+        <span className="zoom-controls" title="Zoom in to separate closely-spaced pins (Ctrl + scroll)">
+          <button className="zoom-btn" onClick={() => applyZoom(zoom - 0.25)} disabled={zoom <= 1} aria-label="Zoom out">−</button>
+          <span className="zoom-readout">{Math.round(zoom * 100)}%</span>
+          <button className="zoom-btn" onClick={() => applyZoom(zoom + 0.25)} disabled={zoom >= 3} aria-label="Zoom in">+</button>
+          {zoom > 1 && (
+            <button className="zoom-btn zoom-reset" onClick={() => applyZoom(1)} aria-label="Reset zoom">⤢</button>
+          )}
+        </span>
       </div>
 
       {/* Canvas */}
@@ -504,11 +563,15 @@ export default function CircuitCanvas({
         }}
         onDragStart={(e) => e.preventDefault()}
       >
-        {renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
-        {circuit.parts.map((p) => renderPart(p.id, p.type, p.x, p.y))}
+        <div
+          className="wokwi-stage"
+          style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
+        >
+          {renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
+          {circuit.parts.map((p) => renderPart(p.id, p.type, p.x, p.y))}
 
-        {/* Wires + pins overlay */}
-        <svg className="wire-layer">
+          {/* Wires + pins overlay */}
+          <svg className="wire-layer">
           {circuit.wires.map((w, i) => {
             const a = anchorOf(w.from);
             const b = anchorOf(w.to);
@@ -567,12 +630,14 @@ export default function CircuitCanvas({
             <circle cx={hoverPin.x} cy={hoverPin.y} r={9} className="pin-hover" />
           )}
         </svg>
+        </div>
 
-        {/* Magnifier label — readable pin name before you let go */}
+        {/* Magnifier label — readable pin name before you let go. Sits outside
+            the scaled stage, so multiply the stage coords by the zoom. */}
         {hoverPin && (
           <div
             className="pin-tooltip"
-            style={{ left: hoverPin.x, top: hoverPin.y - 16 }}
+            style={{ left: hoverPin.x * zoom, top: hoverPin.y * zoom - 16 }}
           >
             {pinLabelText(hoverPin.t)}
           </div>
