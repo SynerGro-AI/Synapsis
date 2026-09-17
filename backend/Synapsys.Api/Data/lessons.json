@@ -2018,6 +2018,76 @@
         "initial": "Error: --  Servo: --",
         "status": "Waiting for sketch..."
       }
+    },
+    {
+      "id": 218,
+      "phase": "nano_control",
+      "title": "Integral — Kill the Offset",
+      "description": "Proportional control leaves a standing error. The integral term erases it by remembering the past: it sums the error over time — integral += error * dt — and adds Ki * integral to the command. As long as any error lingers, that sum keeps growing and keeps pushing, so the only place the platform can rest is exactly level. You need real elapsed time for the sum, so measure dt with millis(). Watch the residual tilt from Lesson 217 drift the rest of the way to zero.",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\nfloat integral = 0;\nunsigned long lastTime = 0;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n    lastTime = millis();\n}\n\nvoid loop() {\n    // Accumulate the error over time and add an integral term.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    float error = 0 - event.orientation.z;",
+        "unsigned long now = millis();\n    float dt = (now - lastTime) / 1000.0;\n    lastTime = now;",
+        "integral += error * dt;",
+        "float Kp = 0.5;\n    float Ki = 0.4;\n    float command = 90 + Kp * error + Ki * integral;\n    platform.write(constrain(command, 0, 180));",
+        "Serial.print(\"Error: \");\n    Serial.print(error);\n    Serial.print(\"  Integral: \");\n    Serial.println(integral);",
+        "delay(20);"
+      ],
+      "output": {
+        "initial": "Error: --  Integral: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 219,
+      "phase": "nano_control",
+      "title": "Derivative — Damp the Overshoot",
+      "description": "Proportional and integral both push harder the longer the error lasts — which can make the platform race past level and overshoot. The derivative term is the brake: it looks at how fast the error is changing, derivative = (error - prevError) / dt, and pushes against that motion. Add Kd * derivative and the platform settles smoothly instead of ringing. Store prevError each pass so you can compare. That is all three terms — P, I, D — working together.",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\nfloat integral = 0;\nfloat prevError = 0;\nunsigned long lastTime = 0;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n    lastTime = millis();\n}\n\nvoid loop() {\n    // Add a derivative term that opposes fast changes in error.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    float error = 0 - event.orientation.z;",
+        "unsigned long now = millis();\n    float dt = (now - lastTime) / 1000.0;\n    lastTime = now;",
+        "integral += error * dt;\n    float derivative = (error - prevError) / dt;\n    prevError = error;",
+        "float Kp = 0.5;\n    float Ki = 0.4;\n    float Kd = 0.1;\n    float command = 90 + Kp * error + Ki * integral + Kd * derivative;\n    platform.write(constrain(command, 0, 180));",
+        "Serial.print(\"Error: \");\n    Serial.print(error);\n    Serial.print(\"  D: \");\n    Serial.println(derivative);",
+        "delay(20);"
+      ],
+      "output": {
+        "initial": "Error: --  D: --",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }
