@@ -12,6 +12,8 @@ export interface SimIO {
   dhtRead(pin: number, kind: "temp" | "humidity"): number;
   /** Read a BNO055 quantity/axis live (orientation/acceleration/gyro/magnetic/temp). */
   imuRead(quantity: string, axis: string): number;
+  /** Read a component (w/x/y/z) of the BNO055's fused unit quaternion. */
+  imuReadQuat(axis: string): number;
   /** 1 when a powered, correctly-wired BNO055 is on the I2C bus, else 0. */
   imuPresent(): number;
   /** Next IR command byte waiting on a receiver whose DAT reaches `pin`, or -1. */
@@ -142,7 +144,7 @@ const TYPE_KEYWORDS = [
   "int", "long", "float", "double", "bool", "byte", "unsigned", "char",
   "uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "size_t",
 ];
-const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT", "Stepper", "Adafruit_BNO055", "sensors_event_t"];
+const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT", "Stepper", "Adafruit_BNO055", "sensors_event_t", "imu::Quaternion"];
 
 class Parser {
   private pos = 0;
@@ -166,6 +168,18 @@ class Parser {
   }
   private at(value: string): boolean {
     return this.peek()?.value === value;
+  }
+  /** The declaration type at the cursor, joining a scoped name like imu::Quaternion. */
+  private typeNameAhead(): string {
+    const t = this.peek();
+    if (!t) return "";
+    if (
+      this.tokens[this.pos + 1]?.value === "::" &&
+      this.tokens[this.pos + 2]?.type === "id"
+    ) {
+      return t.value + "::" + this.tokens[this.pos + 2].value;
+    }
+    return t.value;
   }
   private eat(value: string): boolean {
     if (this.at(value)) {
@@ -197,7 +211,7 @@ class Parser {
         // other functions: parsed but ignored for now
       } else if (TYPE_KEYWORDS.includes(t.value)) {
         program.globals.push(this.parseDecl());
-      } else if (OBJECT_TYPES.includes(t.value)) {
+      } else if (OBJECT_TYPES.includes(this.typeNameAhead())) {
         program.globals.push(this.parseObjDecl());
       } else {
         throw new SimError(`Unexpected '${t.value}' at the top of the sketch`);
@@ -231,11 +245,22 @@ class Parser {
   }
 
   private parseObjDecl(): Stmt {
-    const type = this.next().value;
+    let type = this.next().value;
+    if (this.eat("::")) type += "::" + this.next().value; // scoped: imu::Quaternion
     const name = this.next().value;
     const args: Expr[] = [];
-    // Copy-init form: Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
-    if (this.eat("=") && this.peek()?.type === "id") this.next();
+    if (this.eat("=")) {
+      // Copy-init. Either a constructor call `Type(args)` whose args we keep,
+      // or any other initializer (e.g. `bno.getQuat()`) which we parse and
+      // discard — the object's components are read live on each access.
+      if (this.peek()?.type === "id" && this.tokens[this.pos + 1]?.value === "(") {
+        this.next(); // the class name; fall through to the "(" arg parse
+      } else {
+        this.parseExpr();
+        this.expect(";");
+        return { kind: "objdecl", type, name, args };
+      }
+    }
     if (this.eat("(")) {
       if (!this.at(")")) {
         args.push(this.parseExpr());
@@ -275,7 +300,7 @@ class Parser {
       return { kind: "expr", expr: { kind: "num", value: 0 } };
     }
     if (TYPE_KEYWORDS.includes(t.value)) return this.parseDecl();
-    if (OBJECT_TYPES.includes(t.value)) return this.parseObjDecl();
+    if (OBJECT_TYPES.includes(this.typeNameAhead())) return this.parseObjDecl();
     if (t.value === "if") {
       this.next();
       this.expect("(");
@@ -418,6 +443,11 @@ const CONSTANTS: Record<string, number> = {
   DISABLE_LED_FEEDBACK: 0,
   LSBFIRST: 0,
   MSBFIRST: 1,
+  // Serial.print number-base format specifiers (Arduino Print.h).
+  BIN: 2,
+  OCT: 8,
+  DEC: 10,
+  HEX: 16,
   PI: Math.PI,
   // adafruit_vector_type_t — real BNO055 register bases (Adafruit_BNO055.h).
   VECTOR_ACCELEROMETER: 0x08,
@@ -790,11 +820,39 @@ export class ArduinoSim {
             }
             case "isFullyCalibrated":
               return 1;
+            case "getQuat":
+              // Returns an imu::Quaternion; the object's components are read
+              // live via quat.w()/.x()/.y()/.z(), so this is just a marker.
+              return 0;
+            case "getSystemStatus": {
+              // getSystemStatus(&status, &selfTest, &error): write back the
+              // authentic datasheet values for a healthy fused sensor —
+              // status 5 (sensor-fusion running), self-test 0x0F (all four
+              // chips passed), error 0 (none).
+              const writes = [5, 0x0f, 0];
+              expr.args.forEach((a, i) => {
+                if (a.kind === "unary" && a.op === "&" && a.operand.kind === "var") {
+                  const target = a.operand.name;
+                  for (let s = scopes.length - 1; s >= 0; s--)
+                    if (scopes[s].has(target)) {
+                      scopes[s].set(target, writes[i] ?? 0);
+                      break;
+                    }
+                }
+              });
+              return 0;
+            }
             case "setExtCrystalUse":
             case "setMode":
             case "setAxisRemap":
             case "setAxisSign":
               return 0;
+          }
+        }
+        if (obj.type === "imu::Quaternion") {
+          // quat.w() / .x() / .y() / .z() → the live fused unit quaternion.
+          if (method === "w" || method === "x" || method === "y" || method === "z") {
+            return io.imuReadQuat(method);
           }
         }
         throw new SimError(`'${objName}.${method}()' isn't supported yet`);
@@ -940,10 +998,18 @@ export class ArduinoSim {
             "Serial isn't started — add Serial.begin(9600); in setup()",
           );
         const value = expr.args.length ? await arg(0) : "";
-        const text =
-          typeof value === "number" && !Number.isInteger(value)
-            ? value.toFixed(2)
-            : String(value);
+        let text: string;
+        if (typeof value === "number" && expr.args.length > 1) {
+          // Serial.print(n, BASE) — format the integer in the given base,
+          // uppercase and unpadded, exactly as Arduino's Print.h does.
+          const base = await arg(1);
+          text = Math.trunc(value).toString(Number(base)).toUpperCase();
+        } else {
+          text =
+            typeof value === "number" && !Number.isInteger(value)
+              ? value.toFixed(2)
+              : String(value);
+        }
         this.serialBuffer += text;
         if (expr.name === "Serial.println") {
           io.serial(this.serialBuffer);

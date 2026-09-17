@@ -1075,6 +1075,28 @@ export class CircuitRuntime {
     return 0;
   }
 
+  /** The fused orientation as a unit quaternion component (w/x/y/z), built from
+   *  the live heading/pitch/roll by the standard ZYX (yaw-pitch-roll) formula.
+   *  |q| = 1 by construction — exactly the gimbal-lock-free form the BNO055's
+   *  getQuat() returns. NaN unless a powered, correctly-wired IMU is on the bus. */
+  imuReadQuat(axis: string): number {
+    for (const s of this.circuit.partsByType("imu")) {
+      if (!this.imuConnected(s.id)) continue;
+      const rad = Math.PI / 180;
+      const cy = Math.cos((this.world.heading * rad) / 2);
+      const sy = Math.sin((this.world.heading * rad) / 2);
+      const cp = Math.cos((this.world.pitch * rad) / 2);
+      const sp = Math.sin((this.world.pitch * rad) / 2);
+      const cr = Math.cos((this.world.roll * rad) / 2);
+      const sr = Math.sin((this.world.roll * rad) / 2);
+      if (axis === "w") return cr * cp * cy + sr * sp * sy;
+      if (axis === "x") return sr * cp * cy - cr * sp * sy;
+      if (axis === "y") return cr * sp * cy + sr * cp * sy;
+      return cr * cp * sy - sr * sp * cy;
+    }
+    return NaN;
+  }
+
   private imuConnected(id: string): boolean {
     const powered =
       this.circuit.netOf(id, "VIN") === this.circuit.v5 &&

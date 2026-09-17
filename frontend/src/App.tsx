@@ -362,6 +362,7 @@ export default function App() {
         pulseIn: (pin) => rt.pulseIn(pin),
         dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
         imuRead: (quantity, axis) => rt.imuRead(quantity, axis),
+        imuReadQuat: (axis) => rt.imuReadQuat(axis),
         imuPresent: () => rt.imuPresent(),
         irDecode: (pin) => rt.irDecode(pin),
         serial: (line) => {

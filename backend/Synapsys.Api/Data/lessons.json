@@ -1826,6 +1826,99 @@
         "initial": "Gravity: --",
         "status": "Waiting for sketch..."
       }
+    },
+    {
+      "id": 212,
+      "phase": "sensor_fusion",
+      "title": "Quaternions",
+      "description": "Euler angles have a fatal flaw: point the board straight up and heading and roll collapse into the same motion — gimbal lock. Drones, phones, and game engines dodge it with quaternions, a four-number description of orientation (w, x, y, z) that never locks. The BNO055 outputs one directly: imu::Quaternion quat = bno.getQuat();. Read all four with quat.w()/.x()/.y()/.z(). It is a unit quaternion, so w^2 + x^2 + y^2 + z^2 always equals 1 — spin the board and watch the four numbers trade off while that length stays put.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the fused orientation as a quaternion and print w, x, y, z.\n}"
+      },
+      "hints": [
+        "imu::Quaternion quat = bno.getQuat();",
+        "Serial.print(\"w: \");\n    Serial.print(quat.w());\n    Serial.print(\" x: \");\n    Serial.print(quat.x());",
+        "Serial.print(\" y: \");\n    Serial.print(quat.y());\n    Serial.print(\" z: \");\n    Serial.println(quat.z());",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "w: -- x: -- y: -- z: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 213,
+      "phase": "sensor_fusion",
+      "title": "System Status",
+      "description": "A fused reading is only as good as the fusion engine behind it. The BNO055 will tell you how it is doing: bno.getSystemStatus(&status, &selfTest, &error) reports the running state (5 = sensor-fusion running), the power-on self-test result (0x0F = all four chips passed), and any system error (0 = none). Pair it with the calibration check from Lesson 206 and you can refuse to act on the sensor until it is both healthy and fully calibrated — exactly what a self-balancing robot should do before it trusts its own angle.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the system status, then gate on full calibration.\n}"
+      },
+      "hints": [
+        "uint8_t status = 0, selfTest = 0, error = 0;\n    bno.getSystemStatus(&status, &selfTest, &error);",
+        "Serial.print(\"Status: \");\n    Serial.print(status);\n    Serial.print(\" Self-test: \");\n    Serial.print(selfTest, HEX);\n    Serial.print(\" Error: \");\n    Serial.println(error);",
+        "if (bno.isFullyCalibrated()) {\n        Serial.println(\"Healthy and calibrated - ready.\");\n    }",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Status: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 214,
+      "phase": "sensor_fusion",
+      "title": "Orientation Instrument",
+      "description": "Put it all together into one instrument. Each loop, read the fused heading from event.orientation, read the gravity-free motion from VECTOR_LINEARACCEL, and gate the whole thing on isFullyCalibrated() so you only report once the chip is sure. One tidy line — orientation, motion, and a readiness flag — is the exact feed a Sensor Fusion & Control project hands to a controller. You have built, by hand and then with the chip, everything a balancing robot needs to know which way is up.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read fused heading + linear motion, then report only when calibrated.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    Serial.print(\"Heading: \");\n    Serial.print(event.orientation.x);",
+        "bno.getEvent(&event, Adafruit_BNO055::VECTOR_LINEARACCEL);\n    Serial.print(\"  Motion Z: \");\n    Serial.print(event.acceleration.z);",
+        "if (bno.isFullyCalibrated()) {\n        Serial.println(\"  [ready]\");\n    } else {\n        Serial.println(\"  [calibrating]\");\n    }",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Heading: --  Motion Z: --",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }
