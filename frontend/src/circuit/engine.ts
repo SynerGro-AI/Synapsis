@@ -1127,13 +1127,21 @@ export class CircuitRuntime {
             : this.imuRates.heading;
       }
       case "magnetic": {
-        // Earth's field (~48 µT): the horizontal part rotates with heading.
+        // Earth's field (~47 µT) as the tilted board actually sees it. In the
+        // navigation frame the field is [Hh north, 0 east, Hd down]; rotating it
+        // into the board frame by yaw(heading)/pitch/roll gives what the chip
+        // reports. So the horizontal compass reading skews when tilted — which
+        // is exactly why a tilt-compensated heading (accel roll/pitch + this
+        // mag) is needed. |m| stays ≈47 µT because a rotation preserves length.
         const h = heading * rad;
         const Hh = 22;
-        const Hz = -42;
-        if (axis === "x") return Hh * Math.cos(h);
-        if (axis === "y") return -Hh * Math.sin(h);
-        return Hz;
+        const Hd = 42;
+        const cy = Math.cos(h), sy = Math.sin(h);
+        const cp = Math.cos(p), sp = Math.sin(p);
+        const cr = Math.cos(r), sr = Math.sin(r);
+        if (axis === "x") return Hh * cp * cy - Hd * sp;
+        if (axis === "y") return Hh * (sr * sp * cy - cr * sy) + Hd * sr * cp;
+        return Hh * (cr * sp * cy + sr * sy) + Hd * cr * cp;
       }
       case "temp":
         return Math.round(this.world.tempC);

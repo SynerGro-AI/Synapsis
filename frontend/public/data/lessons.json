@@ -190,7 +190,6 @@
       "track": "nano",
       "name": "Sensor Fusion",
       "range": "207-214",
-      "status": "coming-soon",
       "concepts": [
         "Tilt from accel",
         "Low-pass filters",
@@ -1666,6 +1665,101 @@
       ],
       "output": {
         "initial": "Calibration: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 207,
+      "phase": "sensor_fusion",
+      "title": "Roll & Pitch from Gravity",
+      "description": "Before you trust the chip's fused angles, feel where they come from. Held still, the accelerometer only feels gravity — 9.81 m/s^2 pouring across its three axes as you tilt. That means you can recover the board's tilt with pure trigonometry: roll = atan2(ay, az) and pitch = atan2(-ax, sqrt(ay^2 + az^2)), each times 180/PI to get degrees. Read the accelerometer, do the math, and watch your computed roll and pitch track the sliders exactly. This is fusion by hand.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the accelerometer, then compute roll and pitch with atan2.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);",
+        "float roll = atan2(event.acceleration.y, event.acceleration.z) * 180 / PI;",
+        "float pitch = atan2(-event.acceleration.x, sqrt(event.acceleration.y * event.acceleration.y + event.acceleration.z * event.acceleration.z)) * 180 / PI;",
+        "Serial.print(\"Roll: \");\n    Serial.print(roll);\n    Serial.print(\" Pitch: \");\n    Serial.println(pitch);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Roll: -- Pitch: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 208,
+      "phase": "sensor_fusion",
+      "title": "Tilt-Compensated Heading",
+      "description": "A magnetometer is a compass — atan2 of its X and Y gives heading. But tilt the board and that flat compass swings wildly wrong, because the Earth's field now leaks into the vertical axis. The fix is to fuse two sensors: take roll and pitch from the accelerometer (Lesson 207), then use them to rotate the magnetic reading back to level before you read the angle. Tilt the board and watch the naive number drift while the tilt-compensated heading holds steady.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Get roll & pitch from accel, read the magnetometer,\n    // then compute a tilt-compensated heading.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);\n    float roll = atan2(event.acceleration.y, event.acceleration.z);\n    float pitch = atan2(-event.acceleration.x, sqrt(event.acceleration.y * event.acceleration.y + event.acceleration.z * event.acceleration.z));",
+        "bno.getEvent(&event, Adafruit_BNO055::VECTOR_MAGNETOMETER);\n    float mx = event.magnetic.x;\n    float my = event.magnetic.y;\n    float mz = event.magnetic.z;",
+        "float Xh = mx * cos(pitch) + my * sin(roll) * sin(pitch) + mz * cos(roll) * sin(pitch);\n    float Yh = my * cos(roll) - mz * sin(roll);\n    float heading = atan2(-Yh, Xh) * 180 / PI;\n    if (heading < 0) heading += 360;",
+        "Serial.print(\"Heading: \");\n    Serial.println(heading);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Heading: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 209,
+      "phase": "sensor_fusion",
+      "title": "The Fusion Advantage",
+      "description": "You have done fusion the hard way — now see why the BNO055 earns its keep. Print your hand-computed pitch (atan2 on the accelerometer) right next to the chip's fused event.orientation.z. In this simulator the model is clean, so the two agree; on real hardware the raw accelerometer number is jittery and jumps with every bump, while the fused one — blended with the gyroscope on-chip — stays smooth and absolute. Same angle, no math, no noise. That is what the on-board Cortex-M0 buys you.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Compute pitch from raw accel, then read the fused orientation.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);\n    float rawPitch = atan2(-event.acceleration.x, sqrt(event.acceleration.y * event.acceleration.y + event.acceleration.z * event.acceleration.z)) * 180 / PI;",
+        "bno.getEvent(&event);\n    float fusedPitch = event.orientation.z;",
+        "Serial.print(\"Raw pitch: \");\n    Serial.print(rawPitch);\n    Serial.print(\"  Fused pitch: \");\n    Serial.println(fusedPitch);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Raw pitch: --  Fused pitch: --",
         "status": "Waiting for sketch..."
       }
     }

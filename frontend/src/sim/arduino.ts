@@ -418,6 +418,7 @@ const CONSTANTS: Record<string, number> = {
   DISABLE_LED_FEEDBACK: 0,
   LSBFIRST: 0,
   MSBFIRST: 1,
+  PI: Math.PI,
   // adafruit_vector_type_t — real BNO055 register bases (Adafruit_BNO055.h).
   VECTOR_ACCELEROMETER: 0x08,
   VECTOR_MAGNETOMETER: 0x0e,
@@ -864,6 +865,30 @@ export class ArduinoSim {
       }
       case "millis":
         return Date.now() - this.startTime;
+      // Standard Arduino/avr-libc math. Trig works in radians (convert with
+      // * 180 / PI); atan2(y, x) gives the full -PI..PI angle. Used to work
+      // tilt out of the accelerometer and heading out of the magnetometer.
+      case "abs":
+      case "fabs":
+        return Math.abs(await num(0));
+      case "sqrt":
+        return Math.sqrt(await num(0));
+      case "sin":
+        return Math.sin(await num(0));
+      case "cos":
+        return Math.cos(await num(0));
+      case "tan":
+        return Math.tan(await num(0));
+      case "atan2":
+        return Math.atan2(await num(0), await num(1));
+      case "atan":
+        return Math.atan(await num(0));
+      case "asin":
+        return Math.asin(await num(0));
+      case "acos":
+        return Math.acos(await num(0));
+      case "pow":
+        return Math.pow(await num(0), await num(1));
       case "map": {
         const [v, inMin, inMax, outMin, outMax] = await Promise.all(
           [0, 1, 2, 3, 4].map(num),
