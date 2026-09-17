@@ -2088,6 +2088,40 @@
         "initial": "Error: --  D: --",
         "status": "Waiting for sketch..."
       }
+    },
+    {
+      "id": 220,
+      "phase": "nano_control",
+      "title": "PID Self-Leveling Platform",
+      "description": "Put all three terms into one controller and gate it on a healthy, calibrated sensor. Each pass: read the error, update the integral and derivative, and drive the servo with command = 90 + Kp*error + Ki*integral + Kd*derivative. Only act once bno.isFullyCalibrated() is true, so the platform never chases a bad reading — exactly what a real self-balancing machine does. Tilt the base and the platform holds level: sensor fusion feeding a PID loop feeding an actuator. You have built a complete control system, by hand, from the accelerometer up.",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\nfloat integral = 0;\nfloat prevError = 0;\nunsigned long lastTime = 0;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n    lastTime = millis();\n}\n\nvoid loop() {\n    // Full PID: level the platform, but only when calibrated.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    float error = 0 - event.orientation.z;",
+        "unsigned long now = millis();\n    float dt = (now - lastTime) / 1000.0;\n    lastTime = now;\n    integral += error * dt;\n    float derivative = (error - prevError) / dt;\n    prevError = error;",
+        "float command = 90 + 0.5 * error + 0.4 * integral + 0.1 * derivative;\n    platform.write(constrain(command, 0, 180));",
+        "if (bno.isFullyCalibrated()) {\n        Serial.print(\"Level error: \");\n        Serial.print(error);\n        Serial.println(\"  [holding]\");\n    } else {\n        Serial.println(\"Calibrating...\");\n    }",
+        "delay(20);"
+      ],
+      "output": {
+        "initial": "Level error: --",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }
