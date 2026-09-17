@@ -19,7 +19,8 @@ export type PartType =
   | "dht"
   | "irrecv"
   | "irremote"
-  | "stepper";
+  | "stepper"
+  | "shiftreg";
 
 export interface PlacedPart {
   id: string;
@@ -62,6 +63,8 @@ export interface SketchInfo {
   dhtPins: number[];
   irPins: number[];
   stepperPins: number[];
+  shiftDataPins: number[];
+  shiftClockPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -92,6 +95,7 @@ export const PART_PINS: Record<PartType, string[]> = {
   irrecv: ["GND", "VCC", "DAT"],
   irremote: [],
   stepper: ["A-", "A+", "B+", "B-"],
+  shiftreg: ["DS", "SH_CP", "ST_CP", "MR", "OE", "VCC", "GND"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -111,6 +115,7 @@ export const PART_LABELS: Record<PartType, string> = {
   irrecv: "IR receiver",
   irremote: "IR remote",
   stepper: "Stepper motor",
+  shiftreg: "Shift register 74HC595",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -350,6 +355,7 @@ export function validate(
     dht: ["VCC", "SDA", "GND"],
     irrecv: ["GND", "VCC", "DAT"],
     stepper: ["A-", "A+", "B+", "B-"],
+    shiftreg: ["DS", "SH_CP", "ST_CP", "VCC", "GND"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -384,6 +390,7 @@ export function validate(
       lcd: ["VDD", "VSS"],
       dht: ["VCC", "GND"],
       irrecv: ["VCC", "GND"],
+      shiftreg: ["VCC", "GND"],
     };
     const pins = powered[p.type];
     if (pins) {
@@ -700,6 +707,35 @@ export function validate(
       }
       if (sketch.stepperPins.length && !c.partsByType("stepper").length && required.includes("stepper"))
         err("circuit", "Your code creates a Stepper, but there's no stepper motor in the circuit yet.");
+
+      // Shift register 74HC595: three control lines to digital pins (data,
+      // shift clock, latch clock), OE tied low + MR tied high to enable it,
+      // and shiftOut(dataPin, clockPin, ...) must target the wired pins.
+      for (const sr of c.partsByType("shiftreg")) {
+        const pinOnNet = (name: string) =>
+          c.unoPinsOnNet(c.netOf(sr.id, name)).filter((n) => n <= 13);
+        const dsPins = pinOnNet("DS");
+        const shPins = pinOnNet("SH_CP");
+        const stPins = pinOnNet("ST_CP");
+        for (const [name, pins] of [
+          ["DS", dsPins],
+          ["SH_CP", shPins],
+          ["ST_CP", stPins],
+        ] as const) {
+          if (isTerminalWired(sr.id, name, "shiftreg") && !pins.length)
+            err("circuit", `${sr.id}: the ${name} pin must go to a digital pin so the Uno can clock data into it.`);
+        }
+        if (isTerminalWired(sr.id, "OE", "shiftreg") && c.netOf(sr.id, "OE") !== c.gnd)
+          err("circuit", `${sr.id}: OE (output enable) is active-low — wire it to GND so the outputs turn on.`);
+        if (isTerminalWired(sr.id, "MR", "shiftreg") && c.netOf(sr.id, "MR") !== c.v5)
+          err("circuit", `${sr.id}: MR (master reset) is active-low — wire it to 5V so the register isn't held cleared.`);
+        if (dsPins.length && sketch.shiftDataPins.length && !sketch.shiftDataPins.includes(dsPins[0]))
+          err("both", `${sr.id}'s DS (data) line is on pin ${dsPins[0]}, but shiftOut(...) sends data on pin ${sketch.shiftDataPins.map(pinLabel).join(", ")}. Match the pin numbers.`);
+        if (shPins.length && sketch.shiftClockPins.length && !sketch.shiftClockPins.includes(shPins[0]))
+          err("both", `${sr.id}'s SH_CP (shift clock) is on pin ${shPins[0]}, but shiftOut(...) clocks on pin ${sketch.shiftClockPins.map(pinLabel).join(", ")}. Match the pin numbers.`);
+      }
+      if (sketch.shiftDataPins.length && !c.partsByType("shiftreg").length && required.includes("shiftreg"))
+        err("circuit", "Your code calls shiftOut(), but there's no shift register in the circuit yet.");
     }
   }
 
@@ -732,6 +768,8 @@ export interface CircuitOutputs {
   buzzer: Map<string, number>;
   /** stepper id -> accumulated shaft angle in degrees (can exceed 360) */
   stepper: Map<string, number>;
+  /** shift register id -> latched 8-bit output byte (bit i drives Qi) */
+  shiftreg: Map<string, number>;
   /** 16x2 text (two lines) when a powered LCD is present */
   lcd: { lines: [string, string] } | null;
 }
@@ -746,6 +784,8 @@ export class CircuitRuntime {
   private lcdCursor = { x: 0, y: 0 };
   private lcdUsed = false;
   private stepperAngle = new Map<string, number>();
+  private shiftPending = new Map<string, number>();
+  private shiftLatched = new Map<string, number>();
 
   constructor(state: CircuitState, world: WorldState) {
     this.circuit = new Circuit(state);
@@ -785,6 +825,18 @@ export class CircuitRuntime {
       if (![...want].length) continue;
       const deg = (steps / (stepsPerRev || 200)) * 360;
       this.stepperAngle.set(s.id, (this.stepperAngle.get(s.id) ?? 0) + deg);
+    }
+  }
+
+  /** shiftOut(dataPin, clockPin, value): load an 8-bit value into the shift
+   *  register whose DS/SH_CP lines reach those pins. It becomes visible on the
+   *  outputs only after the latch pin (ST_CP) is pulsed HIGH — see outputs(). */
+  shiftOut(dataPin: number, clockPin: number, value: number): void {
+    for (const sr of this.circuit.partsByType("shiftreg")) {
+      const ds = this.circuit.unoPinsOnNet(this.circuit.netOf(sr.id, "DS"));
+      const sh = this.circuit.unoPinsOnNet(this.circuit.netOf(sr.id, "SH_CP"));
+      if (ds.includes(dataPin) && sh.includes(clockPin))
+        this.shiftPending.set(sr.id, value & 0xff);
     }
   }
 
@@ -898,7 +950,35 @@ export class CircuitRuntime {
       if (powered && this.lcdUsed) lcd = { lines: [...this.lcdLines] as [string, string] };
     }
 
-    return { led, current, rgb, servo, motor, buzzer, stepper: new Map(this.stepperAngle), lcd };
+    // Shift register: outputs show the latched byte. Copy pending -> latched
+    // whenever the latch line (ST_CP) is currently HIGH, and only when powered
+    // (VCC=5V, GND=GND, OE not held high, MR not held low).
+    const shiftreg = new Map<string, number>();
+    for (const part of this.circuit.partsByType("shiftreg")) {
+      const powered =
+        this.circuit.netOf(part.id, "VCC") === this.circuit.v5 &&
+        this.circuit.netOf(part.id, "GND") === this.circuit.gnd;
+      const enabled =
+        this.circuit.netOf(part.id, "OE") !== this.circuit.v5 &&
+        this.circuit.netOf(part.id, "MR") !== this.circuit.gnd;
+      const latchPins = this.circuit.unoPinsOnNet(this.circuit.netOf(part.id, "ST_CP"));
+      const latchHigh = latchPins.some((p) => (this.duties.get(p) ?? 0) > 0);
+      if (latchHigh && this.shiftPending.has(part.id))
+        this.shiftLatched.set(part.id, this.shiftPending.get(part.id)!);
+      shiftreg.set(part.id, powered && enabled ? this.shiftLatched.get(part.id) ?? 0 : 0);
+    }
+
+    return {
+      led,
+      current,
+      rgb,
+      servo,
+      motor,
+      buzzer,
+      stepper: new Map(this.stepperAngle),
+      shiftreg,
+      lcd,
+    };
   }
 
   digitalRead(pin: number, mode: string | undefined): number {

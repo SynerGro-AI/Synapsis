@@ -25,6 +25,7 @@ const SCALE: Record<string, number> = {
   irrecv: 0.9,
   irremote: 0.7,
   stepper: 0.7,
+  shiftreg: 0.8,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -44,6 +45,7 @@ const ID_PREFIX: Record<PartType, string> = {
   irrecv: "IR",
   irremote: "REMOTE",
   stepper: "STEP",
+  shiftreg: "SR",
 };
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
@@ -52,7 +54,58 @@ const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
     { name: "1", x: 14, y: 66 },
     { name: "2", x: 50, y: 66 },
   ],
+  shiftreg: [
+    { name: "DS", x: 20, y: 82 },
+    { name: "SH_CP", x: 36, y: 82 },
+    { name: "ST_CP", x: 52, y: 82 },
+    { name: "MR", x: 68, y: 82 },
+    { name: "OE", x: 84, y: 82 },
+    { name: "VCC", x: 100, y: 82 },
+    { name: "GND", x: 116, y: 82 },
+  ],
 };
+
+/**
+ * 74HC595 shift register: a DIP chip whose eight Q outputs are shown as
+ * on-board indicator LEDs that light per bit — teaching "3 pins drive 8
+ * outputs" without wiring eight separate LEDs.
+ */
+function ShiftRegVisual({ bits }: { bits: number }) {
+  const pins = ["DS", "SH", "ST", "MR", "OE", "5V", "G"];
+  return (
+    <svg width="130" height="96" viewBox="0 0 130 96">
+      {pins.map((label, i) => {
+        const x = 20 + i * 16;
+        return (
+          <g key={label}>
+            <rect x={x - 2} y="64" width="4" height="20" fill="#9aa0a6" />
+            <text x={x} y="94" textAnchor="middle" fontSize="7" fill="#cfd3d8">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      <rect x="10" y="8" width="110" height="58" rx="4" fill="#23272e" stroke="#111" strokeWidth="1.5" />
+      <path d="M58 8 A7 7 0 0 0 72 8" fill="#111" />
+      <text x="65" y="60" textAnchor="middle" fontSize="8" fill="#7a7f87" fontFamily="monospace">
+        74HC595
+      </text>
+      {Array.from({ length: 8 }, (_, i) => {
+        const on = (bits >> i) & 1;
+        const x = 18 + i * 13.4;
+        return (
+          <g key={i}>
+            {on ? <circle cx={x} cy="26" r="8" fill="#ffb02e" opacity="0.25" /> : null}
+            <circle cx={x} cy="26" r="5" fill={on ? "#ffb02e" : "#3a3f47"} stroke="#111" strokeWidth="0.8" />
+            <text x={x} y="42" textAnchor="middle" fontSize="6" fill="#8a8f97">
+              Q{i}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 /** Simple DC motor visual: a can with a fan that spins at PWM speed. */
 function MotorVisual({ speed }: { speed: number }) {
@@ -118,6 +171,7 @@ interface CircuitCanvasProps {
   rgbLevels: Map<string, { r: number; g: number; b: number }>;
   servoAngles: Map<string, number>;
   stepperAngles: Map<string, number>;
+  shiftBits: Map<string, number>;
   motorSpeeds: Map<string, number>;
   buzzerFreqs: Map<string, number>;
   lcdLines: [string, string] | null;
@@ -140,6 +194,7 @@ export default function CircuitCanvas({
   rgbLevels,
   servoAngles,
   stepperAngles,
+  shiftBits,
   motorSpeeds,
   buzzerFreqs,
   lcdLines,
@@ -529,6 +584,7 @@ export default function CircuitCanvas({
         {type === "stepper" && (
           <wokwi-stepper-motor angle={stepperAngles.get(id) ?? 0} />
         )}
+        {type === "shiftreg" && <ShiftRegVisual bits={shiftBits.get(id) ?? 0} />}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

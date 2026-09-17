@@ -14,6 +14,8 @@ export interface SimIO {
   irDecode(pin: number): number;
   /** Advance a stepper driven by `pins` by `steps` out of `stepsPerRev`. */
   stepperStep(pins: number[], steps: number, stepsPerRev: number): void;
+  /** Load an 8-bit value into a shift register via its data + shift-clock pins. */
+  shiftOut(dataPin: number, clockPin: number, value: number): void;
   servoWrite(pin: number, angle: number): void;
   tone(pin: number, freq: number): void;
   noTone(pin: number): void;
@@ -385,6 +387,8 @@ const CONSTANTS: Record<string, number> = {
   DHT22: 22,
   ENABLE_LED_FEEDBACK: 1,
   DISABLE_LED_FEEDBACK: 0,
+  LSBFIRST: 0,
+  MSBFIRST: 1,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -751,6 +755,22 @@ export class ArduinoSim {
         io.analogWrite(pin, duty);
         return 0;
       }
+      case "shiftOut": {
+        // shiftOut(dataPin, clockPin, bitOrder, value): clock 8 bits out.
+        const dataPin = await num(0);
+        const clockPin = await num(1);
+        const order = await num(2); // MSBFIRST=1, LSBFIRST=0
+        let value = (await num(3)) & 0xff;
+        if (order === 0) {
+          // LSBFIRST: the first bit out (bit0) lands on Q7, so reverse the
+          // byte to keep the simulator's "bit i drives Qi" convention.
+          let r = 0;
+          for (let i = 0; i < 8; i++) r |= ((value >> i) & 1) << (7 - i);
+          value = r;
+        }
+        io.shiftOut(dataPin, clockPin, value);
+        return 0;
+      }
       case "delay": {
         this.stepsSinceDelay = 0;
         const ms = await num(0);
@@ -810,6 +830,8 @@ export interface SketchAnalysis {
   dhtPins: number[];
   irPins: number[];
   stepperPins: number[];
+  shiftDataPins: number[];
+  shiftClockPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -831,6 +853,8 @@ export function analyzeSketch(code: string): SketchAnalysis {
     dhtPins: [],
     irPins: [],
     stepperPins: [],
+    shiftDataPins: [],
+    shiftClockPins: [],
     pinModes: new Map(),
   };
 
@@ -888,7 +912,10 @@ export function analyzeSketch(code: string): SketchAnalysis {
         else if (expr.name === "pulseIn") addUnique(result.pulseIns, pin);
         else if (expr.name === "tone") addUnique(result.tonePins, pin);
         else if (expr.name === "IrReceiver.begin") addUnique(result.irPins, pin);
-        else if (expr.name.endsWith(".attach")) addUnique(result.servoPins, pin);
+        else if (expr.name === "shiftOut") {
+          addUnique(result.shiftDataPins, pin);
+          if (expr.args.length > 1) addUnique(result.shiftClockPins, staticEval(expr.args[1]));
+        } else if (expr.name.endsWith(".attach")) addUnique(result.servoPins, pin);
         else if (expr.name === "pinMode" && pin !== null && expr.args.length > 1) {
           const mode = staticEval(expr.args[1]);
           if (mode !== null && MODE_NAMES[mode]) result.pinModes.set(pin, MODE_NAMES[mode]);

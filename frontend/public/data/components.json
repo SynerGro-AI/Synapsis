@@ -267,6 +267,22 @@
       },
       "notes": "Four coil wires: A− A+ B+ B−. In code: #include <Stepper.h>, then Stepper myStepper(stepsPerRevolution, p1, p2, p3, p4); the four pins must match how the coils are wired. Call myStepper.setSpeed(rpm) once, then myStepper.step(steps). A real stepper can't be driven straight from Uno pins — it needs a driver board — but the simulator wires it directly so you can focus on the code.",
       "terminals": "A- , A+ , B+ , B- (each to a digital pin, via a driver in real life)"
+    },
+    {
+      "id": "shiftreg",
+      "name": "Shift Register (74HC595)",
+      "category": "output",
+      "function": "A chip that turns three Arduino pins into eight outputs. You clock eight bits into it one at a time, then flip a latch and all eight outputs update at once. When you run out of pins for LEDs, seven-segment digits, or relays, a shift register buys you eight more for the cost of three — and you can chain several to get 16, 24, 32… outputs from the same three wires.",
+      "science": "Inside are eight flip-flops in a row — a bucket brigade for bits. Each rising edge on the shift clock (SH_CP) pushes the bit currently on the data line (DS) into the first flip-flop and shoves every other bit one seat down the line. After eight clock pulses your byte is lined up inside, but the outputs haven't moved yet: they follow a second set of latch registers. A rising edge on the latch clock (ST_CP) copies all eight bits to the outputs Q0–Q7 simultaneously, so they change cleanly instead of flickering as you shift. Two active-low housekeeping pins finish the job: MR (master reset) must be HIGH (tie to 5V) or the register stays cleared, and OE (output enable) must be LOW (tie to GND) or the outputs stay off. Arduino's shiftOut(dataPin, clockPin, bitOrder, value) does the eight data-and-clock pulses for you; you wrap it in digitalWrite(latchPin, LOW) … digitalWrite(latchPin, HIGH) to latch the result.",
+      "specs": {
+        "type": "8-bit serial-in, parallel-out shift register",
+        "inputs": "DS (data), SH_CP (shift clock), ST_CP (latch clock)",
+        "control": "MR active-low (→5V), OE active-low (→GND)",
+        "outputs": "Q0–Q7, plus Q7' for daisy-chaining more registers",
+        "voltage": "2–6 V logic; ~35 mA total across all outputs"
+      },
+      "notes": "Three control lines do all the work: DS→a digital pin, SH_CP→a digital pin, ST_CP→a digital pin. Power with VCC→5V and GND→GND; tie MR→5V and OE→GND so the chip is enabled. In code, latch LOW, shiftOut(dataPin, clockPin, MSBFIRST, value), latch HIGH. The simulator shows the eight Q outputs as on-board indicator lights so you can watch your byte appear; on a real board you'd wire Q0–Q7 to eight LEDs (each through its own resistor).",
+      "terminals": "DS, SH_CP, ST_CP (to digital pins) · MR→5V · OE→GND · VCC→5V · GND→GND"
     }
   ]
 }

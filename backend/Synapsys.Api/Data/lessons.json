@@ -93,7 +93,7 @@
       "id": "control",
       "track": "arduino",
       "name": "Control",
-      "range": "13-25",
+      "range": "13-26",
       "concepts": [
         "Servos",
         "DC motors",
@@ -103,7 +103,8 @@
         "Piezo buzzer",
         "DHT11 sensor",
         "IR remote",
-        "stepper"
+        "stepper",
+        "shiftreg"
       ]
     },
     {
@@ -1223,6 +1224,42 @@
       ],
       "output": {
         "initial": "Stepper at 0°",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 26,
+      "phase": "control",
+      "title": "Shift Register",
+      "description": "Keep the 16×2 LCD and add a 74HC595 shift register — a chip that turns three Arduino pins into eight outputs. Clock a byte in bit by bit, flip the latch, and all eight Q outputs update at once. Count from 0 to 255 and watch the eight on-board lights spell out each number in binary while the LCD shows it in decimal. This is how you drive far more outputs than the Uno has pins.",
+      "source": "Paul McWhorter, Arduino 74HC595 shift register lessons — toptechboy.com",
+      "featuredComponent": "shiftreg",
+      "circuit": {
+        "palette": [
+          "lcd",
+          "shiftreg"
+        ],
+        "required": [
+          "lcd",
+          "shiftreg"
+        ],
+        "notes": "LCD wired as in Lesson 19 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2; VSS/V0/RW/K→GND, VDD/A→5V). Shift register: DS→8, SH_CP→7, ST_CP→6 — the same three pins you name as dataPin, clockPin, and latchPin in code. Enable the chip by tying MR→5V and OE→GND, and power it with VCC→5V and GND→GND. The eight Q outputs are shown as on-board lights, so you don't wire them."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <LiquidCrystal.h>\n\nconst int dataPin = 8;   // DS    -> shift register serial data\nconst int clockPin = 7;  // SH_CP -> shift clock\nconst int latchPin = 6;  // ST_CP -> latch clock\n\nLiquidCrystal lcd(12, 11, 5, 4, 3, 2);\n\nvoid setup() {\n  lcd.begin(16, 2);\n  // Make the three control pins OUTPUTs.\n}\n\nvoid loop() {\n  // Count value from 0 to 255. For each value:\n  //   pull the latch LOW, shiftOut the byte MSBFIRST, then latch HIGH,\n  //   and print the number on the LCD.\n}"
+      },
+      "hints": [
+        "pinMode(dataPin, OUTPUT);",
+        "pinMode(clockPin, OUTPUT);",
+        "pinMode(latchPin, OUTPUT);",
+        "digitalWrite(latchPin, LOW);",
+        "shiftOut(dataPin, clockPin, MSBFIRST, value);",
+        "digitalWrite(latchPin, HIGH);",
+        "lcd.print(value);"
+      ],
+      "output": {
+        "initial": "Outputs: 00000000",
         "status": "Waiting for sketch..."
       }
     },
