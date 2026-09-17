@@ -1540,6 +1540,134 @@
         "initial": "Heading: --",
         "status": "Waiting for sketch..."
       }
+    },
+    {
+      "id": 203,
+      "phase": "motion_basics",
+      "title": "Accelerometers",
+      "description": "Read the raw accelerometer instead of the fused angle. Pass a vector type to getEvent — bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER) — and event.acceleration.x/.y/.z give acceleration in m/s^2. Held still, the sensor still feels gravity: the three axes always add up to about 9.81 m/s^2, and tilting the board just pours that 9.81 from one axis into another. Tilt the sliders and watch it move.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as Lesson 201: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the accelerometer vector and print X, Y, Z in m/s^2.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);",
+        "Serial.print(\"X: \");\n    Serial.print(event.acceleration.x);",
+        "Serial.print(\" Y: \");\n    Serial.print(event.acceleration.y);",
+        "Serial.print(\" Z: \");\n    Serial.println(event.acceleration.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Accel: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 204,
+      "phase": "motion_basics",
+      "title": "Gyroscopes",
+      "description": "The gyroscope measures rotation speed, not angle. Read it with Adafruit_BNO055::VECTOR_GYROSCOPE and event.gyro.x/.y/.z gives degrees per second on each axis. The key idea: hold the board still and the gyro reads ~0, because nothing is turning; only while you're actively moving a slider does it spike. That's what makes a gyro different from the accelerometer — it sees change, not position.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as Lesson 201: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the gyroscope vector and print X, Y, Z in deg/s.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_GYROSCOPE);",
+        "Serial.print(\"X: \");\n    Serial.print(event.gyro.x);",
+        "Serial.print(\" Y: \");\n    Serial.print(event.gyro.y);",
+        "Serial.print(\" Z: \");\n    Serial.println(event.gyro.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Gyro: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 205,
+      "phase": "motion_basics",
+      "title": "Reading Raw Data",
+      "description": "Real projects read several quantities each loop. Reuse one sensors_event_t: call bno.getEvent(&event) for the fused heading, then bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER) for acceleration, printing after each. One tidy line per pass gives you orientation and motion side by side — the raw feed a filter or controller would consume.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as Lesson 201: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read orientation, then acceleration, into the same event.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;",
+        "bno.getEvent(&event);\n    Serial.print(\"Heading: \");\n    Serial.print(event.orientation.x);",
+        "bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER);\n    Serial.print(\"  Accel Z: \");\n    Serial.println(event.acceleration.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Raw: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 206,
+      "phase": "motion_basics",
+      "title": "Calibration",
+      "description": "The BNO055 fuses its sensors best once it's calibrated, and it will tell you how far along it is. Declare four uint8_t status bytes, fill them with bno.getCalibration(&system, &gyro, &accel, &mag), and print each 0-3 (3 = fully calibrated). bno.isFullyCalibrated() returns true when all four hit 3. On real hardware you calibrate by moving the board through a few poses; here the sim reports fully calibrated so you can see the API.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as Lesson 201: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the four calibration bytes and report progress.\n}"
+      },
+      "hints": [
+        "uint8_t system = 0, gyro = 0, accel = 0, mag = 0;",
+        "bno.getCalibration(&system, &gyro, &accel, &mag);",
+        "Serial.print(\"Sys: \");\n    Serial.print(system, DEC);\n    Serial.print(\" Gyro: \");\n    Serial.print(gyro, DEC);",
+        "Serial.print(\" Accel: \");\n    Serial.print(accel, DEC);\n    Serial.print(\" Mag: \");\n    Serial.println(mag, DEC);",
+        "if (bno.isFullyCalibrated()) {\n        Serial.println(\"Fully calibrated!\");\n    }",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Calibration: --",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }

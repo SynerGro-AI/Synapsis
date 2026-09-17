@@ -269,6 +269,11 @@ class Parser {
 
   private parseStmt(): Stmt {
     const t = this.peek()!;
+    if (t.value === ";") {
+      // Empty statement — e.g. the body of the Adafruit `while (1);` halt.
+      this.next();
+      return { kind: "expr", expr: { kind: "num", value: 0 } };
+    }
     if (TYPE_KEYWORDS.includes(t.value)) return this.parseDecl();
     if (OBJECT_TYPES.includes(t.value)) return this.parseObjDecl();
     if (t.value === "if") {
