@@ -203,7 +203,6 @@
       "track": "nano",
       "name": "Control Systems",
       "range": "215-220",
-      "status": "coming-soon",
       "concepts": [
         "Servo control",
         "Self-leveling platform",
@@ -1917,6 +1916,106 @@
       ],
       "output": {
         "initial": "Heading: --  Motion Z: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 215,
+      "phase": "nano_control",
+      "title": "Command the Platform",
+      "description": "Control starts with an actuator. Bolt the IMU onto a hobby servo and you have a platform whose tilt you can command: platform.write(angle) drives the horn to any position from 0 to 180 degrees, with 90 as level. Sweep it end to end and watch the platform swing. Right now you are steering it blind — open-loop, no feedback. In the next lessons the IMU will tell the servo what to do, but first make sure you can move it on command.",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "servo",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n}\n\nvoid loop() {\n    // Sweep the platform by writing an angle to the servo.\n}"
+      },
+      "hints": [
+        "int angle = map(millis() % 3000, 0, 3000, 0, 180);",
+        "platform.write(angle);",
+        "Serial.print(\"Servo: \");\n    Serial.println(angle);",
+        "delay(20);"
+      ],
+      "output": {
+        "initial": "Servo: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 216,
+      "phase": "nano_control",
+      "title": "Read the Tilt Error",
+      "description": "A controller acts on error: how far the thing you are controlling is from where you want it. Here the goal (the setpoint) is level, pitch = 0. Read the fused pitch from the IMU and compute error = setpoint - pitch. Tilt the platform and watch the error grow and flip sign with the lean. You are not moving the servo yet — this lesson is about seeing the one number the whole control loop is built to drive to zero.",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the pitch, then compute the error from level (0).\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    float pitch = event.orientation.z;",
+        "float error = 0 - pitch;",
+        "Serial.print(\"Pitch: \");\n    Serial.print(pitch);\n    Serial.print(\"  Error: \");\n    Serial.println(error);",
+        "delay(50);"
+      ],
+      "output": {
+        "initial": "Pitch: --  Error: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 217,
+      "phase": "nano_control",
+      "title": "Proportional Control",
+      "description": "Now close the loop. Proportional control nudges the servo in proportion to the error: command = 90 + Kp * error, then constrain it to the servo's 0..180 range. The bigger the tilt, the harder the servo pushes back. Tilt the base and the platform fights to level itself — but settles a little short: with proportional-only control the servo needs a standing error to hold any correction, so a steady offset remains. That leftover tilt is the itch the next lesson scratches. (Keep Kp below 1: this loop corrects one step per reading, and too much gain makes it overshoot and oscillate — real digital-control behavior.)",
+      "source": "Paul McWhorter, Arduino/IMU + PID lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu",
+          "servo"
+        ],
+        "required": [
+          "imu",
+          "servo"
+        ],
+        "notes": "The IMU rides on a servo-driven platform. Servo: PWM (signal) -> pin 9, V+ -> 5V, GND -> GND. IMU: VIN -> 5V, GND -> GND, SDA -> A4, SCL -> A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n#include <Servo.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\nServo platform;\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    platform.attach(9);\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the error, then drive the servo proportionally.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);\n    float error = 0 - event.orientation.z;",
+        "float Kp = 0.5;\n    float command = 90 + Kp * error;",
+        "platform.write(constrain(command, 0, 180));",
+        "Serial.print(\"Error: \");\n    Serial.print(error);\n    Serial.print(\"  Servo: \");\n    Serial.println(command);",
+        "delay(20);"
+      ],
+      "output": {
+        "initial": "Error: --  Servo: --",
         "status": "Waiting for sketch..."
       }
     }

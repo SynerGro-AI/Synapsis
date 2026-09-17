@@ -988,6 +988,12 @@ export class ArduinoSim {
         if (inMax === inMin) return outMin;
         return Math.trunc(((v - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin);
       }
+      case "constrain": {
+        // Arduino constrain(x, lo, hi): clamp x to the [lo, hi] range. Used to
+        // keep a control output inside the servo's 0..180° travel.
+        const [x, lo, hi] = await Promise.all([0, 1, 2].map(num));
+        return Math.min(hi, Math.max(lo, x));
+      }
       case "Serial.begin":
         this.serialStarted = true;
         return 0;

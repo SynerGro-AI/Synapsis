@@ -1083,10 +1083,13 @@ export class CircuitRuntime {
     for (const s of this.circuit.partsByType("imu")) {
       if (!this.imuConnected(s.id)) continue;
       const rad = Math.PI / 180;
+      // Same effective pitch as imuValue: the platform the IMU rides on is
+      // tilted by the controlling servo, so the fused quaternion reflects it too.
+      const pitchDeg = Math.max(-90, Math.min(90, this.world.pitch + this.platformCorrection()));
       const cy = Math.cos((this.world.heading * rad) / 2);
       const sy = Math.sin((this.world.heading * rad) / 2);
-      const cp = Math.cos((this.world.pitch * rad) / 2);
-      const sp = Math.sin((this.world.pitch * rad) / 2);
+      const cp = Math.cos((pitchDeg * rad) / 2);
+      const sp = Math.sin((pitchDeg * rad) / 2);
       const cr = Math.cos((this.world.roll * rad) / 2);
       const sr = Math.sin((this.world.roll * rad) / 2);
       if (axis === "w") return cr * cp * cy + sr * sp * sy;
@@ -1095,6 +1098,20 @@ export class CircuitRuntime {
       return cr * cp * sy - sr * sp * cy;
     }
     return NaN;
+  }
+
+  /** Mechanical tilt (°) the controlled servo adds to the platform the IMU sits
+   *  on: (angle − 90) for a servo whose PWM signal reaches a written pin, else 0.
+   *  Neutral 90° = level. This is what physically closes the self-leveling loop —
+   *  the servo genuinely moves the platform the sensor measures. With no such
+   *  servo present it returns 0, so every sensor-only lesson reads unchanged. */
+  private platformCorrection(): number {
+    for (const part of this.circuit.partsByType("servo")) {
+      const net = this.circuit.netOf(part.id, "PWM");
+      for (const [pin, angle] of this.servoByPin)
+        if (this.circuit.netOf("uno", pinLabel(pin)) === net) return angle - 90;
+    }
+    return 0;
   }
 
   private imuConnected(id: string): boolean {
@@ -1111,7 +1128,12 @@ export class CircuitRuntime {
    *  Euler angles in °, gravity-including acceleration in m/s² (|a|≈9.81), gyro in
    *  °/s from how fast the board is turning, Earth's field in µT, chip temp in °C. */
   private imuValue(quantity: string, axis: string): number {
-    const { heading, pitch, roll } = this.world;
+    const { heading, roll } = this.world;
+    // Effective pitch the IMU actually feels = base tilt (slider) + the
+    // servo-platform correction, clamped to the sensor's ±90° range. With no
+    // controlling servo the correction is 0, so this is just the world pitch and
+    // every Motion Basics / Sensor Fusion lesson reads exactly as before.
+    const pitch = Math.max(-90, Math.min(90, this.world.pitch + this.platformCorrection()));
     const G = 9.81;
     const rad = Math.PI / 180;
     const p = pitch * rad;
