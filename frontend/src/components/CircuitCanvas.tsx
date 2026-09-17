@@ -24,6 +24,7 @@ const SCALE: Record<string, number> = {
   dht: 0.85,
   irrecv: 0.9,
   irremote: 0.7,
+  stepper: 0.7,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -42,6 +43,7 @@ const ID_PREFIX: Record<PartType, string> = {
   dht: "DHT",
   irrecv: "IR",
   irremote: "REMOTE",
+  stepper: "STEP",
 };
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
@@ -115,6 +117,7 @@ interface CircuitCanvasProps {
   currentWires: Map<number, boolean>;
   rgbLevels: Map<string, { r: number; g: number; b: number }>;
   servoAngles: Map<string, number>;
+  stepperAngles: Map<string, number>;
   motorSpeeds: Map<string, number>;
   buzzerFreqs: Map<string, number>;
   lcdLines: [string, string] | null;
@@ -136,6 +139,7 @@ export default function CircuitCanvas({
   currentWires,
   rgbLevels,
   servoAngles,
+  stepperAngles,
   motorSpeeds,
   buzzerFreqs,
   lcdLines,
@@ -522,6 +526,9 @@ export default function CircuitCanvas({
         {type === "dht" && <wokwi-dht22 />}
         {type === "irrecv" && <wokwi-ir-receiver />}
         {type === "irremote" && <wokwi-ir-remote />}
+        {type === "stepper" && (
+          <wokwi-stepper-motor angle={stepperAngles.get(id) ?? 0} />
+        )}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

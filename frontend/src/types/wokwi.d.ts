@@ -33,6 +33,13 @@ declare module "react/jsx-runtime" {
       "wokwi-dht22": WokwiProps;
       "wokwi-ir-receiver": WokwiProps;
       "wokwi-ir-remote": WokwiProps;
+      "wokwi-stepper-motor": WokwiProps<{
+        angle?: number;
+        arrow?: string;
+        value?: string;
+        units?: string;
+        size?: number;
+      }>;
       "wokwi-rgb-led": WokwiProps<{ ledRed?: number; ledGreen?: number; ledBlue?: number }>;
       "wokwi-lcd1602": WokwiProps<{
         characters?: Uint8Array;

@@ -93,7 +93,7 @@
       "id": "control",
       "track": "arduino",
       "name": "Control",
-      "range": "13-24",
+      "range": "13-25",
       "concepts": [
         "Servos",
         "DC motors",
@@ -102,7 +102,8 @@
         "LCD display",
         "Piezo buzzer",
         "DHT11 sensor",
-        "IR remote"
+        "IR remote",
+        "stepper"
       ]
     },
     {
@@ -1188,6 +1189,40 @@
       ],
       "output": {
         "initial": "IR receiver idle",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 25,
+      "phase": "control",
+      "title": "Stepper Motor",
+      "description": "Keep the 16×2 LCD and add a stepper motor — a motor that turns in exact, countable steps instead of just spinning. The Stepper library does the coil-switching for you: set a speed in RPM, then command whole revolutions forward and back while the LCD announces each move. Run the sketch and watch the shaft's arrow sweep one full turn one way, then the other. This is the same kind of motor that positions a 3D-printer head.",
+      "source": "Paul McWhorter, Arduino stepper motor lessons — toptechboy.com",
+      "featuredComponent": "stepper",
+      "circuit": {
+        "palette": [
+          "lcd",
+          "stepper"
+        ],
+        "required": [
+          "lcd",
+          "stepper"
+        ],
+        "notes": "LCD wired as in Lesson 19 (RS→12, E→11, D4→5, D5→4, D6→3, D7→2; VSS/V0/RW/K→GND, VDD/A→5V). Stepper coils: A−→6, A+→7, B+→8, B−→9 — the same four pins, in the same order, that you pass to Stepper myStepper(steps, 6, 7, 8, 9). A real stepper would need a ULN2003 driver board between the Uno and the coils; the simulator drives it directly."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Stepper.h>\n#include <LiquidCrystal.h>\n\nconst int stepsPerRevolution = 200;\n\nStepper myStepper(stepsPerRevolution, 6, 7, 8, 9);\nLiquidCrystal lcd(12, 11, 5, 4, 3, 2);\n\nvoid setup() {\n  lcd.begin(16, 2);\n  // Choose a speed in RPM before the motor can step.\n}\n\nvoid loop() {\n  // Spin one full turn forward (show \"Forward\" on the LCD),\n  // then one full turn back (show \"Reverse\").\n}"
+      },
+      "hints": [
+        "myStepper.setSpeed(30);",
+        "lcd.print(\"Forward\");",
+        "myStepper.step(stepsPerRevolution);",
+        "lcd.print(\"Reverse\");",
+        "myStepper.step(-stepsPerRevolution);"
+      ],
+      "output": {
+        "initial": "Stepper at 0°",
         "status": "Waiting for sketch..."
       }
     },

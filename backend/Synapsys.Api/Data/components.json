@@ -251,6 +251,22 @@
       },
       "notes": "Not wired into the circuit — just drop it on the canvas and click its keys while the sketch runs. Each key sends a command byte (power = 0xA2, 1 = 0x30, …) that shows up in IrReceiver.decodedIRData.command.",
       "terminals": "none — wireless infrared"
+    },
+    {
+      "id": "stepper",
+      "name": "Stepper Motor (4-wire)",
+      "category": "output",
+      "function": "A motor that moves in exact, countable increments instead of spinning freely. Energize its four coils in the right order and the shaft snaps forward one precise step; reverse the order and it steps back. Because every step is the same tiny angle, you can command it to an exact position — no feedback sensor needed — which is why 3D printers, camera rigs, and clocks use them.",
+      "science": "Inside are two coil pairs (A and B) surrounding a toothed magnetic rotor. When you push current through a coil it becomes an electromagnet and tugs the nearest rotor tooth into alignment. By switching current between the coils in a fixed sequence — A+, then B+, then A−, then B− — you drag the rotor around one notch at a time. A common motor has 200 steps per revolution, so each step is 360°/200 = 1.8°. The Arduino Stepper library hides the switching pattern: you tell it stepsPerRevolution and the four control pins in the constructor, call setSpeed(rpm) to choose how fast, and then step(n) to advance n steps (negative n runs it backwards). step() is blocking — it doesn't return until the move finishes.",
+      "specs": {
+        "type": "bipolar/unipolar stepper (28BYJ/NEMA-class)",
+        "resolution": "1.8° per step (200 steps/rev), typical",
+        "control": "4 coil lines, switched in sequence",
+        "driver": "needs a ULN2003 or H-bridge in real hardware",
+        "holding": "stays locked in place while a coil is energized"
+      },
+      "notes": "Four coil wires: A− A+ B+ B−. In code: #include <Stepper.h>, then Stepper myStepper(stepsPerRevolution, p1, p2, p3, p4); the four pins must match how the coils are wired. Call myStepper.setSpeed(rpm) once, then myStepper.step(steps). A real stepper can't be driven straight from Uno pins — it needs a driver board — but the simulator wires it directly so you can focus on the code.",
+      "terminals": "A- , A+ , B+ , B- (each to a digital pin, via a driver in real life)"
     }
   ]
 }

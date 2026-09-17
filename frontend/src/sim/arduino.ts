@@ -12,6 +12,8 @@ export interface SimIO {
   dhtRead(pin: number, kind: "temp" | "humidity"): number;
   /** Next IR command byte waiting on a receiver whose DAT reaches `pin`, or -1. */
   irDecode(pin: number): number;
+  /** Advance a stepper driven by `pins` by `steps` out of `stepsPerRev`. */
+  stepperStep(pins: number[], steps: number, stepsPerRev: number): void;
   servoWrite(pin: number, angle: number): void;
   tone(pin: number, freq: number): void;
   noTone(pin: number): void;
@@ -124,7 +126,7 @@ interface Program {
 // ---------- Parser ----------
 
 const TYPE_KEYWORDS = ["int", "long", "float", "double", "bool", "byte", "unsigned"];
-const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT"];
+const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT", "Stepper"];
 
 class Parser {
   private pos = 0;
@@ -401,7 +403,7 @@ export class ArduinoSim {
   private startTime = 0;
   private stepsSinceYield = 0;
   private stepsSinceDelay = 0;
-  private objects = new Map<string, { type: string; args: number[]; pin?: number }>();
+  private objects = new Map<string, { type: string; args: number[]; pin?: number; rpm?: number }>();
   // IrReceiver is a library-provided global singleton (not a user object).
   private irReceivePin = -1;
   private irCommand = 0;
@@ -644,6 +646,35 @@ export class ArduinoSim {
               return io.dhtRead(obj.args[0], "humidity");
           }
         }
+        if (obj.type === "Stepper") {
+          // Stepper myStepper(stepsPerRev, p1, p2, p3, p4);
+          const stepsPerRev = obj.args[0] || 200;
+          const pins = obj.args.slice(1);
+          switch (method) {
+            case "setSpeed":
+              obj.rpm = Math.max(1, await num(0));
+              return 0;
+            case "step": {
+              const steps = Math.trunc(await num(0));
+              const rpm = obj.rpm ?? 15;
+              const total = Math.abs(steps);
+              const dir = Math.sign(steps) || 1;
+              // step() blocks in the real library; animate the sweep in chunks
+              // so the shaft arrow visibly turns instead of snapping.
+              const chunk = Math.max(1, Math.ceil(total / 60));
+              const msPerStep = 60000 / (rpm * stepsPerRev);
+              let moved = 0;
+              while (moved < total && !this.stopped) {
+                const n = Math.min(chunk, total - moved);
+                io.stepperStep(pins, dir * n, stepsPerRev);
+                moved += n;
+                this.stepsSinceDelay = 0;
+                await sleep(Math.min(120, Math.max(1, msPerStep * n)));
+              }
+              return 0;
+            }
+          }
+        }
         throw new SimError(`'${objName}.${method}()' isn't supported yet`);
       }
       // IrReceiver is a global singleton from the IRremote library.
@@ -778,6 +809,7 @@ export interface SketchAnalysis {
   lcdPins: number[];
   dhtPins: number[];
   irPins: number[];
+  stepperPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -798,6 +830,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
     lcdPins: [],
     dhtPins: [],
     irPins: [],
+    stepperPins: [],
     pinModes: new Map(),
   };
 
@@ -890,6 +923,11 @@ export function analyzeSketch(code: string): SketchAnalysis {
               .filter((v): v is number => v !== null);
           else if (s.type === "DHT" && s.args.length)
             addUnique(result.dhtPins, staticEval(s.args[0]));
+          else if (s.type === "Stepper")
+            result.stepperPins = s.args
+              .slice(1)
+              .map(staticEval)
+              .filter((v): v is number => v !== null);
           break;
         case "assign":
           visitExpr(s.expr);

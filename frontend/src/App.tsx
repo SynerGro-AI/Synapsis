@@ -71,6 +71,7 @@ export default function App() {
   const [currentWires, setCurrentWires] = useState<Map<number, boolean>>(new Map());
   const [rgbLevels, setRgbLevels] = useState<Map<string, { r: number; g: number; b: number }>>(new Map());
   const [servoAngles, setServoAngles] = useState<Map<string, number>>(new Map());
+  const [stepperAngles, setStepperAngles] = useState<Map<string, number>>(new Map());
   const [motorSpeeds, setMotorSpeeds] = useState<Map<string, number>>(new Map());
   const [buzzerFreqs, setBuzzerFreqs] = useState<Map<string, number>>(new Map());
   const [lcdLines, setLcdLines] = useState<[string, string] | null>(null);
@@ -244,6 +245,7 @@ export default function App() {
     setCurrentWires(new Map());
     setRgbLevels(new Map());
     setServoAngles(new Map());
+    setStepperAngles(new Map());
     setMotorSpeeds(new Map());
     setBuzzerFreqs(new Map());
     setLcdLines(null);
@@ -269,6 +271,7 @@ export default function App() {
     setCurrentWires(out.current);
     setRgbLevels(out.rgb);
     setServoAngles(out.servo);
+    setStepperAngles(out.stepper);
     setMotorSpeeds(out.motor);
     setBuzzerFreqs(out.buzzer);
     setLcdLines(out.lcd ? out.lcd.lines : null);
@@ -316,6 +319,11 @@ export default function App() {
         servoWrite: (pin, angle) => {
           setRanClean(true);
           rt.servoWrite(pin, angle);
+          refreshOutputs();
+        },
+        stepperStep: (pins, steps, stepsPerRev) => {
+          setRanClean(true);
+          rt.stepperStep(pins, steps, stepsPerRev);
           refreshOutputs();
         },
         tone: (pin, freq) => {
@@ -573,6 +581,7 @@ export default function App() {
                 currentWires={currentWires}
                 rgbLevels={rgbLevels}
                 servoAngles={servoAngles}
+                stepperAngles={stepperAngles}
                 motorSpeeds={motorSpeeds}
                 buzzerFreqs={buzzerFreqs}
                 lcdLines={lcdLines}

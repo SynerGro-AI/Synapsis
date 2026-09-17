@@ -18,7 +18,8 @@ export type PartType =
   | "lcd"
   | "dht"
   | "irrecv"
-  | "irremote";
+  | "irremote"
+  | "stepper";
 
 export interface PlacedPart {
   id: string;
@@ -60,6 +61,7 @@ export interface SketchInfo {
   lcdPins: number[];
   dhtPins: number[];
   irPins: number[];
+  stepperPins: number[];
   pinModes: Map<number, string>;
 }
 
@@ -89,6 +91,7 @@ export const PART_PINS: Record<PartType, string[]> = {
   dht: ["VCC", "SDA", "NC", "GND"],
   irrecv: ["GND", "VCC", "DAT"],
   irremote: [],
+  stepper: ["A-", "A+", "B+", "B-"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -107,6 +110,7 @@ export const PART_LABELS: Record<PartType, string> = {
   dht: "DHT11 temp/humidity",
   irrecv: "IR receiver",
   irremote: "IR remote",
+  stepper: "Stepper motor",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -345,6 +349,7 @@ export function validate(
     lcd: ["VSS", "VDD", "RS", "E", "D4", "D5", "D6", "D7"],
     dht: ["VCC", "SDA", "GND"],
     irrecv: ["GND", "VCC", "DAT"],
+    stepper: ["A-", "A+", "B+", "B-"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -667,6 +672,34 @@ export function validate(
       }
       if (sketch.irPins.length && !c.partsByType("irrecv").length && required.includes("irrecv"))
         err("circuit", "Your code starts IrReceiver, but there's no IR receiver in the circuit yet.");
+
+      // Stepper: all four coil wires must reach digital pins, and those four
+      // pins must match Stepper myStepper(steps, p1, p2, p3, p4).
+      for (const step of c.partsByType("stepper")) {
+        const coilPins: number[] = [];
+        for (const pin of ["A-", "A+", "B+", "B-"]) {
+          if (!isTerminalWired(step.id, pin, "stepper")) continue; // floating already reported
+          const pins = c.unoPinsOnNet(c.netOf(step.id, pin)).filter((n) => n <= 13);
+          if (!pins.length)
+            err("circuit", `${step.id}: coil ${pin} must go to a digital pin so the Uno can energize it.`);
+          else coilPins.push(pins[0]);
+        }
+        if (coilPins.length === 4 && sketch.stepperPins.length === 4) {
+          const want = new Set(sketch.stepperPins);
+          const wired = new Set(coilPins);
+          const same = want.size === wired.size && [...want].every((p) => wired.has(p));
+          if (!same)
+            err("both", `${step.id} is wired to pins ${[...wired].sort((a, b) => a - b).join(", ")}, but Stepper myStepper(...) lists pins ${[...want].sort((a, b) => a - b).join(", ")}. The coil order must match.`);
+        }
+        if (coilPins.length)
+          out.push({
+            level: "info",
+            source: "circuit",
+            message: `${step.id}: a real stepper needs a driver board (ULN2003 or an H-bridge) between the Uno and the coils — the pins can't source coil current directly. The simulator drives it straight so you can focus on the code.`,
+          });
+      }
+      if (sketch.stepperPins.length && !c.partsByType("stepper").length && required.includes("stepper"))
+        err("circuit", "Your code creates a Stepper, but there's no stepper motor in the circuit yet.");
     }
   }
 
@@ -697,6 +730,8 @@ export interface CircuitOutputs {
   motor: Map<string, number>;
   /** buzzer id -> tone frequency in Hz (0/absent = silent) */
   buzzer: Map<string, number>;
+  /** stepper id -> accumulated shaft angle in degrees (can exceed 360) */
+  stepper: Map<string, number>;
   /** 16x2 text (two lines) when a powered LCD is present */
   lcd: { lines: [string, string] } | null;
 }
@@ -710,6 +745,7 @@ export class CircuitRuntime {
   private lcdLines: [string, string] = ["", ""];
   private lcdCursor = { x: 0, y: 0 };
   private lcdUsed = false;
+  private stepperAngle = new Map<string, number>();
 
   constructor(state: CircuitState, world: WorldState) {
     this.circuit = new Circuit(state);
@@ -734,6 +770,22 @@ export class CircuitRuntime {
 
   noTone(pin: number): void {
     this.tonePins.set(pin, 0);
+  }
+
+  /** Advance any stepper whose four coils are driven by the given Arduino pins
+   *  by `steps` (signed) out of `stepsPerRev`, accumulating its shaft angle. */
+  stepperStep(pins: number[], steps: number, stepsPerRev: number): void {
+    const want = new Set(pins);
+    for (const s of this.circuit.partsByType("stepper")) {
+      const coilPins = ["A-", "A+", "B+", "B-"].flatMap((p) =>
+        this.circuit.unoPinsOnNet(this.circuit.netOf(s.id, p)).filter((n) => n <= 13),
+      );
+      // Every constructor pin must reach one of this stepper's coils.
+      if (!coilPins.length || !pins.every((p) => coilPins.includes(p))) continue;
+      if (![...want].length) continue;
+      const deg = (steps / (stepsPerRev || 200)) * 360;
+      this.stepperAngle.set(s.id, (this.stepperAngle.get(s.id) ?? 0) + deg);
+    }
   }
 
   lcdOp(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void {
@@ -846,7 +898,7 @@ export class CircuitRuntime {
       if (powered && this.lcdUsed) lcd = { lines: [...this.lcdLines] as [string, string] };
     }
 
-    return { led, current, rgb, servo, motor, buzzer, lcd };
+    return { led, current, rgb, servo, motor, buzzer, stepper: new Map(this.stepperAngle), lcd };
   }
 
   digitalRead(pin: number, mode: string | undefined): number {
