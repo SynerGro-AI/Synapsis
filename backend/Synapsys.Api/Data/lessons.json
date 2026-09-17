@@ -1762,6 +1762,70 @@
         "initial": "Raw pitch: --  Fused pitch: --",
         "status": "Waiting for sketch..."
       }
+    },
+    {
+      "id": 210,
+      "phase": "sensor_fusion",
+      "title": "Linear Acceleration",
+      "description": "The raw accelerometer always feels gravity, which drowns out real motion. The BNO055 fixes this: ask for VECTOR_LINEARACCEL and it subtracts the gravity vector for you, leaving only the acceleration from actually moving the board. Hold it still and all three axes read about 0 — no gravity, no motion. (This simulator models a board that only tilts, never travels, so linear acceleration stays ~0; on real hardware, shove the sensor and the axis you pushed spikes.) This is the signal a step-counter or a dead-reckoning robot lives on.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read linear acceleration (gravity removed) and print X, Y, Z.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_LINEARACCEL);",
+        "Serial.print(\"X: \");\n    Serial.print(event.acceleration.x);",
+        "Serial.print(\" Y: \");\n    Serial.print(event.acceleration.y);",
+        "Serial.print(\" Z: \");\n    Serial.println(event.acceleration.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Linear: --",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 211,
+      "phase": "sensor_fusion",
+      "title": "The Gravity Vector",
+      "description": "Linear acceleration is what is left after gravity is removed — so where did the gravity go? Ask for VECTOR_GRAVITY and the chip hands you the other half: a pure 9.81 m/s^2 vector pointing straight down, in the board's own frame. Add this to the linear acceleration and you get back the raw accelerometer. Tilt the board and watch the 9.81 pour between axes exactly as in Lesson 203 — but now cleanly separated from any motion. Its direction is, quite literally, which way is down.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as the Motion Basics lessons: VIN->5V, GND->GND, SDA->A4, SCL->A5."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read the gravity vector and print X, Y, Z in m/s^2.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event, Adafruit_BNO055::VECTOR_GRAVITY);",
+        "Serial.print(\"X: \");\n    Serial.print(event.acceleration.x);",
+        "Serial.print(\" Y: \");\n    Serial.print(event.acceleration.y);",
+        "Serial.print(\" Z: \");\n    Serial.println(event.acceleration.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Gravity: --",
+        "status": "Waiting for sketch..."
+      }
     }
   ]
 }

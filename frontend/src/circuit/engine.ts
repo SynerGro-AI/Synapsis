@@ -1104,6 +1104,18 @@ export class CircuitRuntime {
         if (axis === "y") return G * Math.sin(r) * Math.cos(p);
         return G * Math.cos(r) * Math.cos(p);
       }
+      case "gravity": {
+        // The chip's fused gravity vector: the same 9.81 m/s² projection the
+        // raw accelerometer feels at rest, cleanly separated from motion.
+        if (axis === "x") return -G * Math.sin(p);
+        if (axis === "y") return G * Math.sin(r) * Math.cos(p);
+        return G * Math.cos(r) * Math.cos(p);
+      }
+      case "linearaccel":
+        // Acceleration with gravity removed. This sim models a board that only
+        // tilts (never translates), so at rest every axis is honestly 0 — the
+        // lesson says so. On real hardware, shoving the sensor spikes an axis.
+        return 0;
       case "gyro": {
         // Angular rate (°/s): how fast the tilt is changing right now.
         const now = Date.now();

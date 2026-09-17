@@ -444,7 +444,10 @@ export class ArduinoSim {
   private startTime = 0;
   private stepsSinceYield = 0;
   private stepsSinceDelay = 0;
-  private objects = new Map<string, { type: string; args: number[]; pin?: number; rpm?: number }>();
+  private objects = new Map<
+    string,
+    { type: string; args: number[]; pin?: number; rpm?: number; accelMode?: string }
+  >();
   // IrReceiver is a library-provided global singleton (not a user object).
   private irReceivePin = -1;
   private irCommand = 0;
@@ -589,8 +592,16 @@ export class ArduinoSim {
         const member = expr.name.match(
           /^(\w+)\.(orientation|acceleration|gyro|magnetic)\.([xyz])$/,
         );
-        if (member && this.objects.get(member[1])?.type === "sensors_event_t")
-          return io.imuRead(member[2], member[3]);
+        if (member) {
+          const obj = this.objects.get(member[1]);
+          if (obj?.type === "sensors_event_t") {
+            // acceleration resolves to raw / linear-accel / gravity per the
+            // VECTOR_* type passed to the matching getEvent() call.
+            const quantity =
+              member[2] === "acceleration" ? obj.accelMode ?? "acceleration" : member[2];
+            return io.imuRead(quantity, member[3]);
+          }
+        }
         for (let i = scopes.length - 1; i >= 0; i--)
           if (scopes[i].has(expr.name)) return scopes[i].get(expr.name)!;
         if (expr.name in CONSTANTS) return CONSTANTS[expr.name];
@@ -733,10 +744,33 @@ export class ArduinoSim {
           switch (method) {
             case "begin":
               return io.imuPresent();
-            case "getEvent":
+            case "getEvent": {
               // getEvent(&event) / getEvent(&event, TYPE): members are read
               // live, so we just report success (the real call returns bool).
+              // Record which accel family the caller asked for so a later
+              // event.acceleration read resolves to raw / linear / gravity.
+              const evName =
+                expr.args[0]?.kind === "unary" &&
+                expr.args[0].op === "&" &&
+                expr.args[0].operand.kind === "var"
+                  ? expr.args[0].operand.name
+                  : undefined;
+              const evObj = evName ? this.objects.get(evName) : undefined;
+              if (evObj) {
+                if (expr.args.length > 1) {
+                  const type = Number(await this.evalExpr(expr.args[1], scopes, io));
+                  evObj.accelMode =
+                    type === CONSTANTS.VECTOR_LINEARACCEL
+                      ? "linearaccel"
+                      : type === CONSTANTS.VECTOR_GRAVITY
+                        ? "gravity"
+                        : "acceleration";
+                } else {
+                  evObj.accelMode = "acceleration";
+                }
+              }
               return 1;
+            }
             case "getTemp":
               return io.imuRead("temp", "");
             case "getCalibration": {
