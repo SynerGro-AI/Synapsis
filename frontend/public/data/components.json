@@ -283,6 +283,22 @@
       },
       "notes": "Three control lines do all the work: DS→a digital pin, SH_CP→a digital pin, ST_CP→a digital pin. Power with VCC→5V and GND→GND; tie MR→5V and OE→GND so the chip is enabled. In code, latch LOW, shiftOut(dataPin, clockPin, MSBFIRST, value), latch HIGH. The simulator shows the eight Q outputs as on-board indicator lights so you can watch your byte appear; on a real board you'd wire Q0–Q7 to eight LEDs (each through its own resistor).",
       "terminals": "DS, SH_CP, ST_CP (to digital pins) · MR→5V · OE→GND · VCC→5V · GND→GND"
+    },
+    {
+      "id": "imu",
+      "name": "BNO055 9-axis IMU (Adafruit)",
+      "category": "sensor",
+      "function": "A single chip that knows which way it is pointing. It packs three sensors — an accelerometer (which way is down, plus any shove), a gyroscope (how fast it is spinning), and a magnetometer (a compass) — and a small processor that fuses all nine readings into one clean answer: the board's heading, roll, and pitch, in degrees, updated a hundred times a second. Point it, tilt it, spin it, and it tells you exactly how. This is the sensor that lets a drone hold level, a phone rotate its screen, and a self-balancing robot stay upright.",
+      "science": "Nine 'axes' = three sensors, three axes each. The MEMS accelerometer measures acceleration in m/s^2 on X, Y, Z; sitting still it reads Earth's gravity (~9.81 m/s^2) pointing down, so from its direction you can work out tilt. The gyroscope measures angular rate in degrees/second on each axis — it sees rotation, not position, so it is zero when the board is held still. The magnetometer measures the Earth's magnetic field in microtesla to find true heading. Raw accel is noisy and gyro drifts, so the BNO055's built-in ARM Cortex-M0 runs a sensor-fusion algorithm that blends all three into a stable absolute orientation (Euler angles or a quaternion). The Adafruit_BNO055 library talks to it over I2C at address 0x28: bno.begin() starts it, then sensors_event_t event; bno.getEvent(&event); fills event.orientation.x/.y/.z (heading/roll/pitch in degrees). Pass a vector type — bno.getEvent(&event, Adafruit_BNO055::VECTOR_ACCELEROMETER) — to read event.acceleration or event.gyro instead.",
+      "specs": {
+        "axes": "9 (3-axis accel + 3-axis gyro + 3-axis magnetometer)",
+        "fusion": "on-chip ARM Cortex-M0 — absolute orientation, no math on the Uno",
+        "output": "Euler angles (deg), quaternion, accel (m/s^2), gyro (deg/s), mag (uT)",
+        "interface": "I2C, default address 0x28",
+        "power": "VIN 3.3-5V (on-board regulator)"
+      },
+      "notes": "Four wires: VIN->5V, GND->GND, SDA->A4, SCL->A5 (A4/A5 are the Uno's fixed I2C pins). In code: #include <Adafruit_Sensor.h> and <Adafruit_BNO055.h>, then Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire); guard bno.begin() so you know it was found. The gyroscope reads ~0 while the board is still — it senses turning, not tilt; use the accelerometer or the fused orientation for angle.",
+      "terminals": "VIN , GND , SDA (->A4) , SCL (->A5)"
     }
   ]
 }

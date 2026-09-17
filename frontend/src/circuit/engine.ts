@@ -20,7 +20,8 @@ export type PartType =
   | "irrecv"
   | "irremote"
   | "stepper"
-  | "shiftreg";
+  | "shiftreg"
+  | "imu";
 
 export interface PlacedPart {
   id: string;
@@ -65,6 +66,7 @@ export interface SketchInfo {
   stepperPins: number[];
   shiftDataPins: number[];
   shiftClockPins: number[];
+  usesImu: boolean;
   pinModes: Map<number, string>;
 }
 
@@ -76,6 +78,9 @@ export interface WorldState {
   humidityPct: number; // 0..100 (DHT11)
   distanceCm: number; // 2..400
   irQueue: number[]; // pending IR command bytes from the remote (FIFO)
+  heading: number; // IMU yaw / compass heading 0..360°
+  pitch: number; // IMU pitch -90..90°
+  roll: number; // IMU roll -90..90°
 }
 
 export const PART_PINS: Record<PartType, string[]> = {
@@ -96,6 +101,7 @@ export const PART_PINS: Record<PartType, string[]> = {
   irremote: [],
   stepper: ["A-", "A+", "B+", "B-"],
   shiftreg: ["DS", "SH_CP", "ST_CP", "MR", "OE", "VCC", "GND"],
+  imu: ["VIN", "GND", "SDA", "SCL"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -116,6 +122,7 @@ export const PART_LABELS: Record<PartType, string> = {
   irremote: "IR remote",
   stepper: "Stepper motor",
   shiftreg: "Shift register 74HC595",
+  imu: "BNO055 9-axis IMU",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -356,6 +363,7 @@ export function validate(
     irrecv: ["GND", "VCC", "DAT"],
     stepper: ["A-", "A+", "B+", "B-"],
     shiftreg: ["DS", "SH_CP", "ST_CP", "VCC", "GND"],
+    imu: ["VIN", "GND", "SDA", "SCL"],
   };
   const wiredTerminals = new Set<string>();
   for (const w of state.wires) {
@@ -391,6 +399,7 @@ export function validate(
       dht: ["VCC", "GND"],
       irrecv: ["VCC", "GND"],
       shiftreg: ["VCC", "GND"],
+      imu: ["VIN", "GND"],
     };
     const pins = powered[p.type];
     if (pins) {
@@ -669,6 +678,16 @@ export function validate(
       if (sketch.dhtPins.length && !c.partsByType("dht").length && required.includes("dht"))
         err("circuit", "Your code creates a DHT sensor, but there's no DHT11 in the circuit yet.");
 
+      // BNO055 IMU: an I2C sensor — on the Uno, SDA is fixed to A4 and SCL to A5.
+      for (const imu of c.partsByType("imu")) {
+        if (isTerminalWired(imu.id, "SDA", "imu") && c.netOf(imu.id, "SDA") !== c.netOf("uno", "A4"))
+          err("circuit", `${imu.id}: SDA is the I2C data line — on the Uno it must go to A4.`);
+        if (isTerminalWired(imu.id, "SCL", "imu") && c.netOf(imu.id, "SCL") !== c.netOf("uno", "A5"))
+          err("circuit", `${imu.id}: SCL is the I2C clock line — on the Uno it must go to A5.`);
+      }
+      if (sketch.usesImu && !c.partsByType("imu").length && required.includes("imu"))
+        err("circuit", "Your code creates an Adafruit_BNO055, but there's no IMU in the circuit yet.");
+
       // IR receiver: the DAT (signal) wire must reach IrReceiver.begin(pin)
       for (const ir of c.partsByType("irrecv")) {
         const dataPins = c.unoPinsOnNet(c.netOf(ir.id, "DAT")).filter((n) => n <= 13);
@@ -786,6 +805,8 @@ export class CircuitRuntime {
   private stepperAngle = new Map<string, number>();
   private shiftPending = new Map<string, number>();
   private shiftLatched = new Map<string, number>();
+  private imuPrev: { heading: number; pitch: number; roll: number; t: number } | null = null;
+  private imuRates = { heading: 0, pitch: 0, roll: 0 };
 
   constructor(state: CircuitState, world: WorldState) {
     this.circuit = new Circuit(state);
@@ -1034,6 +1055,91 @@ export class CircuitRuntime {
       return kind === "temp" ? this.world.tempC : this.world.humidityPct;
     }
     return NaN;
+  }
+
+  /** BNO055 read. quantity ∈ orientation|acceleration|gyro|magnetic|temp,
+   *  axis ∈ x|y|z (unused for temp). NaN unless a powered IMU (VIN=5V, GND=GND)
+   *  sits on the Uno's I2C bus (SDA→A4, SCL→A5) — matches the real library. */
+  imuRead(quantity: string, axis: string): number {
+    for (const s of this.circuit.partsByType("imu")) {
+      if (!this.imuConnected(s.id)) continue;
+      return this.imuValue(quantity, axis);
+    }
+    return NaN;
+  }
+
+  /** 1 when a correctly-wired, powered IMU is on the bus — drives bno.begin(). */
+  imuPresent(): number {
+    for (const s of this.circuit.partsByType("imu"))
+      if (this.imuConnected(s.id)) return 1;
+    return 0;
+  }
+
+  private imuConnected(id: string): boolean {
+    const powered =
+      this.circuit.netOf(id, "VIN") === this.circuit.v5 &&
+      this.circuit.netOf(id, "GND") === this.circuit.gnd;
+    const onBus =
+      this.circuit.netOf(id, "SDA") === this.circuit.netOf("uno", "A4") &&
+      this.circuit.netOf(id, "SCL") === this.circuit.netOf("uno", "A5");
+    return powered && onBus;
+  }
+
+  /** Physically real BNO055 values derived from the live tilt (heading/pitch/roll):
+   *  Euler angles in °, gravity-including acceleration in m/s² (|a|≈9.81), gyro in
+   *  °/s from how fast the board is turning, Earth's field in µT, chip temp in °C. */
+  private imuValue(quantity: string, axis: string): number {
+    const { heading, pitch, roll } = this.world;
+    const G = 9.81;
+    const rad = Math.PI / 180;
+    const p = pitch * rad;
+    const r = roll * rad;
+    switch (quantity) {
+      case "orientation":
+        // Euler register order: x = heading, y = roll, z = pitch.
+        return axis === "x" ? heading : axis === "y" ? roll : pitch;
+      case "acceleration": {
+        // Gravity projected into the sensor frame; magnitude stays ≈ 9.81 m/s².
+        if (axis === "x") return -G * Math.sin(p);
+        if (axis === "y") return G * Math.sin(r) * Math.cos(p);
+        return G * Math.cos(r) * Math.cos(p);
+      }
+      case "gyro": {
+        // Angular rate (°/s): how fast the tilt is changing right now.
+        const now = Date.now();
+        if (!this.imuPrev) {
+          this.imuPrev = { heading, pitch, roll, t: now };
+        } else {
+          const dt = (now - this.imuPrev.t) / 1000;
+          if (dt >= 0.05) {
+            const dh = ((heading - this.imuPrev.heading + 540) % 360) - 180;
+            this.imuRates.heading = dh / dt;
+            this.imuRates.pitch = (pitch - this.imuPrev.pitch) / dt;
+            this.imuRates.roll = (roll - this.imuPrev.roll) / dt;
+            this.imuPrev = { heading, pitch, roll, t: now };
+          }
+        }
+        // Body axes: x = roll rate, y = pitch rate, z = yaw (heading) rate.
+        return axis === "x"
+          ? this.imuRates.roll
+          : axis === "y"
+            ? this.imuRates.pitch
+            : this.imuRates.heading;
+      }
+      case "magnetic": {
+        // Earth's field (~48 µT): the horizontal part rotates with heading.
+        const h = heading * rad;
+        const Hh = 22;
+        const Hz = -42;
+        if (axis === "x") return Hh * Math.cos(h);
+        if (axis === "y") return -Hh * Math.sin(h);
+        return Hz;
+      }
+      case "temp":
+        return Math.round(this.world.tempC);
+      default:
+        return 0;
+    }
   }
 
   /** Next IR command byte waiting on a receiver whose DAT line reaches this

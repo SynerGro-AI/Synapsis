@@ -177,7 +177,6 @@
       "track": "nano",
       "name": "Motion Basics",
       "range": "201-206",
-      "status": "coming-soon",
       "concepts": [
         "BNO055 IMU",
         "Accelerometers",
@@ -1477,6 +1476,69 @@
       "output": {
         "initial": "",
         "status": ""
+      }
+    },
+    {
+      "id": 201,
+      "phase": "motion_basics",
+      "title": "Meet the IMU",
+      "description": "Wire up the BNO055 9-axis IMU and prove the Uno can talk to it. Four wires carry power and the I2C bus: VIN->5V, GND->GND, SDA->A4, SCL->A5. Create the sensor object with its real I2C address 0x28, then call bno.begin() inside setup() and guard it — if the chip isn't found, say so and stop. Get this handshake right and every later lesson just works.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "BNO055 -> Uno: VIN to 5V, GND to GND, SDA to A4, SCL to A5. A4 and A5 are the Uno's dedicated I2C pins — the sensor won't answer on any other pair. The address 0x28 in the constructor must match the hardware (it's the BNO055 default)."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\n// Create the BNO055 object, then start it inside setup().\n\nvoid setup() {\n\n}\n\nvoid loop() {\n\n}"
+      },
+      "hints": [
+        "Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);",
+        "Serial.begin(115200);",
+        "if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }",
+        "delay(1000);"
+      ],
+      "output": {
+        "initial": "BNO055 not started",
+        "status": "Waiting for sketch..."
+      }
+    },
+    {
+      "id": 202,
+      "phase": "motion_basics",
+      "title": "Reading Orientation",
+      "description": "Now that the IMU answers, ask it which way it's pointing. Each pass through loop(), make a sensors_event_t, fill it with bno.getEvent(&event), and read the fused orientation: event.orientation.x is heading (0-360), .y is roll, .z is pitch — all in degrees. Print them, then drag the Heading / Pitch / Roll sliders and watch the numbers track the board as it tilts live.",
+      "source": "Paul McWhorter, Arduino/IMU lessons — toptechboy.com; Adafruit_BNO055 sensorapi example",
+      "featuredComponent": "imu",
+      "circuit": {
+        "palette": [
+          "imu"
+        ],
+        "required": [
+          "imu"
+        ],
+        "notes": "Same wiring as Lesson 201: VIN->5V, GND->GND, SDA->A4, SCL->A5. Unwire SDA and the reading goes nan — exactly like the real sensor dropping off the bus."
+      },
+      "codeTemplate": {
+        "language": "cpp",
+        "starter": "#include <Wire.h>\n#include <Adafruit_Sensor.h>\n#include <Adafruit_BNO055.h>\n#include <utility/imumaths.h>\n\nAdafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);\n\nvoid setup() {\n    Serial.begin(115200);\n    if (!bno.begin()) {\n        Serial.println(\"No BNO055 detected\");\n        while (1);\n    }\n    delay(1000);\n}\n\nvoid loop() {\n    // Read an orientation event, then print heading, roll, pitch.\n}"
+      },
+      "hints": [
+        "sensors_event_t event;\n    bno.getEvent(&event);",
+        "Serial.print(\"Heading: \");\n    Serial.print(event.orientation.x);",
+        "Serial.print(\" Roll: \");\n    Serial.print(event.orientation.y);",
+        "Serial.print(\" Pitch: \");\n    Serial.println(event.orientation.z);",
+        "delay(100);"
+      ],
+      "output": {
+        "initial": "Heading: --",
+        "status": "Waiting for sketch..."
       }
     }
   ]

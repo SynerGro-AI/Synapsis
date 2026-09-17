@@ -26,6 +26,7 @@ const SCALE: Record<string, number> = {
   irremote: 0.7,
   stepper: 0.7,
   shiftreg: 0.8,
+  imu: 0.8,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -46,6 +47,7 @@ const ID_PREFIX: Record<PartType, string> = {
   irremote: "REMOTE",
   stepper: "STEP",
   shiftreg: "SR",
+  imu: "IMU",
 };
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
@@ -62,6 +64,12 @@ const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
     { name: "OE", x: 84, y: 82 },
     { name: "VCC", x: 100, y: 82 },
     { name: "GND", x: 116, y: 82 },
+  ],
+  imu: [
+    { name: "VIN", x: 30, y: 88 },
+    { name: "GND", x: 55, y: 88 },
+    { name: "SDA", x: 80, y: 88 },
+    { name: "SCL", x: 105, y: 88 },
   ],
 };
 
@@ -138,6 +146,45 @@ function MotorVisual({ speed }: { speed: number }) {
   );
 }
 
+/** Adafruit BNO055 breakout: an attitude disc whose bubble slides with roll and
+ *  pitch and whose arrow swings to the heading — the board reacts to tilt live. */
+function ImuVisual({ heading, pitch, roll }: { heading: number; pitch: number; roll: number }) {
+  const rad = Math.PI / 180;
+  const R = 22;
+  const bx = 65 + Math.sin(roll * rad) * R;
+  const by = 34 - Math.sin(pitch * rad) * R;
+  return (
+    <svg width="130" height="96" viewBox="0 0 130 96">
+      {["VIN", "GND", "SDA", "SCL"].map((label, i) => {
+        const x = 30 + i * 25;
+        return (
+          <g key={label}>
+            <rect x={x - 2} y="78" width="4" height="14" fill="#c9a227" />
+            <text x={x} y="94" textAnchor="middle" fontSize="6.5" fill="#cfd3d8">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+      <rect x="8" y="6" width="114" height="72" rx="5" fill="#0f4a2f" stroke="#0a2e1d" strokeWidth="1.5" />
+      <text x="114" y="16" textAnchor="end" fontSize="7" fill="#8fdcae" fontFamily="monospace">
+        BNO055
+      </text>
+      <circle cx="65" cy="34" r={R + 3} fill="#0a3320" stroke="#1c6b45" strokeWidth="1.5" />
+      <line x1="65" y1={34 - R} x2="65" y2={34 + R} stroke="#1c6b45" strokeWidth="0.7" />
+      <line x1={65 - R} y1="34" x2={65 + R} y2="34" stroke="#1c6b45" strokeWidth="0.7" />
+      <g transform={`rotate(${heading} 65 34)`}>
+        <polygon points="65,15 61,34 69,34" fill="#ffb02e" />
+        <rect x="63.5" y="34" width="3" height="15" fill="#c9862a" />
+      </g>
+      <circle cx={bx} cy={by} r="4" fill="#7fe0ff" stroke="#0a2e1d" strokeWidth="0.8" />
+      <text x="65" y="74" textAnchor="middle" fontSize="6" fill="#9fe8c2" fontFamily="monospace">
+        {`H${Math.round(heading)} P${Math.round(pitch)} R${Math.round(roll)}`}
+      </text>
+    </svg>
+  );
+}
+
 /** 16x2 character buffer for the wokwi LCD element. */
 function lcdCharacters(lines: [string, string]): Uint8Array {
   const buf = new Uint8Array(32).fill(32);
@@ -173,6 +220,8 @@ interface CircuitCanvasProps {
   stepperAngles: Map<string, number>;
   shiftBits: Map<string, number>;
   motorSpeeds: Map<string, number>;
+  /** Live IMU orientation (one shared tilt for all BNO055 parts). */
+  imuOrient: { heading: number; pitch: number; roll: number };
   buzzerFreqs: Map<string, number>;
   lcdLines: [string, string] | null;
   selected: string | null;
@@ -196,6 +245,7 @@ export default function CircuitCanvas({
   stepperAngles,
   shiftBits,
   motorSpeeds,
+  imuOrient,
   buzzerFreqs,
   lcdLines,
   selected,
@@ -585,6 +635,9 @@ export default function CircuitCanvas({
           <wokwi-stepper-motor angle={stepperAngles.get(id) ?? 0} />
         )}
         {type === "shiftreg" && <ShiftRegVisual bits={shiftBits.get(id) ?? 0} />}
+        {type === "imu" && (
+          <ImuVisual heading={imuOrient.heading} pitch={imuOrient.pitch} roll={imuOrient.roll} />
+        )}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

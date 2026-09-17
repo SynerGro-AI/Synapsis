@@ -10,6 +10,10 @@ export interface SimIO {
   analogRead(pin: number): number;
   pulseIn(pin: number): number;
   dhtRead(pin: number, kind: "temp" | "humidity"): number;
+  /** Read a BNO055 quantity/axis live (orientation/acceleration/gyro/magnetic/temp). */
+  imuRead(quantity: string, axis: string): number;
+  /** 1 when a powered, correctly-wired BNO055 is on the I2C bus, else 0. */
+  imuPresent(): number;
   /** Next IR command byte waiting on a receiver whose DAT reaches `pin`, or -1. */
   irDecode(pin: number): number;
   /** Advance a stepper driven by `pins` by `steps` out of `stepsPerRev`. */
@@ -58,14 +62,20 @@ function tokenize(source: string): Token[] {
     .replace(/\/\/[^\n]*/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "");
   let i = 0;
-  const puncts = [">=", "<=", "==", "!=", "&&", "||", "++", "--", "+=", "-="];
+  const puncts = [">=", "<=", "==", "!=", "&&", "||", "++", "--", "+=", "-=", "::"];
   while (i < s.length) {
     const ch = s[i];
     if (/\s/.test(ch)) {
       i++;
     } else if (/[0-9]/.test(ch)) {
       let j = i;
-      while (j < s.length && /[0-9.]/.test(s[j])) j++;
+      if (ch === "0" && (s[j + 1] === "x" || s[j + 1] === "X")) {
+        // Hex literal (I2C addresses, register bases): 0x28.
+        j += 2;
+        while (j < s.length && /[0-9a-fA-F]/.test(s[j])) j++;
+      } else {
+        while (j < s.length && /[0-9.]/.test(s[j])) j++;
+      }
       tokens.push({ type: "num", value: s.slice(i, j) });
       i = j;
     } else if (/[A-Za-z_]/.test(ch)) {
@@ -117,7 +127,8 @@ type Stmt =
   | { kind: "expr"; expr: Expr }
   | { kind: "if"; cond: Expr; then: Stmt[]; else?: Stmt[] }
   | { kind: "while"; cond: Expr; body: Stmt[] }
-  | { kind: "for"; init?: Stmt; cond?: Expr; post?: Stmt; body: Stmt[] };
+  | { kind: "for"; init?: Stmt; cond?: Expr; post?: Stmt; body: Stmt[] }
+  | { kind: "block"; body: Stmt[] };
 
 interface Program {
   globals: Stmt[];
@@ -127,8 +138,11 @@ interface Program {
 
 // ---------- Parser ----------
 
-const TYPE_KEYWORDS = ["int", "long", "float", "double", "bool", "byte", "unsigned"];
-const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT", "Stepper"];
+const TYPE_KEYWORDS = [
+  "int", "long", "float", "double", "bool", "byte", "unsigned", "char",
+  "uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t", "size_t",
+];
+const OBJECT_TYPES = ["Servo", "LiquidCrystal", "DHT", "Stepper", "Adafruit_BNO055", "sensors_event_t"];
 
 class Parser {
   private pos = 0;
@@ -196,11 +210,16 @@ class Parser {
 
   private parseDecl(): Stmt {
     while (TYPE_KEYWORDS.includes(this.peek()?.value ?? "")) this.next();
-    const name = this.next().value;
-    let init: Expr | undefined;
-    if (this.eat("=")) init = this.parseExpr();
+    // Support comma lists: uint8_t system, gyro, accel, mag = 0;
+    const decls: Stmt[] = [];
+    do {
+      const name = this.next().value;
+      let init: Expr | undefined;
+      if (this.eat("=")) init = this.parseExpr();
+      decls.push({ kind: "decl", name, init });
+    } while (this.eat(","));
     this.expect(";");
-    return { kind: "decl", name, init };
+    return decls.length === 1 ? decls[0] : { kind: "block", body: decls };
   }
 
   private parseBlock(): Stmt[] {
@@ -215,6 +234,8 @@ class Parser {
     const type = this.next().value;
     const name = this.next().value;
     const args: Expr[] = [];
+    // Copy-init form: Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
+    if (this.eat("=") && this.peek()?.type === "id") this.next();
     if (this.eat("(")) {
       if (!this.at(")")) {
         args.push(this.parseExpr());
@@ -331,7 +352,7 @@ class Parser {
     return left;
   }
   private parseUnary(): Expr {
-    if (this.at("-") || this.at("!")) {
+    if (this.at("-") || this.at("!") || this.at("&")) {
       const op = this.next().value;
       return { kind: "unary", op, operand: this.parseUnary() };
     }
@@ -348,6 +369,9 @@ class Parser {
     }
     if (t.type === "id") {
       let name = t.value;
+      // Scoped enum: Adafruit_BNO055::VECTOR_ACCELEROMETER → the member name
+      // (globally unique in CONSTANTS).
+      if (this.eat("::")) return { kind: "var", name: this.next().value };
       // Serial.begin, lcd.print, IrReceiver.decodedIRData.command — allow any depth.
       while (this.eat(".")) name += "." + this.next().value;
       if (this.eat("(")) {
@@ -389,6 +413,13 @@ const CONSTANTS: Record<string, number> = {
   DISABLE_LED_FEEDBACK: 0,
   LSBFIRST: 0,
   MSBFIRST: 1,
+  // adafruit_vector_type_t — real BNO055 register bases (Adafruit_BNO055.h).
+  VECTOR_ACCELEROMETER: 0x08,
+  VECTOR_MAGNETOMETER: 0x0e,
+  VECTOR_GYROSCOPE: 0x14,
+  VECTOR_EULER: 0x1a,
+  VECTOR_LINEARACCEL: 0x28,
+  VECTOR_GRAVITY: 0x2e,
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -474,6 +505,9 @@ export class ArduinoSim {
           stmt.init ? await this.evalExpr(stmt.init, scopes, io) : 0,
         );
         return;
+      case "block":
+        await this.execBlock(stmt.body, scopes, io);
+        return;
       case "objdecl": {
         const args: number[] = [];
         for (const a of stmt.args) args.push(Number(await this.evalExpr(a, scopes, io)));
@@ -544,12 +578,22 @@ export class ArduinoSim {
         return expr.value;
       case "var": {
         if (expr.name === "IrReceiver.decodedIRData.command") return this.irCommand;
+        // BNO055 struct member read: event.orientation.x → live sensor value
+        // (orientation = Euler °, acceleration = m/s², gyro = rad/s, magnetic = µT).
+        const member = expr.name.match(
+          /^(\w+)\.(orientation|acceleration|gyro|magnetic)\.([xyz])$/,
+        );
+        if (member && this.objects.get(member[1])?.type === "sensors_event_t")
+          return io.imuRead(member[2], member[3]);
         for (let i = scopes.length - 1; i >= 0; i--)
           if (scopes[i].has(expr.name)) return scopes[i].get(expr.name)!;
         if (expr.name in CONSTANTS) return CONSTANTS[expr.name];
         throw new SimError(`'${expr.name}' hasn't been declared`);
       }
       case "unary": {
+        // Address-of (&event, &Wire, &system): our sensor models read struct
+        // members live and write back by name, so the pointer value is unused.
+        if (expr.op === "&") return 0;
         const v = Number(await this.evalExpr(expr.operand, scopes, io));
         return expr.op === "-" ? -v : v === 0 ? 1 : 0;
       }
@@ -677,6 +721,40 @@ export class ArduinoSim {
               }
               return 0;
             }
+          }
+        }
+        if (obj.type === "Adafruit_BNO055") {
+          switch (method) {
+            case "begin":
+              return io.imuPresent();
+            case "getEvent":
+              // getEvent(&event) / getEvent(&event, TYPE): members are read
+              // live, so we just report success (the real call returns bool).
+              return 1;
+            case "getTemp":
+              return io.imuRead("temp", "");
+            case "getCalibration": {
+              // getCalibration(&system, &gyro, &accel, &mag): write 3 (fully
+              // calibrated in the sim) back into each referenced variable.
+              for (const a of expr.args) {
+                if (a.kind === "unary" && a.op === "&" && a.operand.kind === "var") {
+                  const target = a.operand.name;
+                  for (let i = scopes.length - 1; i >= 0; i--)
+                    if (scopes[i].has(target)) {
+                      scopes[i].set(target, 3);
+                      break;
+                    }
+                }
+              }
+              return 0;
+            }
+            case "isFullyCalibrated":
+              return 1;
+            case "setExtCrystalUse":
+            case "setMode":
+            case "setAxisRemap":
+            case "setAxisSign":
+              return 0;
           }
         }
         throw new SimError(`'${objName}.${method}()' isn't supported yet`);
@@ -832,6 +910,7 @@ export interface SketchAnalysis {
   stepperPins: number[];
   shiftDataPins: number[];
   shiftClockPins: number[];
+  usesImu: boolean;
   pinModes: Map<number, string>;
 }
 
@@ -855,6 +934,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
     stepperPins: [],
     shiftDataPins: [],
     shiftClockPins: [],
+    usesImu: false,
     pinModes: new Map(),
   };
 
@@ -955,6 +1035,7 @@ export function analyzeSketch(code: string): SketchAnalysis {
               .slice(1)
               .map(staticEval)
               .filter((v): v is number => v !== null);
+          else if (s.type === "Adafruit_BNO055") result.usesImu = true;
           break;
         case "assign":
           visitExpr(s.expr);
@@ -975,6 +1056,9 @@ export function analyzeSketch(code: string): SketchAnalysis {
           if (s.init) visitStmts([s.init]);
           if (s.cond) visitExpr(s.cond);
           if (s.post) visitStmts([s.post]);
+          visitStmts(s.body);
+          break;
+        case "block":
           visitStmts(s.body);
           break;
       }

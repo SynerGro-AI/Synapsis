@@ -84,6 +84,9 @@ export default function App() {
   const [tempC, setTempC] = useState(22);
   const [humidityPct, setHumidityPct] = useState(50);
   const [distanceCm, setDistanceCm] = useState(50);
+  const [heading, setHeading] = useState(0);
+  const [pitch, setPitch] = useState(0);
+  const [roll, setRoll] = useState(0);
 
   const editorRef = useRef<CodeEditorHandle | null>(null);
   const engineRef = useRef<ArduinoSim | null>(null);
@@ -97,12 +100,18 @@ export default function App() {
     humidityPct: 50,
     distanceCm: 50,
     irQueue: [],
+    heading: 0,
+    pitch: 0,
+    roll: 0,
   });
   worldRef.current.potValue = potValue;
   worldRef.current.lightPct = lightPct;
   worldRef.current.tempC = tempC;
   worldRef.current.humidityPct = humidityPct;
   worldRef.current.distanceCm = distanceCm;
+  worldRef.current.heading = heading;
+  worldRef.current.pitch = pitch;
+  worldRef.current.roll = roll;
 
   // Piezo buzzer audio: play the highest active buzzer's pitch through a
   // WebAudio oscillator so the simulated circuit actually beeps.
@@ -352,6 +361,8 @@ export default function App() {
         analogRead: (pin) => rt.analogRead(pin),
         pulseIn: (pin) => rt.pulseIn(pin),
         dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
+        imuRead: (quantity, axis) => rt.imuRead(quantity, axis),
+        imuPresent: () => rt.imuPresent(),
         irDecode: (pin) => rt.irDecode(pin),
         serial: (line) => {
           setRanClean(true);
@@ -592,6 +603,7 @@ export default function App() {
                 stepperAngles={stepperAngles}
                 shiftBits={shiftBits}
                 motorSpeeds={motorSpeeds}
+                imuOrient={{ heading, pitch, roll }}
                 buzzerFreqs={buzzerFreqs}
                 lcdLines={lcdLines}
                 selected={selected}
@@ -632,6 +644,28 @@ export default function App() {
                       onChange={(e) => setHumidityPct(Number(e.target.value))} />
                     <code>{humidityPct}%</code>
                   </label>
+                )}
+                {hasType("imu") && (
+                  <>
+                    <label>
+                      Heading
+                      <input type="range" min={0} max={360} value={heading}
+                        onChange={(e) => setHeading(Number(e.target.value))} />
+                      <code>{heading}°</code>
+                    </label>
+                    <label>
+                      Pitch
+                      <input type="range" min={-90} max={90} value={pitch}
+                        onChange={(e) => setPitch(Number(e.target.value))} />
+                      <code>{pitch}°</code>
+                    </label>
+                    <label>
+                      Roll
+                      <input type="range" min={-90} max={90} value={roll}
+                        onChange={(e) => setRoll(Number(e.target.value))} />
+                      <code>{roll}°</code>
+                    </label>
+                  </>
                 )}
                 {hasType("ultrasonic") && (
                   <label>
