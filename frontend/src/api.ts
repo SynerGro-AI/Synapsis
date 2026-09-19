@@ -20,6 +20,11 @@ export interface TerminalStep {
   why: string;
 }
 
+/** A serializable filesystem seed for a terminal lesson (real files to explore). */
+export type TerminalSeedNode =
+  | { type: "file"; content: string; mode?: number }
+  | { type: "dir"; children: Record<string, TerminalSeedNode> };
+
 export interface Lesson {
   id: number;
   phase: string;
@@ -30,9 +35,15 @@ export interface Lesson {
   kind?: "arduino" | "terminal";
   terminal?: {
     shell: string;
+    /** Prompt user (defaults to "you"); Pi lessons use "pi". */
+    user?: string;
+    /** Prompt host (defaults to "synapsys"); Pi lessons use "raspberrypi". */
+    host?: string;
     /** Starting working directory, e.g. "~/projects". */
     cwd: string;
     intro: string;
+    /** Files to preload into the sandbox so grep/find/globs have real material. */
+    seed?: Record<string, TerminalSeedNode>;
     steps: TerminalStep[];
   };
   featuredComponent: string;

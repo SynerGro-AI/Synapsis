@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { FsNode } from "../sim/shell";
 import type { Lesson } from "../api";
 import { Shell } from "../sim/shell";
 
@@ -30,7 +31,12 @@ export default function TerminalCourse({
 
   // A fresh shell whenever the lesson changes.
   const shell = useMemo(
-    () => new Shell(lesson.terminal?.cwd ?? "~/projects"),
+    () =>
+      new Shell(lesson.terminal?.cwd ?? "~/projects", {
+        user: lesson.terminal?.user,
+        host: lesson.terminal?.host,
+        seed: lesson.terminal?.seed as Record<string, FsNode> | undefined,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [restoreKey],
   );
@@ -40,8 +46,13 @@ export default function TerminalCourse({
   const [history, setHistory] = useState<string[]>([]);
   const [histIdx, setHistIdx] = useState<number | null>(null);
   const [doneSteps, setDoneSteps] = useState<Set<number>>(new Set());
+  // The nano editor modal: null when closed. `saved` shows the write-out status bar.
+  const [editor, setEditor] = useState<{ path: string; content: string; saved?: string } | null>(
+    null,
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
 
   // Reset transcript + progress when the shell is rebuilt.
   useEffect(() => {
@@ -50,8 +61,14 @@ export default function TerminalCourse({
     setDoneSteps(new Set());
     setHistory([]);
     setHistIdx(null);
+    setEditor(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoreKey]);
+
+  // Focus the editor textarea whenever it opens.
+  useEffect(() => {
+    if (editor) editorRef.current?.focus();
+  }, [editor]);
 
   // Keep the newest output in view.
   useEffect(() => {
@@ -87,6 +104,11 @@ export default function TerminalCourse({
       ]);
     }
 
+    // A `nano <file>` command opens the real editor modal.
+    if (result.edit) {
+      setEditor({ path: result.edit.path, content: result.edit.content });
+    }
+
     // Advance the checklist: mark the first not-yet-done step this command matches.
     setDoneSteps((prev) => {
       const next = new Set(prev);
@@ -98,6 +120,32 @@ export default function TerminalCourse({
       }
       return next;
     });
+  }
+
+  // ^O — write the buffer back to the sandbox filesystem (a genuine save).
+  function saveEditor() {
+    if (!editor) return;
+    shell.writeFile(editor.path, editor.content);
+    const count = editor.content ? editor.content.split("\n").length : 0;
+    setEditor({ ...editor, saved: `[ Wrote ${count} line${count === 1 ? "" : "s"} ]` });
+  }
+
+  // ^X — leave nano, returning to the shell.
+  function exitEditor() {
+    setEditor(null);
+    inputRef.current?.focus();
+  }
+
+  function onEditorKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!e.ctrlKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "o") {
+      e.preventDefault();
+      saveEditor();
+    } else if (key === "x") {
+      e.preventDefault();
+      exitEditor();
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -160,6 +208,36 @@ export default function TerminalCourse({
               />
             </div>
           </div>
+
+          {editor && (
+            <div className="nano-editor" onClick={(e) => e.stopPropagation()}>
+              <div className="nano-titlebar">
+                <span className="nano-brand">GNU nano 7.2</span>
+                <span className="nano-file">{editor.path}</span>
+                <span className="nano-flag">{editor.saved ? "" : "Modified"}</span>
+              </div>
+              <textarea
+                ref={editorRef}
+                className="nano-body"
+                value={editor.content}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                onChange={(e) => setEditor({ path: editor.path, content: e.target.value })}
+                onKeyDown={onEditorKeyDown}
+                aria-label="nano editor"
+              />
+              <div className="nano-status">{editor.saved ?? ""}</div>
+              <div className="nano-keys">
+                <button type="button" onClick={saveEditor}>
+                  <span className="nano-key">^O</span> Write Out
+                </button>
+                <button type="button" onClick={exitEditor}>
+                  <span className="nano-key">^X</span> Exit
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

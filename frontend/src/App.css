@@ -1459,6 +1459,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
   background: #0a0a0a;
   border: 1px solid #2a2a2a;
   border-radius: 8px;
@@ -1544,6 +1545,97 @@
 }
 .term-input::placeholder {
   color: #4a4a4a;
+}
+
+/* The in-terminal nano editor (a real save-to-sandbox modal). */
+.nano-editor {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  font-family: var(--mono, "Cascadia Code", "Consolas", monospace);
+  font-size: 13.5px;
+}
+.nano-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 12px;
+  background: #d6d6d6;
+  color: #0a0a0a;
+  font-size: 12.5px;
+  flex: 0 0 auto;
+}
+.nano-brand {
+  font-weight: 600;
+}
+.nano-file {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nano-flag {
+  min-width: 60px;
+  text-align: right;
+  font-style: italic;
+}
+.nano-body {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 10px 14px;
+  background: #0a0a0a;
+  color: #e8e8e8;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+  caret-color: #5cc8ff;
+  white-space: pre;
+  overflow: auto;
+}
+.nano-status {
+  flex: 0 0 auto;
+  min-height: 20px;
+  padding: 0 12px;
+  text-align: center;
+  color: #7fbf7f;
+  font-size: 12.5px;
+  line-height: 20px;
+}
+.nano-keys {
+  display: flex;
+  gap: 18px;
+  padding: 6px 12px;
+  background: #1b1b1b;
+  border-top: 1px solid #2a2a2a;
+  flex: 0 0 auto;
+}
+.nano-keys button {
+  background: none;
+  border: none;
+  color: #d6d6d6;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.nano-keys button:hover {
+  color: #fff;
+}
+.nano-key {
+  background: #d6d6d6;
+  color: #0a0a0a;
+  padding: 1px 4px;
+  margin-right: 6px;
+  border-radius: 2px;
+  font-weight: 600;
 }
 
 .terminal-guide {
