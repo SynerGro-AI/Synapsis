@@ -983,6 +983,44 @@ export function validatePython(
       );
   }
 
+  // RGB LED (common cathode): COM returns to a Pi GND, and each of R/G/B goes
+  // through its own current-limiting resistor to a GPIO. When code is present,
+  // every wired channel's GPIO must be one the code actually makes PWM on.
+  for (const rgb of c.partsByType("rgbled")) {
+    const legs = ["R", "G", "B"];
+    const comWired = isWired(rgb.id, "COM", "rgbled");
+    const legsWired = legs.every((l) => isWired(rgb.id, l, "rgbled"));
+    if (!comWired || !legsWired) {
+      err("circuit", `${rgb.id} needs all four pins wired: R, G and B each through a resistor to a GPIO, and COM to a Pi GND pin.`);
+      continue;
+    }
+    if (pi && piGndNet && c.netOf(rgb.id, "COM") !== piGndNet)
+      err("circuit", `${rgb.id}'s COM (common cathode) must return to a Pi GND pin.`);
+    const isSrcGpio = (t: Terminal) =>
+      c.parts.get(t.part)?.type === "pi" && piGpioNumber(t.pin) !== null;
+    for (const leg of legs) {
+      const trace = tracePath(c, { part: rgb.id, pin: leg }, isSrcGpio, new Set(), true);
+      if (!trace) {
+        err("circuit", `${rgb.id}'s ${leg} channel has no path to a GPIO — wire it through a resistor to a Pi GPIO pin.`);
+        continue;
+      }
+      if (trace.resistors === 0)
+        err("circuit", `${rgb.id}'s ${leg} channel needs a current-limiting resistor in series.`);
+      const gpio = piGpioNumber(trace.goal.pin);
+      if (
+        sketch &&
+        !sketch.parseError &&
+        gpio !== null &&
+        sketch.pwmPins.length &&
+        !sketch.pwmPins.includes(gpio)
+      )
+        err(
+          "both",
+          `${rgb.id}'s ${leg} channel is on GPIO${gpio}, but your code makes PWM on GPIO ${[...new Set(sketch.pwmPins)].sort((a, b) => a - b).join(", ")}. Point a PWM channel at it.`,
+        );
+    }
+  }
+
   if (sketch) {
     if (sketch.parseError) {
       err("code", sketch.parseError);
@@ -1185,15 +1223,31 @@ export class CircuitRuntime {
     }
 
     const rgb = new Map<string, { r: number; g: number; b: number }>();
-    const isDriven = (t: Terminal) =>
-      t.part === "uno" && (pinNumber(t.pin) ?? 99) <= 13 && high.has(pinNumber(t.pin)!);
+    const piForRgb = this.circuit.partsByType("pi")[0];
+    // A channel is driven by an Uno digital pin (≤13) that's high, or — on a Pi
+    // build — by a GPIO the code is sourcing (its PWM duty > 0 lives in `high`).
+    const isDriven = (t: Terminal) => {
+      if (t.part === "uno") return (pinNumber(t.pin) ?? 99) <= 13 && high.has(pinNumber(t.pin)!);
+      if (piForRgb && this.circuit.parts.get(t.part)?.type === "pi") {
+        const n = piGpioNumber(t.pin);
+        return n !== null && high.has(n);
+      }
+      return false;
+    };
     for (const part of this.circuit.partsByType("rgbled")) {
-      if (this.circuit.netOf(part.id, "COM") !== this.circuit.gnd) continue;
+      // Common cathode sits on the board ground: the Uno GND, or the Pi's GND.
+      const comNet = this.circuit.netOf(part.id, "COM");
+      const comAtGnd =
+        comNet === this.circuit.gnd ||
+        (!!piForRgb && comNet === this.circuit.netOf(piForRgb.id, "GND.6"));
+      if (!comAtGnd) continue;
       const level = (leg: string) => {
         const trace = tracePath(this.circuit, { part: part.id, pin: leg }, isDriven, this.world.pressed, false);
         if (!trace) return 0;
         for (const w of trace.wires) current.set(w.index, !w.forward);
-        return this.dutyLevel(pinNumber(trace.goal.pin));
+        const goalPin =
+          trace.goal.part === "uno" ? pinNumber(trace.goal.pin) : piGpioNumber(trace.goal.pin);
+        return this.dutyLevel(goalPin);
       };
       const channels = { r: level("R"), g: level("G"), b: level("B") };
       if (channels.r || channels.g || channels.b) rgb.set(part.id, channels);
