@@ -333,9 +333,9 @@ export default function App() {
           refreshOutputs();
         },
         input: (pin) => rt.readGpio(pin, pulls.get(pin) ?? "OFF"),
-        pwmStart: (pin, _freq, duty) => {
+        pwmStart: (pin, freq, duty) => {
           setRanClean(true);
-          rt.setGpioPwm(pin, duty);
+          rt.setGpioPwm(pin, duty, freq);
           refreshOutputs();
         },
         pwmChangeDuty: (pin, duty) => {
@@ -343,7 +343,10 @@ export default function App() {
           rt.setGpioPwm(pin, duty);
           refreshOutputs();
         },
-        pwmChangeFreq: () => {},
+        pwmChangeFreq: (pin, freq) => {
+          rt.setGpioPwmFreq(pin, freq);
+          refreshOutputs();
+        },
         pwmStop: (pin) => {
           rt.setGpio(pin, false);
           refreshOutputs();

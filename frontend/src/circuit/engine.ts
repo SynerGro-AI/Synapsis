@@ -945,6 +945,44 @@ export function validatePython(
     }
   }
 
+  // Servo: all three leads must be wired, and the PWM (signal) lead must reach a
+  // Pi GPIO. V+ belongs on 5V (a GPIO can't source enough current); GND returns to
+  // a Pi GND. When code is present, the pin the code makes PWM on must be the one
+  // the servo's signal is wired to.
+  for (const servo of c.partsByType("servo")) {
+    const sig = isWired(servo.id, "PWM", "servo");
+    const vplus = isWired(servo.id, "V+", "servo");
+    const gnd = isWired(servo.id, "GND", "servo");
+    if (!sig || !vplus || !gnd) {
+      err("circuit", `${servo.id} needs three wires: PWM (signal) → a GPIO pin, V+ → a 5V pin, and GND → a Pi GND pin.`);
+      continue;
+    }
+    const sigGpios = c.piGpioPinsOnNet(c.netOf(servo.id, "PWM"));
+    if (!sigGpios.length)
+      err("circuit", `${servo.id}'s PWM (signal) wire must go to a GPIO pin on the Pi.`);
+    if (pi) {
+      const vNet = c.netOf(servo.id, "V+");
+      const onFiveV = PART_PINS.pi.some((p) => p.startsWith("5V") && c.netOf(pi.id, p) === vNet);
+      if (!onFiveV)
+        warn("circuit", `${servo.id}'s V+ should go to a 5V pin — a servo draws more current than a 3.3V GPIO can safely give.`);
+      const gNet = c.netOf(servo.id, "GND");
+      const onGnd = PART_PINS.pi.some((p) => p.startsWith("GND") && c.netOf(pi.id, p) === gNet);
+      if (!onGnd)
+        err("circuit", `${servo.id}'s GND must return to a Pi GND pin.`);
+    }
+    if (
+      sketch &&
+      !sketch.parseError &&
+      sigGpios.length &&
+      sketch.pwmPins.length &&
+      !sigGpios.some((g) => sketch.pwmPins.includes(g))
+    )
+      err(
+        "both",
+        `${servo.id}'s signal is on GPIO${sigGpios.join(", ")}, but your code makes PWM on GPIO ${[...new Set(sketch.pwmPins)].sort((a, b) => a - b).join(", ")}. Point GPIO.PWM at the servo's pin.`,
+      );
+  }
+
   if (sketch) {
     if (sketch.parseError) {
       err("code", sketch.parseError);
@@ -1037,6 +1075,9 @@ export class CircuitRuntime {
   private world: WorldState;
   private duties = new Map<number, number>();
   private servoByPin = new Map<number, number>();
+  /** Pi BCM pin -> live software-PWM {duty %, freq Hz}. A ~50 Hz signal is a
+   *  servo command; other frequencies just dim an LED. */
+  private piPwm = new Map<number, { duty: number; freq: number }>();
   private tonePins = new Map<number, number>();
   private lcdLines: [string, string] = ["", ""];
   private lcdCursor = { x: 0, y: 0 };
@@ -1159,10 +1200,21 @@ export class CircuitRuntime {
     }
 
     const servo = new Map<string, number>();
+    const piForServo = this.circuit.partsByType("pi")[0];
     for (const part of this.circuit.partsByType("servo")) {
       const net = this.circuit.netOf(part.id, "PWM");
       for (const [pin, angle] of this.servoByPin)
         if (this.circuit.netOf("uno", pinLabel(pin)) === net) servo.set(part.id, angle);
+      // A Pi drives a servo with ~50 Hz software PWM, mapping angle to duty by the
+      // standard duty = angle/18 + 2 — so angle = (duty − 2) × 18. Only a servo-rate
+      // signal moves the arm; a 1 kHz LED-fade PWM on some other pin never does.
+      if (piForServo) {
+        for (const [pin, pwm] of this.piPwm) {
+          if (Math.abs(pwm.freq - 50) > 20) continue;
+          if (this.circuit.netOf(piForServo.id, `GPIO${pin}`) === net)
+            servo.set(part.id, Math.max(0, Math.min(180, Math.round((pwm.duty - 2) * 18))));
+        }
+      }
     }
 
     const motor = new Map<string, number>();
@@ -1265,16 +1317,27 @@ export class CircuitRuntime {
     this.duties.set(pin, high ? 255 : 0);
   }
 
-  /** pwm.ChangeDutyCycle(pct): set a Pi BCM pin's PWM duty 0..100 % (→ 0..255). */
-  setGpioPwm(pin: number, dutyPct: number): void {
+  /** pwm.ChangeDutyCycle(pct): set a Pi BCM pin's PWM duty 0..100 % (→ 0..255).
+   *  Also records the duty for the servo mapping, keeping the pin's frequency. */
+  setGpioPwm(pin: number, dutyPct: number, freqHz?: number): void {
     const clamped = Math.max(0, Math.min(100, dutyPct));
     this.duties.set(pin, Math.round((clamped / 100) * 255));
+    const prev = this.piPwm.get(pin);
+    this.piPwm.set(pin, { duty: clamped, freq: freqHz ?? prev?.freq ?? 0 });
+  }
+
+  /** pwm.ChangeFrequency(hz): change a Pi PWM pin's frequency, keeping its duty.
+   *  ~50 Hz is what a hobby servo expects. */
+  setGpioPwmFreq(pin: number, freqHz: number): void {
+    const prev = this.piPwm.get(pin);
+    this.piPwm.set(pin, { duty: prev?.duty ?? 0, freq: freqHz });
   }
 
   /** GPIO.cleanup(): release the Pi's driven pins (they read/drive LOW again). */
   gpioCleanup(): void {
     this.duties.clear();
     this.servoByPin.clear();
+    this.piPwm.clear();
   }
 
   /** GPIO.input(pin): read a pushbutton on this Pi GPIO pin, honoring the pull

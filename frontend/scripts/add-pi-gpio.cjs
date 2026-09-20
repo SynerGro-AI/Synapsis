@@ -44,7 +44,10 @@ const lesson = (id, title, description, notes, required, starter, hints, output)
   kind: "python",
   featuredComponent: "pi",
   circuit: {
-    palette: ["pi", "led", "resistor"],
+    // The tray holds exactly the parts this lesson needs — no clutter, no
+    // missing part. (321-324 need pi/led/resistor; 325's servo lesson needs
+    // pi/servo; button lessons will add pushbutton.)
+    palette: required,
     required,
     notes,
   },
@@ -119,6 +122,24 @@ const allLessons = [
       "led.ChangeDutyCycle(100 - i * 5)",
     ],
     { initial: "GPIO18: 0%", status: "Waiting for your Python..." },
+  ),
+  lesson(
+    325,
+    "Servo Motor — An Angle from a Pulse",
+    "You faded an LED with PWM; a hobby servo uses PWM too, but reads it differently. Send it a 50 Hz signal and the width of each pulse commands an angle: a short pulse (about 2% duty) means 0°, the middle (~7%) means 90°, a long pulse (~12%) means 180°. So GPIO.PWM(18, 50) makes the 50 Hz signal, start(0) begins it, and ChangeDutyCycle(percent) moves the arm. Sweep 2 → 7 → 12 and the servo steps 0° → 90° → 180°. Same PWM you just learned — now it steers a motor.",
+    "Wire the servo to the Pi: the signal lead (usually orange or yellow) → GPIO18, V+ (red) → a 5V pin, and GND (brown or black) → a Pi GND pin. Then make a 50 Hz PWM on GPIO18 and command a few angles.",
+    ["pi", "servo"],
+    "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(18, GPIO.OUT)\n\n# A servo listens to a 50 Hz signal. Make one, start it, and sweep the arm.\n",
+    [
+      "servo = GPIO.PWM(18, 50)",
+      "servo.start(0)",
+      "while True:",
+      "servo.ChangeDutyCycle(2)",
+      "time.sleep(0.5)",
+      "servo.ChangeDutyCycle(7)",
+      "servo.ChangeDutyCycle(12)",
+    ],
+    { initial: "Servo: 0°", status: "Waiting for your Python..." },
   ),
 ];
 
