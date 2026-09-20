@@ -1,9 +1,14 @@
 name: Deploy to Cloudflare (synapsis.school)
 
-# Manual deploy: run from the Actions tab. Requires the CLOUDFLARE_API_TOKEN
-# repository secret (Cloudflare dashboard -> My Profile -> API Tokens ->
-# Create Token -> "Edit Cloudflare Workers" template).
-on: workflow_dispatch
+# Deploys on every push to main (Cloudflare Workers + static assets have no
+# native Git build integration, so publishing must run `wrangler deploy` here),
+# and can still be run manually from the Actions tab. Requires the
+# CLOUDFLARE_API_TOKEN repository secret (Cloudflare dashboard -> My Profile ->
+# API Tokens -> Create Token -> "Edit Cloudflare Workers" template).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
