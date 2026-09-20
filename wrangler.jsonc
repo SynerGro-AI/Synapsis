@@ -1,0 +1,35 @@
+{
+  // Root Wrangler config — this is the one Cloudflare Workers Builds finds when it
+  // runs `npx wrangler deploy` at the repo root. Its whole job is to STOP Wrangler
+  // from auto-detecting a "Static" project and shipping the unbuilt frontend/ source
+  // (the blank-page bug). The `build.command` builds the real SPA into frontend/dist
+  // FIRST, then this config deploys the Worker (src in cloudflare/) with that dist as
+  // its static-assets bundle. Keep this in sync with cloudflare/wrangler.jsonc, which
+  // is still used for local dev + `wrangler secret put` (paths there are relative to
+  // cloudflare/, here they are relative to the repo root).
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "synapsis",
+  "account_id": "ff1f7aa57999e3d7914dd00d2ff46632",
+  "main": "cloudflare/src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  "build": {
+    "command": "cd frontend && npm ci && npm run build"
+  },
+  "assets": {
+    "directory": "frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "synapsis",
+      "database_id": "3ce992de-a857-40fe-8495-761c7bbb84e1"
+    }
+  ],
+  "routes": [
+    { "pattern": "synapsis.school", "custom_domain": true },
+    { "pattern": "www.synapsis.school", "custom_domain": true }
+  ]
+}
