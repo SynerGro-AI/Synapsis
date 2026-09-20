@@ -57,7 +57,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ---------- Values ----------
 
-type PyNamespace = { __ns: "GPIO" | "time" };
+type PyNamespace = { __ns: "GPIO" | "time" | "random" };
 type PyPwm = { __pwm: number; freq: number; running: boolean };
 type PyFunc = { __func: FuncDef };
 type PyValue =
@@ -1019,6 +1019,10 @@ export class PythonSim {
       this.scope.set(alias ?? "time", { __ns: "time" });
       return;
     }
+    if (module === "random") {
+      this.scope.set(alias ?? "random", { __ns: "random" });
+      return;
+    }
     if (module === "RPi") {
       // `import RPi` alone doesn't expose GPIO; the real hint is to import RPi.GPIO.
       throw new PyError(
@@ -1158,6 +1162,7 @@ export class PythonSim {
       if (name === "time") return Date.now() / 1000;
       throw new PyError("AttributeError", `module 'time' has no attribute '${name}'`);
     }
+    if (isNamespace(obj) && obj.__ns === "random") return this.randomCall(name, args);
     if (isPwm(obj)) return this.pwmCall(obj, name, args);
     if (typeof obj === "string") return this.strMethod(obj, name, args);
     if (Array.isArray(obj)) return this.listMethod(obj, name, args);
@@ -1318,6 +1323,35 @@ export class PythonSim {
     while (!this.stopped && Date.now() < end) await sleep(Math.min(50, end - Date.now()));
     if (this.stopped) throw new PyError("KeyboardInterrupt", "");
     return null;
+  }
+
+  // The `random` module's authentic subset: randint/random/uniform/choice.
+  // Backed by Math.random(), so results are genuinely unpredictable — exactly
+  // what a reaction-timer game needs. Bad args raise Python-style errors.
+  private randomCall(name: string, args: PyValue[]): PyValue {
+    if (name === "random") return Math.random();
+    if (name === "randint") {
+      const a = Math.trunc(Number(args[0]));
+      const b = Math.trunc(Number(args[1]));
+      if (!Number.isFinite(a) || !Number.isFinite(b))
+        throw new PyError("TypeError", "randint() requires two integers");
+      if (b < a) throw new PyError("ValueError", "empty range for randint()");
+      return a + Math.floor(Math.random() * (b - a + 1));
+    }
+    if (name === "uniform") {
+      const a = Number(args[0]);
+      const b = Number(args[1]);
+      if (!Number.isFinite(a) || !Number.isFinite(b))
+        throw new PyError("TypeError", "uniform() requires two numbers");
+      return a + Math.random() * (b - a);
+    }
+    if (name === "choice") {
+      const seq = args[0];
+      if (!Array.isArray(seq)) throw new PyError("TypeError", "object is not subscriptable");
+      if (seq.length === 0) throw new PyError("IndexError", "Cannot choose from an empty sequence");
+      return seq[Math.floor(Math.random() * seq.length)];
+    }
+    throw new PyError("AttributeError", `module 'random' has no attribute '${name}'`);
   }
 
   // ----- builtins helpers -----
