@@ -27,6 +27,7 @@ const SCALE: Record<string, number> = {
   stepper: 0.7,
   shiftreg: 0.8,
   imu: 0.8,
+  pi: 0.8,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -48,7 +49,35 @@ const ID_PREFIX: Record<PartType, string> = {
   stepper: "STEP",
   shiftreg: "SR",
   imu: "IMU",
+  pi: "PI",
 };
+
+/**
+ * Raspberry Pi 40-pin GPIO header, in physical pin order 1..40 (matches
+ * PART_PINS.pi in engine.ts). Even indices = odd physical pins (top row),
+ * odd indices = even physical pins (bottom row). Shared by the wire-anchor
+ * table and the on-board drawing so wires land on the gold pins.
+ */
+const PI_HEADER = [
+  "3V3.1", "5V.2", "GPIO2", "5V.4", "GPIO3", "GND.6", "GPIO4", "GPIO14",
+  "GND.9", "GPIO15", "GPIO17", "GPIO18", "GPIO27", "GND.14", "GPIO22", "GPIO23",
+  "3V3.17", "GPIO24", "GPIO10", "GND.20", "GPIO9", "GPIO25", "GPIO11", "GPIO8",
+  "GND.25", "GPIO7", "GPIO0", "GPIO1", "GPIO5", "GND.30", "GPIO6", "GPIO12",
+  "GPIO13", "GND.34", "GPIO19", "GPIO16", "GPIO26", "GPIO20", "GND.39", "GPIO21",
+];
+const PI_HEADER_X0 = 40;
+const PI_HEADER_DX = 13;
+const PI_ROW_TOP = 30;
+const PI_ROW_BOT = 46;
+
+function piHeaderAnchors(): WokwiPinInfo[] {
+  return PI_HEADER.map((name, i) => {
+    const col = Math.floor(i / 2);
+    const top = i % 2 === 0;
+    return { name, x: PI_HEADER_X0 + col * PI_HEADER_DX, y: top ? PI_ROW_TOP : PI_ROW_BOT };
+  });
+}
+
 
 /** Custom parts without wokwi elements provide their own pin anchors. */
 const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
@@ -71,6 +100,7 @@ const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
     { name: "SDA", x: 80, y: 88 },
     { name: "SCL", x: 105, y: 88 },
   ],
+  pi: piHeaderAnchors(),
 };
 
 /**
@@ -180,6 +210,59 @@ function ImuVisual({ heading, pitch, roll }: { heading: number; pitch: number; r
       <circle cx={bx} cy={by} r="4" fill="#7fe0ff" stroke="#0a2e1d" strokeWidth="0.8" />
       <text x="65" y="74" textAnchor="middle" fontSize="6" fill="#9fe8c2" fontFamily="monospace">
         {`H${Math.round(heading)} P${Math.round(pitch)} R${Math.round(roll)}`}
+      </text>
+    </svg>
+  );
+}
+
+/** Raspberry Pi 4 board: green PCB with the 40-pin GPIO header the learner wires
+ *  into. Powered boards show a solid red PWR LED and a green ACT LED. The gold
+ *  header pins are drawn at the same coordinates as FALLBACK_PINS.pi so dropped
+ *  wires land exactly on them. */
+function RaspberryPiVisual() {
+  return (
+    <svg width="320" height="200" viewBox="0 0 320 200">
+      {/* PCB */}
+      <rect x="6" y="6" width="308" height="188" rx="10" fill="#0f5a34" stroke="#0a3a22" strokeWidth="2" />
+      {/* mounting holes */}
+      {[[20, 20], [300, 20], [20, 180], [300, 180]].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="5" fill="#0a2e1d" stroke="#1c6b45" strokeWidth="1.5" />
+      ))}
+      {/* SoC */}
+      <rect x="118" y="98" width="66" height="62" rx="4" fill="#1a1a1a" stroke="#000" strokeWidth="1.5" />
+      <text x="151" y="133" textAnchor="middle" fontSize="9" fill="#8fdcae" fontFamily="monospace">
+        BCM2711
+      </text>
+      {/* USB + ethernet ports */}
+      <rect x="250" y="86" width="58" height="26" rx="2" fill="#3a3a3a" stroke="#222" />
+      <rect x="250" y="118" width="58" height="26" rx="2" fill="#3a3a3a" stroke="#222" />
+      <rect x="250" y="152" width="44" height="26" rx="2" fill="#b0b0b0" stroke="#777" />
+      {/* PWR (solid red) + ACT (green) status LEDs — a powered Pi */}
+      <circle cx="16" cy="74" r="4" fill="#ff4136" stroke="#7a0f0a" strokeWidth="0.8" />
+      <text x="24" y="77" fontSize="6.5" fill="#cfd3d8" fontFamily="monospace">PWR</text>
+      <circle cx="16" cy="88" r="4" fill="#2ecc40" stroke="#0a5a1c" strokeWidth="0.8" />
+      <text x="24" y="91" fontSize="6.5" fill="#cfd3d8" fontFamily="monospace">ACT</text>
+      {/* board name */}
+      <text x="151" y="184" textAnchor="middle" fontSize="8" fill="#8fdcae" fontFamily="monospace">
+        Raspberry Pi 4
+      </text>
+      {/* 40-pin GPIO header */}
+      <rect x="28" y="18" width="272" height="42" rx="3" fill="#111" stroke="#000" strokeWidth="1" />
+      {PI_HEADER.map((name, i) => {
+        const col = Math.floor(i / 2);
+        const top = i % 2 === 0;
+        const x = PI_HEADER_X0 + col * PI_HEADER_DX;
+        const y = top ? PI_ROW_TOP : PI_ROW_BOT;
+        const isPwr = name.startsWith("3V3") || name.startsWith("5V");
+        const isGnd = name.startsWith("GND");
+        const fill = isGnd ? "#555" : isPwr ? "#c0392b" : "#d9b310";
+        return (
+          <rect key={name} x={x - 3} y={y - 3} width="6" height="6" rx="1" fill={fill} stroke="#7a5c00" strokeWidth="0.5" />
+        );
+      })}
+      {/* pin-1 marker */}
+      <text x={PI_HEADER_X0} y="14" textAnchor="middle" fontSize="6" fill="#ffd479" fontFamily="monospace">
+        1
       </text>
     </svg>
   );
@@ -638,6 +721,7 @@ export default function CircuitCanvas({
         {type === "imu" && (
           <ImuVisual heading={imuOrient.heading} pitch={imuOrient.pitch} roll={imuOrient.roll} />
         )}
+        {type === "pi" && <RaspberryPiVisual />}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );
@@ -683,7 +767,9 @@ export default function CircuitCanvas({
           className="wokwi-stage"
           style={{ transform: `scale(${zoom})`, transformOrigin: "top left" }}
         >
-          {renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
+          {/* The Uno is the fixed board for Arduino lessons. Python/Pi lessons
+              supply their own board from the tray, so hide it there. */}
+          {!palette.includes("pi") && renderPart("uno", "uno", UNO_POS.x, UNO_POS.y)}
           {circuit.parts.map((p) => renderPart(p.id, p.type, p.x, p.y))}
 
           {/* Wires + pins overlay */}

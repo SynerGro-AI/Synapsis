@@ -299,6 +299,22 @@
       },
       "notes": "Four wires: VIN->5V, GND->GND, SDA->A4, SCL->A5 (A4/A5 are the Uno's fixed I2C pins). In code: #include <Adafruit_Sensor.h> and <Adafruit_BNO055.h>, then Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire); guard bno.begin() so you know it was found. The gyroscope reads ~0 while the board is still — it senses turning, not tilt; use the accelerometer or the fused orientation for angle.",
       "terminals": "VIN , GND , SDA (->A4) , SCL (->A5)"
+    },
+    {
+      "id": "pi",
+      "name": "Raspberry Pi — Single-Board Computer",
+      "category": "controller",
+      "function": "A full Linux computer on one board. Its 40-pin GPIO header lets Python turn real pins HIGH or LOW, read buttons, and make PWM — the same electronics you learned on the Arduino, now driven by Python instead of a compiled sketch.",
+      "science": "The GPIO pins connect to a Broadcom SoC (system-on-chip). Under the RPi.GPIO library, 'BCM' numbering names each pin the way the chip does (GPIO17, GPIO27, …) rather than by its physical header position. A pin set as an output is a transistor switch tying it to 3.3V (HIGH) or 0V (LOW). The Pi has no analog-to-digital converter and its logic level is 3.3V, not 5V — so unlike the Uno, you never feed a Pi input pin more than 3.3V.",
+      "specs": {
+        "processor": "Broadcom SoC (ARM)",
+        "gpioPins": "40-pin header, BCM-numbered GPIO2–GPIO27",
+        "logicLevel": "3.3V (NOT 5V tolerant)",
+        "pinCurrent": "16mA per pin recommended",
+        "power": "3V3 and 5V rails, multiple GND pins"
+      },
+      "notes": "The header carries 3V3, 5V, GND, and GPIO pins. Drive LEDs from a GPIO pin through a resistor to a GND pin. Never connect 5V to a GPIO input — the pins are only 3.3V tolerant. There is no analogRead here: GPIO pins are digital in/out (with PWM), not analog.",
+      "terminals": "40-pin GPIO header: 3V3, 5V, GND ×8, and BCM GPIO2–GPIO27."
     }
   ]
 }

@@ -8,9 +8,11 @@ import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import { ArduinoSim, analyzeSketch } from "./sim/arduino";
+import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
 import {
   CircuitRuntime,
   validate,
+  validatePython,
   type CircuitState,
   type PartType,
   type WorldState,
@@ -89,7 +91,7 @@ export default function App() {
   const [roll, setRoll] = useState(0);
 
   const editorRef = useRef<CodeEditorHandle | null>(null);
-  const engineRef = useRef<ArduinoSim | null>(null);
+  const engineRef = useRef<ArduinoSim | PythonSim | null>(null);
   const runtimeRef = useRef<CircuitRuntime | null>(null);
   const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode; gain: GainNode } | null>(null);
   const worldRef = useRef<WorldState>({
@@ -306,13 +308,65 @@ export default function App() {
   function runSketch() {
     stopSim();
     const sketch = editorRef.current?.getValue() ?? code;
-    const sim = new ArduinoSim();
-    engineRef.current = sim;
     const rt = new CircuitRuntime(circuit, worldRef.current);
     runtimeRef.current = rt;
-    worldRef.current.irQueue.length = 0; // drop stale remote presses
     setSerial([]);
     setRunning(true);
+
+    if (lesson.kind === "python") {
+      const sim = new PythonSim();
+      engineRef.current = sim;
+      const pulls = new Map<number, "UP" | "DOWN" | "OFF">();
+      const io: PyGpioIO = {
+        setmode: () => {
+          setRanClean(true);
+        },
+        setup: (pin, direction, pull) => {
+          setRanClean(true);
+          pulls.set(pin, pull);
+          if (direction === "OUT") rt.setGpio(pin, false);
+          refreshOutputs();
+        },
+        output: (pin, high) => {
+          setRanClean(true);
+          rt.setGpio(pin, high);
+          refreshOutputs();
+        },
+        input: (pin) => rt.readGpio(pin, pulls.get(pin) ?? "OFF"),
+        pwmStart: (pin, _freq, duty) => {
+          setRanClean(true);
+          rt.setGpioPwm(pin, duty);
+          refreshOutputs();
+        },
+        pwmChangeDuty: (pin, duty) => {
+          setRanClean(true);
+          rt.setGpioPwm(pin, duty);
+          refreshOutputs();
+        },
+        pwmChangeFreq: () => {},
+        pwmStop: (pin) => {
+          rt.setGpio(pin, false);
+          refreshOutputs();
+        },
+        cleanup: () => {
+          rt.gpioCleanup();
+          refreshOutputs();
+        },
+        print: (line) => {
+          setRanClean(true);
+          setSerial((s) => [...s.slice(-30), line]);
+        },
+        onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
+      };
+      sim.run(sketch, io).finally(() => {
+        if (engineRef.current === sim) setRunning(false);
+      });
+      return;
+    }
+
+    const sim = new ArduinoSim();
+    engineRef.current = sim;
+    worldRef.current.irQueue.length = 0; // drop stale remote presses
 
     sim
       .run(sketch, {
@@ -380,8 +434,11 @@ export default function App() {
 
   // ---- Live diagnostics: circuit + code, explained bottom-right ----
   const diagnoses = useMemo(
-    () => validate(circuit, analyzeSketch(code), lesson.circuit.required as PartType[]),
-    [circuit, code, lesson.circuit.required],
+    () =>
+      lesson.kind === "python"
+        ? validatePython(circuit, analyzePython(code), lesson.circuit.required as PartType[])
+        : validate(circuit, analyzeSketch(code), lesson.circuit.required as PartType[]),
+    [circuit, code, lesson.circuit.required, lesson.kind],
   );
   const circuitOk = !diagnoses.some((d) => d.level === "error");
 
@@ -716,7 +773,7 @@ export default function App() {
 
             <div className="editor">
               <div className="panel-label editor-bar">
-                <span>Code IDE — Arduino C++</span>
+                <span>{lesson.kind === "python" ? "Code IDE — Python (RPi.GPIO)" : "Code IDE — Arduino C++"}</span>
                 {running ? (
                   <button className="run stop" onClick={stopSim}>
                     ■ Stop

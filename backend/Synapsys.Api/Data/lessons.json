@@ -241,7 +241,6 @@
       "track": "pi",
       "name": "Python GPIO",
       "range": "321-330",
-      "status": "coming-soon",
       "concepts": [
         "Python on the Pi",
         "GPIO out",
@@ -3903,6 +3902,156 @@
       "output": {
         "initial": "",
         "status": ""
+      }
+    },
+    {
+      "id": 321,
+      "phase": "pi_gpio",
+      "title": "Python on the Pi — Turn On an LED",
+      "description": "The Raspberry Pi has no separate 'sketch' — you write ordinary Python, and the RPi.GPIO library lets that Python reach out and control real pins. Three lines do it: setmode(GPIO.BCM) says 'number the pins the way the chip does', setup(17, GPIO.OUT) makes GPIO17 an output, and output(17, GPIO.HIGH) drives it to 3.3V. Current then flows GPIO17 → resistor → LED → GND, and the LED lights. Same electronics you already know — now in Python.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "notes": "Drag the Raspberry Pi onto the canvas. Wire GPIO17 → resistor → LED anode (A), and the LED cathode (C) → any GND pin on the Pi. Then finish the program so the LED turns on."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\n\n# GPIO17 -> resistor -> LED(+),  LED(-) -> a GND pin.\n# Finish the three lines below to light the LED:\n"
+      },
+      "hints": [
+        "GPIO.setmode(GPIO.BCM)",
+        "GPIO.setup(17, GPIO.OUT)",
+        "GPIO.output(17, GPIO.HIGH)"
+      ],
+      "output": {
+        "initial": "GPIO17: OFF",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 322,
+      "phase": "pi_gpio",
+      "title": "Blink — Loops and time.sleep",
+      "description": "A steady light is a start; the 'Hello, World' of hardware is a blink. To blink, you turn the pin on, wait, turn it off, wait, and repeat forever. Python's while True: makes an endless loop, and time.sleep(seconds) pauses between each change so your eye can see it. Import the time module, then toggle GPIO17 HIGH and LOW inside the loop. Press Stop to end it — sleep() is interrupted just like the real thing.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "notes": "Same circuit as before: GPIO17 → resistor → LED → GND. The setup is done for you; add a loop that blinks the LED on and off half a second at a time."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(17, GPIO.OUT)\n\n# Blink forever. Press Stop to end the loop.\n"
+      },
+      "hints": [
+        "while True:",
+        "GPIO.output(17, GPIO.HIGH)",
+        "time.sleep(0.5)",
+        "GPIO.output(17, GPIO.LOW)"
+      ],
+      "output": {
+        "initial": "GPIO17: OFF",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 323,
+      "phase": "pi_gpio",
+      "title": "Three LEDs — A Traffic-Light Sequence",
+      "description": "One pin taught you output; now drive three. Give each LED pin a name — red = 17, yellow = 27, green = 22 — so your code reads like the circuit. Set each as an output, then light them one at a time inside the loop: HIGH, a short sleep, LOW, move to the next. Because each name is a real pin number, output(red, GPIO.HIGH) genuinely drives GPIO17. This is how any multi-output project — a traffic light, a bar graph, a keypad — is built.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "notes": "Wire three LEDs: GPIO17 → resistor → red LED → GND, GPIO27 → resistor → yellow LED → GND, GPIO22 → resistor → green LED → GND. The pin names and setup are done for you; write the loop that lights them in sequence."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nred = 17\nyellow = 27\ngreen = 22\nGPIO.setup(red, GPIO.OUT)\nGPIO.setup(yellow, GPIO.OUT)\nGPIO.setup(green, GPIO.OUT)\n\n# Light red, then yellow, then green — one at a time, forever.\n"
+      },
+      "hints": [
+        "while True:",
+        "GPIO.output(red, GPIO.HIGH)",
+        "time.sleep(0.3)",
+        "GPIO.output(red, GPIO.LOW)",
+        "GPIO.output(yellow, GPIO.HIGH)",
+        "GPIO.output(yellow, GPIO.LOW)",
+        "GPIO.output(green, GPIO.HIGH)",
+        "GPIO.output(green, GPIO.LOW)"
+      ],
+      "output": {
+        "initial": "GPIO17/27/22: OFF",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 324,
+      "phase": "pi_gpio",
+      "title": "PWM — Fade an LED Smoothly",
+      "description": "A digital pin is only ever fully on or fully off — so how do you dim an LED? You blink it faster than the eye can see and vary how much of each cycle is 'on': that fraction is the duty cycle, and the technique is PWM (Pulse-Width Modulation). GPIO.PWM(18, 1000) makes a 1000 Hz PWM signal on GPIO18; start(0) begins it at 0% (off). Then ChangeDutyCycle(percent) sets the brightness. Sweep the duty 0→100 and back with a for loop over range(0, 21), and the LED breathes.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor"
+        ],
+        "notes": "Wire GPIO18 → resistor → LED → GND. The pin is set up as an output for you; create a PWM signal on it and fade the LED up and down in a loop."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(18, GPIO.OUT)\n\n# Create a PWM signal on GPIO18 and fade the LED up and down.\n"
+      },
+      "hints": [
+        "led = GPIO.PWM(18, 1000)",
+        "led.start(0)",
+        "while True:",
+        "for i in range(0, 21):",
+        "led.ChangeDutyCycle(i * 5)",
+        "time.sleep(0.05)",
+        "led.ChangeDutyCycle(100 - i * 5)"
+      ],
+      "output": {
+        "initial": "GPIO18: 0%",
+        "status": "Waiting for your Python..."
       }
     }
   ]

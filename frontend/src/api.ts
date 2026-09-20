@@ -31,8 +31,8 @@ export interface Lesson {
   title: string;
   description: string;
   source?: string;
-  /** Defaults to "arduino" when absent. "terminal" lessons render the shell course. */
-  kind?: "arduino" | "terminal";
+  /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO. */
+  kind?: "arduino" | "terminal" | "python";
   terminal?: {
     shell: string;
     /** Prompt user (defaults to "you"); Pi lessons use "pi". */

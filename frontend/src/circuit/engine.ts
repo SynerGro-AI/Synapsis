@@ -21,7 +21,8 @@ export type PartType =
   | "irremote"
   | "stepper"
   | "shiftreg"
-  | "imu";
+  | "imu"
+  | "pi";
 
 export interface PlacedPart {
   id: string;
@@ -70,6 +71,18 @@ export interface SketchInfo {
   pinModes: Map<number, string>;
 }
 
+/** What a Python RPi.GPIO sketch does, from a static pass (see analyzePython). */
+export interface PySketchInfo {
+  parseError?: string;
+  mode?: "BCM" | "BOARD";
+  outPins: number[]; // BCM pins set up as GPIO.OUT
+  inPins: number[]; // BCM pins set up as GPIO.IN
+  writes: number[]; // BCM pins driven by GPIO.output(...) (incl. PWM starts)
+  pwmPins: number[]; // BCM pins used with GPIO.PWM(...)
+  reads: number[]; // BCM pins read via GPIO.input(...)
+  pulls: Map<number, "UP" | "DOWN" | "OFF">;
+}
+
 export interface WorldState {
   pressed: Set<string>; // pushbutton part ids currently held
   potValue: number; // 0-1023
@@ -102,6 +115,30 @@ export const PART_PINS: Record<PartType, string[]> = {
   stepper: ["A-", "A+", "B+", "B-"],
   shiftreg: ["DS", "SH_CP", "ST_CP", "MR", "OE", "VCC", "GND"],
   imu: ["VIN", "GND", "SDA", "SCL"],
+  // Raspberry Pi 40-pin header, listed in physical pin order (1..40). Power and
+  // ground pins are disambiguated by physical position so every id is unique.
+  pi: [
+    "3V3.1", "5V.2",
+    "GPIO2", "5V.4",
+    "GPIO3", "GND.6",
+    "GPIO4", "GPIO14",
+    "GND.9", "GPIO15",
+    "GPIO17", "GPIO18",
+    "GPIO27", "GND.14",
+    "GPIO22", "GPIO23",
+    "3V3.17", "GPIO24",
+    "GPIO10", "GND.20",
+    "GPIO9", "GPIO25",
+    "GPIO11", "GPIO8",
+    "GND.25", "GPIO7",
+    "GPIO0", "GPIO1",
+    "GPIO5", "GND.30",
+    "GPIO6", "GPIO12",
+    "GPIO13", "GND.34",
+    "GPIO19", "GPIO16",
+    "GPIO26", "GPIO20",
+    "GND.39", "GPIO21",
+  ],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -123,6 +160,7 @@ export const PART_LABELS: Record<PartType, string> = {
   stepper: "Stepper motor",
   shiftreg: "Shift register 74HC595",
   imu: "BNO055 9-axis IMU",
+  pi: "Raspberry Pi 4",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);
@@ -143,6 +181,12 @@ export function pinNumber(pin: string): number | null {
 
 export function pinLabel(n: number): string {
   return n >= 14 ? `A${n - 14}` : String(n);
+}
+
+/** BCM GPIO number for a Pi header pin id like "GPIO18", else null (power/ground). */
+export function piGpioNumber(pin: string): number | null {
+  const m = /^GPIO(\d+)$/.exec(pin);
+  return m ? Number(m[1]) : null;
 }
 
 // ---------- Netlist (union-find) ----------
@@ -182,6 +226,19 @@ export class Circuit {
         this.uf.union(`${p.id}:1.l`, `${p.id}:1.r`);
         this.uf.union(`${p.id}:2.l`, `${p.id}:2.r`);
       }
+    // Raspberry Pi header: all GND pins are one node, all 3V3 one node, all 5V one node.
+    for (const p of state.parts)
+      if (p.type === "pi") {
+        const rails: Record<string, string[]> = { GND: [], "3V3": [], "5V": [] };
+        for (const pin of PART_PINS.pi) {
+          if (pin.startsWith("GND")) rails.GND.push(pin);
+          else if (pin.startsWith("3V3")) rails["3V3"].push(pin);
+          else if (pin.startsWith("5V")) rails["5V"].push(pin);
+        }
+        for (const group of Object.values(rails))
+          for (let i = 1; i < group.length; i++)
+            this.uf.union(`${p.id}:${group[0]}`, `${p.id}:${group[i]}`);
+      }
     for (const w of state.wires) this.uf.union(key(w.from), key(w.to));
   }
 
@@ -206,6 +263,23 @@ export class Circuit {
       if (n !== null && this.netOf("uno", pin) === net) result.push(n);
     }
     return result;
+  }
+
+  /** Which Pi BCM GPIO numbers share a net with the given terminal. */
+  piGpioPinsOnNet(net: string): number[] {
+    const result: number[] = [];
+    for (const pi of this.partsByType("pi"))
+      for (const pin of PART_PINS.pi) {
+        const n = piGpioNumber(pin);
+        if (n !== null && this.netOf(pi.id, pin) === net) result.push(n);
+      }
+    return result;
+  }
+
+  /** The net a Pi header pin sits on (first Pi part), or null if no Pi placed. */
+  piPinNet(pin: string): string | null {
+    const pi = this.partsByType("pi")[0];
+    return pi ? this.netOf(pi.id, pin) : null;
   }
 
   partsByType(type: PartType): PlacedPart[] {
@@ -286,6 +360,20 @@ function tracePath(
       for (const g of ["GND.1", "GND.2", "GND.3"])
         if (g !== node.t.pin) push({ part: "uno", pin: g }, null, 0);
     }
+    // Raspberry Pi header: pins on the same power/ground rail are one node.
+    if (part?.type === "pi") {
+      const rail = node.t.pin.startsWith("GND")
+        ? "GND"
+        : node.t.pin.startsWith("3V3")
+          ? "3V3"
+          : node.t.pin.startsWith("5V")
+            ? "5V"
+            : null;
+      if (rail)
+        for (const pin of PART_PINS.pi)
+          if (pin !== node.t.pin && pin.startsWith(rail))
+            push({ part: part.id, pin }, null, 0);
+    }
   }
   return null;
 }
@@ -298,12 +386,22 @@ export function ledPath(
   buttonsConduct: boolean,
 ): PathResult | null {
   const isSource = (t: Terminal) => {
-    if (t.part !== "uno") return false;
-    if (t.pin === "5V") return true;
-    const n = pinNumber(t.pin);
-    return n !== null && n <= 13 && highPins.has(n);
+    if (t.part === "uno") {
+      if (t.pin === "5V") return true;
+      const n = pinNumber(t.pin);
+      return n !== null && n <= 13 && highPins.has(n);
+    }
+    if (circuit.parts.get(t.part)?.type === "pi") {
+      if (t.pin.startsWith("3V3") || t.pin.startsWith("5V")) return true;
+      const n = piGpioNumber(t.pin);
+      return n !== null && highPins.has(n);
+    }
+    return false;
   };
-  const isGnd = (t: Terminal) => t.part === "uno" && t.pin.startsWith("GND.");
+  const isGnd = (t: Terminal) => {
+    if (t.part === "uno") return t.pin.startsWith("GND.");
+    return circuit.parts.get(t.part)?.type === "pi" && t.pin.startsWith("GND");
+  };
 
   const up = tracePath(circuit, { part: ledId, pin: "A" }, isSource, pressed, buttonsConduct);
   if (!up) return null;
@@ -319,7 +417,13 @@ export function ledPath(
     ...down.wires,
   ];
   const sourcePin =
-    up.goal.pin === "5V" ? ("5V" as const) : pinNumber(up.goal.pin);
+    up.goal.part === "uno"
+      ? up.goal.pin === "5V"
+        ? ("5V" as const)
+        : pinNumber(up.goal.pin)
+      : up.goal.pin.startsWith("3V3") || up.goal.pin.startsWith("5V")
+        ? ("5V" as const)
+        : piGpioNumber(up.goal.pin);
   return { wires, resistors: up.resistors + down.resistors, sourcePin };
 }
 
@@ -770,6 +874,141 @@ export function validate(
   return out;
 }
 
+// ---------- Validation for Python (RPi.GPIO) lessons ----------
+
+/**
+ * Pi-aware sibling of validate(): checks LED wiring science (resistor + a GND
+ * return to a Pi GND pin, correct polarity) and cross-checks the Python sketch
+ * (setmode present, driven GPIO matches the wired pin and is set up as OUT,
+ * reads reach a button set up as IN). Leaves the Uno validate() untouched.
+ */
+export function validatePython(
+  state: CircuitState,
+  sketch: PySketchInfo | null,
+  required: PartType[],
+): Diagnosis[] {
+  const c = new Circuit(state);
+  const out: Diagnosis[] = [];
+  const err = (source: Diagnosis["source"], message: string) =>
+    out.push({ level: "error", source, message });
+  const warn = (source: Diagnosis["source"], message: string) =>
+    out.push({ level: "warn", source, message });
+
+  for (const type of required)
+    if (c.partsByType(type).length === 0)
+      err("circuit", `This lesson needs a ${PART_LABELS[type]} — add one from the parts tray.`);
+
+  const pi = c.partsByType("pi")[0];
+
+  const wired = new Set<string>();
+  for (const w of state.wires) {
+    wired.add(`${w.from.part}:${w.from.pin}`);
+    wired.add(`${w.to.part}:${w.to.pin}`);
+  }
+  const isWired = (part: string, pin: string, type: PartType) => {
+    if (wired.has(`${part}:${pin}`)) return true;
+    if (type === "pushbutton") return wired.has(`${part}:${pin[0]}.l`) || wired.has(`${part}:${pin[0]}.r`);
+    return false;
+  };
+
+  // Every GPIO number treated as "high" so wiring is checked independent of
+  // the code's runtime state (the code cross-check below adds the pin match).
+  const allHigh = new Set<number>(Array.from({ length: 28 }, (_, i) => i));
+  const piGndNet = pi ? c.netOf(pi.id, "GND.6") : null;
+
+  for (const led of c.partsByType("led")) {
+    if (!isWired(led.id, "A", "led") || !isWired(led.id, "C", "led")) {
+      err("circuit", `${led.id} isn't fully wired — both its long leg (anode) and short leg (cathode) need connections.`);
+      continue;
+    }
+    const fwd = ledPath(c, led.id, allHigh, new Set(), true);
+    if (fwd) {
+      if (fwd.resistors === 0)
+        err("circuit", `${led.id} has no current-limiting resistor — wire one in series or you'll burn out the LED (and stress the Pi pin).`);
+    } else {
+      const isSrcAny = (t: Terminal) => {
+        if (t.part === "uno") return t.pin === "5V" || (pinNumber(t.pin) ?? 99) <= 13;
+        return (
+          c.parts.get(t.part)?.type === "pi" &&
+          (t.pin.startsWith("3V3") || t.pin.startsWith("5V") || piGpioNumber(t.pin) !== null)
+        );
+      };
+      const isGndAny = (t: Terminal) =>
+        (t.part === "uno" && t.pin.startsWith("GND.")) ||
+        (c.parts.get(t.part)?.type === "pi" && t.pin.startsWith("GND"));
+      const revUp = tracePath(c, { part: led.id, pin: "C" }, isSrcAny, new Set(), true);
+      const revDn = tracePath(c, { part: led.id, pin: "A" }, isGndAny, new Set(), true);
+      if (revUp && revDn)
+        err("circuit", `${led.id} is backwards — the long leg (anode) faces the GPIO/3V3 side, the short leg (cathode) the GND side.`);
+      else
+        err("circuit", `${led.id} has no complete path — trace from a GPIO pin, through the LED and a resistor, back to a Pi GND pin.`);
+    }
+  }
+
+  if (sketch) {
+    if (sketch.parseError) {
+      err("code", sketch.parseError);
+    } else {
+      if (!sketch.mode)
+        warn("code", "Call GPIO.setmode(GPIO.BCM) before GPIO.setup(), or RPi.GPIO raises a RuntimeError at runtime.");
+      else if (sketch.mode === "BOARD")
+        warn("code", "These lessons number pins in BCM — use GPIO.setmode(GPIO.BCM) so the GPIO numbers match the board.");
+
+      // LEDs: the wired GPIO must be the one your code drives, set up as OUT.
+      for (const led of c.partsByType("led")) {
+        if (!isWired(led.id, "A", "led") || !isWired(led.id, "C", "led")) continue;
+        const p = ledPath(c, led.id, allHigh, new Set(), true);
+        if (p && typeof p.sourcePin === "number") {
+          const gpio = p.sourcePin;
+          if (sketch.writes.length && !sketch.writes.includes(gpio))
+            err("both", `${led.id} is wired to GPIO${gpio}, but your code drives GPIO ${[...new Set(sketch.writes)].sort((a, b) => a - b).join(", ")}. Use pin ${gpio}.`);
+          if (!sketch.outPins.includes(gpio))
+            err("code", `GPIO${gpio} lights ${led.id}, but you never call GPIO.setup(${gpio}, GPIO.OUT).`);
+        }
+      }
+
+      // Driving a pin that's shorted to GND is a mistake worth catching.
+      for (const gpio of new Set(sketch.writes)) {
+        if (!pi) continue;
+        const net = c.netOf(pi.id, `GPIO${gpio}`);
+        if (piGndNet && net === piGndNet)
+          err("circuit", `GPIO${gpio} is wired straight to a GND pin — driving it HIGH would be a short.`);
+      }
+
+      // Reads must reach a button that's set up as an input.
+      for (const gpio of new Set(sketch.reads)) {
+        if (!pi) continue;
+        const net = c.netOf(pi.id, `GPIO${gpio}`);
+        let found = false;
+        for (const b of c.partsByType("pushbutton")) {
+          const row = c.netOf(b.id, "1.l") === net ? "1" : c.netOf(b.id, "2.l") === net ? "2" : null;
+          if (!row) continue;
+          found = true;
+          const otherNet = c.netOf(b.id, row === "1" ? "2.l" : "1.l");
+          const pull = sketch.pulls.get(gpio) ?? "OFF";
+          if (piGndNet && otherNet === piGndNet && pull !== "UP")
+            warn("both", `The button on GPIO${gpio} returns to GND — set it up with pull_up_down=GPIO.PUD_UP so it idles HIGH and reads LOW when pressed.`);
+        }
+        if (!found)
+          err("both", `Your code reads GPIO${gpio}, but no button is wired to that pin yet.`);
+        if (!sketch.inPins.includes(gpio))
+          err("code", `GPIO${gpio} is read but never set up as an input — add GPIO.setup(${gpio}, GPIO.IN, ...).`);
+      }
+    }
+  }
+
+  if (!out.some((d) => d.level === "error"))
+    out.unshift({
+      level: "ok",
+      source: "both",
+      message: state.wires.length
+        ? "✓ Circuit and code agree — press Run to drive the Pi."
+        : "Place your Raspberry Pi and parts, then wire them up. Diagnostics will guide you here.",
+    });
+
+  return out;
+}
+
 // ---------- Runtime bridge for the simulator ----------
 
 export interface CircuitOutputs {
@@ -1014,6 +1253,51 @@ export class CircuitRuntime {
       if (otherNet === this.circuit.v5) return pressed ? 1 : 0;
     }
     return mode === "INPUT_PULLUP" ? 1 : 0;
+  }
+
+  // ---------- Raspberry Pi GPIO (Python RPi.GPIO) ----------
+  // The Pi shares the duty map with the Arduino pins, keyed by pin number. A
+  // Python lesson never has an Uno and an Arduino lesson never has a Pi, so the
+  // BCM numbers and Uno pin numbers never collide at runtime.
+
+  /** GPIO.output(pin, HIGH/LOW): drive a Pi BCM output pin. */
+  setGpio(pin: number, high: boolean): void {
+    this.duties.set(pin, high ? 255 : 0);
+  }
+
+  /** pwm.ChangeDutyCycle(pct): set a Pi BCM pin's PWM duty 0..100 % (→ 0..255). */
+  setGpioPwm(pin: number, dutyPct: number): void {
+    const clamped = Math.max(0, Math.min(100, dutyPct));
+    this.duties.set(pin, Math.round((clamped / 100) * 255));
+  }
+
+  /** GPIO.cleanup(): release the Pi's driven pins (they read/drive LOW again). */
+  gpioCleanup(): void {
+    this.duties.clear();
+    this.servoByPin.clear();
+  }
+
+  /** GPIO.input(pin): read a pushbutton on this Pi GPIO pin, honoring the pull
+   *  the code configured. True = HIGH (3.3 V), False = LOW. Deterministic: a
+   *  floating pin resolves to its pull state so lesson gating stays stable. */
+  readGpio(pin: number, pull: "UP" | "DOWN" | "OFF"): boolean {
+    const pi = this.circuit.partsByType("pi")[0];
+    if (!pi) return pull === "UP";
+    const net = this.circuit.netOf(pi.id, `GPIO${pin}`);
+    const gnd = this.circuit.netOf(pi.id, "GND.6");
+    const threeV3 = this.circuit.netOf(pi.id, "3V3.1");
+    // Direct jumper to a rail reads that rail.
+    if (net === threeV3) return true;
+    if (net === gnd) return false;
+    for (const b of this.circuit.partsByType("pushbutton")) {
+      const row = this.circuit.netOf(b.id, "1.l") === net ? "1" : this.circuit.netOf(b.id, "2.l") === net ? "2" : null;
+      if (!row) continue;
+      const otherNet = this.circuit.netOf(b.id, row === "1" ? "2.l" : "1.l");
+      const pressed = this.world.pressed.has(b.id);
+      if (otherNet === gnd) return pressed ? false : pull === "UP"; // pull-up idles HIGH, pressed pulls LOW
+      if (otherNet === threeV3) return pressed ? true : pull !== "DOWN" ? true : false; // pull-down idles LOW
+    }
+    return pull === "UP";
   }
 
   analogRead(pin: number): number {
