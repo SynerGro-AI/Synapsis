@@ -4090,6 +4090,123 @@
         "initial": "Servo: 0°",
         "status": "Waiting for your Python..."
       }
+    },
+    {
+      "id": 326,
+      "phase": "pi_gpio",
+      "title": "Read a Button — GPIO as an Input",
+      "description": "Every pin you've used was an output; a GPIO pin can also listen. Set one up as an input with the chip's built-in pull-up resistor — pull_up_down=GPIO.PUD_UP — so it idles HIGH (3.3V). Wire the button between that pin and GND, and pressing it pulls the pin down to LOW. GPIO.input(4) reads the level: HIGH when open, LOW when pressed. Read it in a loop and print the state. This is how a Pi senses the world — the exact opposite direction of output().",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "pushbutton"
+        ],
+        "required": [
+          "pi",
+          "pushbutton"
+        ],
+        "notes": "Drag a Pi and a pushbutton. Wire one leg of the button to GPIO4 and the other leg to any GND pin. Set GPIO4 as a pull-up input, then read it in a loop and print whether it's pressed. Click and hold the button on the canvas to press it."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\n\n# One button leg -> GPIO4, the other leg -> a GND pin.\n# Set GPIO4 as a pull-up input, then read it in a loop.\n"
+      },
+      "hints": [
+        "GPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)",
+        "while True:",
+        "if GPIO.input(4) == GPIO.LOW:",
+        "print(\"Pressed\")",
+        "else:",
+        "print(\"Not pressed\")",
+        "time.sleep(0.2)"
+      ],
+      "output": {
+        "initial": "Button: —",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 327,
+      "phase": "pi_gpio",
+      "title": "Button Controls the LED",
+      "description": "You can read a button and you can drive an LED — now wire them together in code. Each pass of the loop, check the button: when GPIO.input reads LOW (pressed), turn the LED on; otherwise turn it off. The LED follows your finger because the same input you just learned now decides the output. This read → decide → act → repeat loop is the beating heart of every interactive device, from a doorbell to a game controller.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "notes": "Wire the button (one leg → GPIO4, other leg → GND) and the LED (GPIO17 → resistor → LED → GND). Setup is done for you; write the loop so the LED lights only while the button is held."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(17, GPIO.OUT)\nGPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)\n\n# Light the LED while the button is pressed.\n"
+      },
+      "hints": [
+        "while True:",
+        "if GPIO.input(4) == GPIO.LOW:",
+        "GPIO.output(17, GPIO.HIGH)",
+        "else:",
+        "GPIO.output(17, GPIO.LOW)",
+        "time.sleep(0.05)"
+      ],
+      "output": {
+        "initial": "GPIO17: OFF",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 328,
+      "phase": "pi_gpio",
+      "title": "Toggle the LED — A Latch with Debounce",
+      "description": "Holding the button to keep the light on is tiring; real switches latch. Keep a variable — led_on — that remembers the state. Each time you detect a press, flip it with led_on = not led_on and write it straight to the pin: GPIO.output(17, led_on) takes the boolean directly. A short time.sleep right after the flip is a debounce — it ignores the electrical chatter of the metal contact so one push counts as one press, not ten. Now a single press turns the LED on and the next press turns it off.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "notes": "Same wiring as before: button on GPIO4 to GND, LED on GPIO17 through a resistor. The LED starts off; flip it on each press and leave it there until the next press."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(17, GPIO.OUT)\nGPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)\n\nled_on = False\n\n# One press toggles the LED. Flip a variable, then debounce.\n"
+      },
+      "hints": [
+        "while True:",
+        "if GPIO.input(4) == GPIO.LOW:",
+        "led_on = not led_on",
+        "GPIO.output(17, led_on)",
+        "time.sleep(0.3)",
+        "time.sleep(0.01)"
+      ],
+      "output": {
+        "initial": "GPIO17: OFF",
+        "status": "Waiting for your Python..."
+      }
     }
   ]
 }
