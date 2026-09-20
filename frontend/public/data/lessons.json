@@ -4207,6 +4207,97 @@
         "initial": "GPIO17: OFF",
         "status": "Waiting for your Python..."
       }
+    },
+    {
+      "id": 329,
+      "phase": "pi_gpio",
+      "title": "Pedestrian Crossing — Sense, Sequence, Return",
+      "description": "Now combine what you know into a real machine: a pedestrian crossing. Three LEDs are the traffic light — green while cars flow. When someone presses the button to cross, you run a sequence: green off, yellow for a moment, then red while people walk, then back to green. Every idea so far works together — named pins from the traffic-light lesson, a while loop, time.sleep for timing, and GPIO.input to sense the press. This is exactly how real embedded controllers behave: rest, sense an event, run a sequence, return to rest.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "required": [
+          "pi",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "notes": "Wire three LEDs (GPIO17 = red, GPIO27 = yellow, GPIO22 = green, each through a resistor to GND) and a button (GPIO4 to a GND pin). Setup is done and the light rests on green; when the button is pressed, run yellow → red → green."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nred = 17\nyellow = 27\ngreen = 22\nGPIO.setup(red, GPIO.OUT)\nGPIO.setup(yellow, GPIO.OUT)\nGPIO.setup(green, GPIO.OUT)\nGPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)\n\n# Rest on green. When the button is pressed, run the crossing sequence.\nGPIO.output(green, GPIO.HIGH)\n"
+      },
+      "hints": [
+        "while True:",
+        "if GPIO.input(4) == GPIO.LOW:",
+        "GPIO.output(green, GPIO.LOW)",
+        "GPIO.output(yellow, GPIO.HIGH)",
+        "time.sleep(1)",
+        "GPIO.output(yellow, GPIO.LOW)",
+        "GPIO.output(red, GPIO.HIGH)",
+        "time.sleep(3)",
+        "GPIO.output(red, GPIO.LOW)",
+        "GPIO.output(green, GPIO.HIGH)"
+      ],
+      "output": {
+        "initial": "Crossing: GREEN",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 330,
+      "phase": "pi_gpio",
+      "title": "Capstone — A Button-Controlled Servo Gate",
+      "description": "Your capstone brings the whole course together into one device: a gate you open and close with a button. Keep a state variable, gate_open, and flip it on each press. When it opens, drive the servo to 90° — recall a 50 Hz servo reads ~7% duty as 90°, ~2% as 0° — and light an LED to show it's open; when it closes, swing back to 0° and turn the LED off. That is PWM for the servo, GPIO.input for the button, a toggling state variable with debounce, and digital output for the indicator — every skill from lessons 321–330 working as one. You now write real Python that drives real hardware. That is exactly what a Raspberry Pi is for.",
+      "source": "Paul McWhorter, Raspberry Pi Python GPIO — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "python",
+      "featuredComponent": "pi",
+      "circuit": {
+        "palette": [
+          "pi",
+          "servo",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "required": [
+          "pi",
+          "servo",
+          "led",
+          "resistor",
+          "pushbutton"
+        ],
+        "notes": "Wire the servo (signal → GPIO18, V+ → a 5V pin, GND → a Pi GND pin), a button (GPIO4 → GND), and an indicator LED (GPIO17 → resistor → LED → GND). Setup and a 50 Hz PWM are done; press the button to open (90°, LED on) and close (0°, LED off) the gate."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import RPi.GPIO as GPIO\nimport time\n\nGPIO.setmode(GPIO.BCM)\nGPIO.setup(18, GPIO.OUT)\nGPIO.setup(17, GPIO.OUT)\nGPIO.setup(4, GPIO.IN, pull_up_down=GPIO.PUD_UP)\n\ngate = GPIO.PWM(18, 50)\ngate.start(2)\ngate_open = False\n\n# Each press flips the gate: open = 90 deg + LED on, closed = 0 deg + LED off.\n"
+      },
+      "hints": [
+        "while True:",
+        "if GPIO.input(4) == GPIO.LOW:",
+        "gate_open = not gate_open",
+        "if gate_open:",
+        "gate.ChangeDutyCycle(7)",
+        "GPIO.output(17, GPIO.HIGH)",
+        "else:",
+        "gate.ChangeDutyCycle(2)",
+        "GPIO.output(17, GPIO.LOW)",
+        "time.sleep(0.3)",
+        "time.sleep(0.01)"
+      ],
+      "output": {
+        "initial": "Gate: CLOSED (0°)",
+        "status": "Waiting for your Python..."
+      }
     }
   ]
 }
