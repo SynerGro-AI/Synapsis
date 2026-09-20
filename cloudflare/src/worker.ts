@@ -125,6 +125,37 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
 
 const error = (message: string, status: number) => json({ error: message }, status);
 
+// ---------- schema (self-migrating) ----------
+// D1 never runs schema.sql for us, so ensure the tables the handlers assume
+// actually exist before we touch them. CREATE TABLE IF NOT EXISTS is idempotent
+// and never drops data, so this is safe to run against a live DB — with or
+// without existing rows. Mirrors cloudflare/schema.sql and backend Db.cs.
+let schemaReady = false;
+async function ensureSchema(env: Env): Promise<void> {
+  if (schemaReady) return;
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      password_hash TEXT NOT NULL,
+      current_lesson INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL
+    )`,
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS progress (
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      lesson_id INTEGER NOT NULL,
+      completed INTEGER NOT NULL DEFAULT 0,
+      sketch TEXT,
+      circuit TEXT,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, lesson_id)
+    )`,
+  ).run();
+  schemaReady = true;
+}
+
 // ---------- handlers ----------
 
 async function register(request: Request, env: Env): Promise<Response> {
@@ -256,6 +287,9 @@ export default {
       return env.ASSETS.fetch(new URL("/data/lessons.json", url.origin).toString());
     if (path === "/api/components")
       return env.ASSETS.fetch(new URL("/data/components.json", url.origin).toString());
+
+    // Every route below this point reads or writes D1; make sure the tables exist.
+    await ensureSchema(env);
 
     if (request.method === "POST" && path === "/api/auth/register") return register(request, env);
     if (request.method === "POST" && path === "/api/auth/login") return login(request, env);
