@@ -262,10 +262,22 @@
       ]
     },
     {
+      "id": "python_serial",
+      "track": "python",
+      "name": "Talking to Arduino",
+      "range": "401-406",
+      "concepts": [
+        "Serial ports",
+        "Bytes & decoding",
+        "Two-way control",
+        "Closed loop"
+      ]
+    },
+    {
       "id": "vpython_world",
       "track": "python",
       "name": "A Virtual World",
-      "range": "401-406",
+      "range": "407-412",
       "status": "coming-soon",
       "concepts": [
         "Arduino + Python setup",
@@ -278,7 +290,7 @@
       "id": "python_plots",
       "track": "python",
       "name": "Data & Plots",
-      "range": "407-414",
+      "range": "413-420",
       "status": "coming-soon",
       "concepts": [
         "pip & Matplotlib",
@@ -291,7 +303,7 @@
       "id": "python_comms",
       "track": "python",
       "name": "Talking Between Machines",
-      "range": "415-420",
+      "range": "421-426",
       "status": "coming-soon",
       "concepts": [
         "Xbee radios",
@@ -4640,6 +4652,78 @@
       ],
       "output": {
         "initial": "Gate: closed",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 401,
+      "phase": "python_serial",
+      "title": "Hello, Serial",
+      "description": "Until now your Python ran alone on the Pi. This course connects it to an Arduino over a wire. The Arduino here is already running — its sketch (shown on the right) counts 0, 1, 2, ... and calls Serial.println on each number, pushing it out the USB port every half second. Your job is the other end. import serial gives you pyserial; serial.Serial('COM4', 9600, timeout=1) opens the port — the baud, 9600, MUST match the sketch's Serial.begin(9600) or the bytes arrive as garbage. Then ser.readline() blocks until a whole line of bytes has come in and hands you those raw bytes. Bytes aren't text, so .decode() turns them into a string and .rstrip() trims the trailing newline the Arduino sent. Print it, loop forever, and you're watching the real numbers cross the wire.",
+      "source": "Paul McWhorter, Python with Arduino — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "serial",
+      "arduinoSketch": "int count = 0;\n\nvoid setup() {\n    Serial.begin(9600);\n}\n\nvoid loop() {\n    Serial.println(count);\n    count = count + 1;\n    delay(500);\n}\n",
+      "featuredComponent": "pc",
+      "circuit": {
+        "palette": [
+          "pc"
+        ],
+        "required": [
+          "pc"
+        ],
+        "notes": "The Uno is on the board and already flashed with the counting sketch shown on the right. Add the PC (laptop) and connect it to the Uno with the USB cable — no other wiring. Then open the port in Python and print every line the Arduino sends."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import serial\n\n# The Arduino is counting and sending each number over serial.\n# Open the port, then read and print every line it sends.\n"
+      },
+      "hints": [
+        "ser = serial.Serial('COM4', 9600, timeout=1)",
+        "while True:",
+        "line = ser.readline()",
+        "text = line.decode().rstrip()",
+        "print(text)"
+      ],
+      "output": {
+        "initial": "Serial monitor: waiting",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 402,
+      "phase": "python_serial",
+      "title": "Send a Command",
+      "description": "Reading is half a conversation; now you talk back. The same wire runs both ways, and this sketch listens: each loop it checks Serial.available(), and when a byte has arrived it reads it with Serial.read() and turns the real LED on for 'H' or off for 'L'. From Python you send a byte with ser.write(b'H') — the b'' makes a bytes literal, because only bytes cross the wire, never text. The Arduino truly reads that byte and runs digitalWrite(13, HIGH), so the LED you see lights ONLY because your command really arrived. Send b'L' and it goes dark. Wrap the two in a loop with time.sleep(1) between them and you've written software on the laptop that blinks a physical light. The time.sleep(2) up top gives the Arduino a moment to reset when the port opens, exactly as on real hardware.",
+      "source": "Paul McWhorter, Python with Arduino — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "serial",
+      "arduinoSketch": "void setup() {\n    Serial.begin(9600);\n    pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n    if (Serial.available() > 0) {\n        char command = Serial.read();\n        if (command == 'H') {\n            digitalWrite(13, HIGH);\n        }\n        if (command == 'L') {\n            digitalWrite(13, LOW);\n        }\n    }\n}\n",
+      "featuredComponent": "led",
+      "circuit": {
+        "palette": [
+          "pc",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pc",
+          "led",
+          "resistor"
+        ],
+        "notes": "The Uno runs the command sketch shown on the right. Wire pin 13 -> resistor -> LED -> a GND pin, and connect the PC to the Uno with the USB cable. Your Python sends 'H' and 'L' bytes to blink the real LED on pin 13."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import serial\nimport time\n\nser = serial.Serial('COM4', 9600, timeout=1)\ntime.sleep(2)\n\n# Send b'H' to turn the LED on and b'L' to turn it off.\n# Blink it: on, wait, off, wait, forever.\n"
+      },
+      "hints": [
+        "while True:",
+        "ser.write(b'H')",
+        "time.sleep(1)",
+        "ser.write(b'L')",
+        "time.sleep(1)"
+      ],
+      "output": {
+        "initial": "LED: off",
         "status": "Waiting for your Python..."
       }
     }

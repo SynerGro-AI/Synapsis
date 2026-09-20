@@ -234,6 +234,32 @@
   overflow-y: auto;
 }
 
+.companion-sketch {
+  border-top: 1px solid #333;
+  padding: 6px 10px 8px;
+  background: #1c1c1c;
+}
+
+.companion-sketch .panel-label {
+  color: #e8a33d;
+  opacity: 0.8;
+}
+
+.companion-code {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  background: #141414;
+  border: 1px solid #333;
+  border-radius: 4px;
+  max-height: 150px;
+  overflow: auto;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b6c2a0;
+  white-space: pre;
+}
+
 .hint {
   display: flex;
   align-items: center;

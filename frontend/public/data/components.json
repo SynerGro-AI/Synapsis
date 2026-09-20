@@ -315,6 +315,22 @@
       },
       "notes": "The header carries 3V3, 5V, GND, and GPIO pins. Drive LEDs from a GPIO pin through a resistor to a GND pin. Never connect 5V to a GPIO input — the pins are only 3.3V tolerant. There is no analogRead here: GPIO pins are digital in/out (with PWM), not analog.",
       "terminals": "40-pin GPIO header: 3V3, 5V, GND ×8, and BCM GPIO2–GPIO27."
+    },
+    {
+      "id": "pc",
+      "name": "PC (laptop)",
+      "category": "controller",
+      "function": "Your computer, running a Python program. It talks to the Arduino over a USB cable that acts as a serial port — Python sends bytes down the wire and reads bytes the Arduino sends back, so software on the laptop can command and monitor a real circuit.",
+      "science": "USB carries a virtual serial port: a stream of bytes, one after another, at an agreed baud rate (bits per second) that both sides must match. There is no shared memory — the only thing that crosses the cable is bytes. Text has to be encoded to bytes before sending (UTF-8) and decoded back on arrival, and a line is just bytes up to a newline. pyserial's Serial object is Python's end of that wire: .write(b'...') pushes bytes out, .readline() blocks until a full line of bytes has come in.",
+      "specs": {
+        "port": "USB virtual COM port (e.g. COM4, /dev/ttyUSB0)",
+        "baud": "Must match the sketch's Serial.begin() — commonly 9600",
+        "library": "pyserial (import serial)",
+        "dataUnit": "Bytes — encode text before sending, decode after receiving",
+        "flow": "Two directions: PC->Arduino and Arduino->PC, independently"
+      },
+      "notes": "The baud rate in serial.Serial(port, 9600) must equal the sketch's Serial.begin(9600) or the bytes arrive garbled. readline() returns bytes ending in the newline — call .decode().rstrip() before int() or split(','). Arduino's println sends '\r\n', so rstrip() (not just strip of '\n') is the safe choice.",
+      "terminals": "USB (serial to the Arduino)"
     }
   ]
 }

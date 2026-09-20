@@ -22,7 +22,8 @@ export type PartType =
   | "stepper"
   | "shiftreg"
   | "imu"
-  | "pi";
+  | "pi"
+  | "pc";
 
 export interface PlacedPart {
   id: string;
@@ -91,6 +92,8 @@ export interface WorldState {
   humidityPct: number; // 0..100 (DHT11)
   distanceCm: number; // 2..400
   irQueue: number[]; // pending IR command bytes from the remote (FIFO)
+  serialToArduino: number[]; // bytes the PC has written, waiting for the MCU (FIFO)
+  serialToPc: number[]; // bytes the MCU has printed, waiting for the PC (FIFO)
   heading: number; // IMU yaw / compass heading 0..360°
   pitch: number; // IMU pitch -90..90°
   roll: number; // IMU roll -90..90°
@@ -139,6 +142,10 @@ export const PART_PINS: Record<PartType, string[]> = {
     "GPIO26", "GPIO20",
     "GND.39", "GPIO21",
   ],
+  // A laptop/PC linked to the Uno by the USB serial cable. USB is a single
+  // cable, not GPIO, so the serial bridge never depends on this pin being
+  // wired — it is here only so the canvas can draw the connection.
+  pc: ["USB"],
 };
 
 export const PART_LABELS: Record<PartType, string> = {
@@ -161,6 +168,7 @@ export const PART_LABELS: Record<PartType, string> = {
   shiftreg: "Shift register 74HC595",
   imu: "BNO055 9-axis IMU",
   pi: "Raspberry Pi 4",
+  pc: "PC (laptop)",
 };
 
 export const PWM_PINS = new Set([3, 5, 6, 9, 10, 11]);

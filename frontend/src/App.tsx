@@ -7,7 +7,7 @@ import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
-import { ArduinoSim, analyzeSketch } from "./sim/arduino";
+import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
 import {
   CircuitRuntime,
@@ -92,6 +92,9 @@ export default function App() {
 
   const editorRef = useRef<CodeEditorHandle | null>(null);
   const engineRef = useRef<ArduinoSim | PythonSim | null>(null);
+  // For "serial" lessons a second sim runs concurrently: engineRef holds the
+  // learner's PythonSim, sketchRef holds the companion ArduinoSim.
+  const sketchRef = useRef<ArduinoSim | null>(null);
   const runtimeRef = useRef<CircuitRuntime | null>(null);
   const audioRef = useRef<{ ctx: AudioContext; osc: OscillatorNode; gain: GainNode } | null>(null);
   const worldRef = useRef<WorldState>({
@@ -102,6 +105,8 @@ export default function App() {
     humidityPct: 50,
     distanceCm: 50,
     irQueue: [],
+    serialToArduino: [],
+    serialToPc: [],
     heading: 0,
     pitch: 0,
     roll: 0,
@@ -251,7 +256,11 @@ export default function App() {
   const stopSim = useCallback(() => {
     engineRef.current?.stop();
     engineRef.current = null;
+    sketchRef.current?.stop();
+    sketchRef.current = null;
     runtimeRef.current = null;
+    worldRef.current.serialToArduino.length = 0;
+    worldRef.current.serialToPc.length = 0;
     setRunning(false);
     setLedLevels(new Map());
     setCurrentWires(new Map());
@@ -359,10 +368,139 @@ export default function App() {
           setRanClean(true);
           setSerial((s) => [...s.slice(-30), line]);
         },
+        // A Raspberry Pi lesson never opens a serial port; these stay inert.
+        serialWrite: () => 0,
+        serialAvailable: () => 0,
+        serialReadByte: () => -1,
         onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
       };
       sim.run(sketch, io).finally(() => {
         if (engineRef.current === sim) setRunning(false);
+      });
+      return;
+    }
+
+    // The Arduino IO bag is identical whether the sketch runs alone or beside a
+    // Python program — only the serial wiring differs, so both paths share it.
+    const buildArduinoIO = (
+      bridge: Pick<SimIO, "serial" | "serialTx" | "serialAvailable" | "serialRead" | "serialPeek">,
+    ): SimIO => ({
+      digitalWrite: (pin, high) => {
+        setRanClean(true);
+        rt.setPin(pin, high);
+        if (pin === 13) setBoardLed(high);
+        refreshOutputs();
+      },
+      analogWrite: (pin, duty) => {
+        setRanClean(true);
+        rt.setDuty(pin, duty);
+        if (pin === 13) setBoardLed(duty > 0);
+        refreshOutputs();
+      },
+      servoWrite: (pin, angle) => {
+        setRanClean(true);
+        rt.servoWrite(pin, angle);
+        refreshOutputs();
+      },
+      stepperStep: (pins, steps, stepsPerRev) => {
+        setRanClean(true);
+        rt.stepperStep(pins, steps, stepsPerRev);
+        refreshOutputs();
+      },
+      shiftOut: (dataPin, clockPin, value) => {
+        setRanClean(true);
+        rt.shiftOut(dataPin, clockPin, value);
+        refreshOutputs();
+      },
+      tone: (pin, freq) => {
+        setRanClean(true);
+        rt.tone(pin, freq);
+        refreshOutputs();
+      },
+      noTone: (pin) => {
+        rt.noTone(pin);
+        refreshOutputs();
+      },
+      lcd: (op, a, b) => {
+        setRanClean(true);
+        rt.lcdOp(op, a, b);
+        refreshOutputs();
+      },
+      digitalRead: (pin, mode) => rt.digitalRead(pin, mode),
+      analogRead: (pin) => rt.analogRead(pin),
+      pulseIn: (pin) => rt.pulseIn(pin),
+      dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
+      imuRead: (quantity, axis) => rt.imuRead(quantity, axis),
+      imuReadQuat: (axis) => rt.imuReadQuat(axis),
+      imuPresent: () => rt.imuPresent(),
+      irDecode: (pin) => rt.irDecode(pin),
+      ...bridge,
+      onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
+    });
+
+    // "serial" lesson: the learner's Python (on the PC) and the fixed companion
+    // sketch (on the Arduino) run concurrently, exchanging real bytes across the
+    // two WorldState FIFOs. An LED lights only because a byte was truly read.
+    if (lesson.kind === "serial") {
+      const world = worldRef.current;
+      world.serialToArduino.length = 0;
+      world.serialToPc.length = 0;
+      world.irQueue.length = 0;
+
+      const tag = (src: "Arduino" | "PC", line: string) =>
+        setSerial((s) => [...s.slice(-40), `${src === "Arduino" ? "Arduino ●" : "PC ●"} ${line}`]);
+
+      const arduino = new ArduinoSim();
+      const python = new PythonSim();
+      sketchRef.current = arduino;
+      engineRef.current = python; // completion + "running" follow the learner's program
+
+      const arduinoIo = buildArduinoIO({
+        serial: (line) => tag("Arduino", line),
+        serialTx: (byte) => {
+          world.serialToPc.push(byte & 0xff);
+        },
+        serialAvailable: () => world.serialToArduino.length,
+        serialRead: () => world.serialToArduino.shift() ?? -1,
+        serialPeek: () => (world.serialToArduino.length ? world.serialToArduino[0] : -1),
+      });
+
+      const pyIo: PyGpioIO = {
+        // A PC has no GPIO — these stay inert; serial lessons never import RPi.GPIO.
+        setmode: () => {},
+        setup: () => {},
+        output: () => {},
+        input: () => false,
+        pwmStart: () => {},
+        pwmChangeDuty: () => {},
+        pwmChangeFreq: () => {},
+        pwmStop: () => {},
+        cleanup: () => {},
+        print: (line) => {
+          setRanClean(true);
+          tag("PC", line);
+        },
+        serialWrite: (bytes) => {
+          setRanClean(true);
+          for (const b of bytes) world.serialToArduino.push(b & 0xff);
+          return bytes.length;
+        },
+        serialAvailable: () => world.serialToPc.length,
+        serialReadByte: () => {
+          const b = world.serialToPc.shift() ?? -1;
+          if (b !== -1) setRanClean(true);
+          return b;
+        },
+        onError: (message) => tag("PC", `⚠ ${message}`),
+      };
+
+      const aDone = arduino.run(lesson.arduinoSketch ?? "", arduinoIo);
+      const pDone = python.run(sketch, pyIo);
+      Promise.allSettled([aDone, pDone]).finally(() => {
+        if (engineRef.current === python) {
+          arduino.stop();
+          setRunning(false);
+        }
       });
       return;
     }
@@ -372,62 +510,20 @@ export default function App() {
     worldRef.current.irQueue.length = 0; // drop stale remote presses
 
     sim
-      .run(sketch, {
-        digitalWrite: (pin, high) => {
-          setRanClean(true);
-          rt.setPin(pin, high);
-          if (pin === 13) setBoardLed(high);
-          refreshOutputs();
-        },
-        analogWrite: (pin, duty) => {
-          setRanClean(true);
-          rt.setDuty(pin, duty);
-          if (pin === 13) setBoardLed(duty > 0);
-          refreshOutputs();
-        },
-        servoWrite: (pin, angle) => {
-          setRanClean(true);
-          rt.servoWrite(pin, angle);
-          refreshOutputs();
-        },
-        stepperStep: (pins, steps, stepsPerRev) => {
-          setRanClean(true);
-          rt.stepperStep(pins, steps, stepsPerRev);
-          refreshOutputs();
-        },
-        shiftOut: (dataPin, clockPin, value) => {
-          setRanClean(true);
-          rt.shiftOut(dataPin, clockPin, value);
-          refreshOutputs();
-        },
-        tone: (pin, freq) => {
-          setRanClean(true);
-          rt.tone(pin, freq);
-          refreshOutputs();
-        },
-        noTone: (pin) => {
-          rt.noTone(pin);
-          refreshOutputs();
-        },
-        lcd: (op, a, b) => {
-          setRanClean(true);
-          rt.lcdOp(op, a, b);
-          refreshOutputs();
-        },
-        digitalRead: (pin, mode) => rt.digitalRead(pin, mode),
-        analogRead: (pin) => rt.analogRead(pin),
-        pulseIn: (pin) => rt.pulseIn(pin),
-        dhtRead: (pin, kind) => rt.dhtRead(pin, kind),
-        imuRead: (quantity, axis) => rt.imuRead(quantity, axis),
-        imuReadQuat: (axis) => rt.imuReadQuat(axis),
-        imuPresent: () => rt.imuPresent(),
-        irDecode: (pin) => rt.irDecode(pin),
-        serial: (line) => {
-          setRanClean(true);
-          setSerial((s) => [...s.slice(-30), line]);
-        },
-        onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
-      })
+      .run(
+        sketch,
+        buildArduinoIO({
+          serial: (line) => {
+            setRanClean(true);
+            setSerial((s) => [...s.slice(-30), line]);
+          },
+          // No PC is attached in a plain Arduino lesson, so the serial wire is idle.
+          serialTx: () => {},
+          serialAvailable: () => 0,
+          serialRead: () => -1,
+          serialPeek: () => -1,
+        }),
+      )
       .finally(() => {
         if (engineRef.current === sim) {
           setRunning(false);
@@ -440,8 +536,16 @@ export default function App() {
     () =>
       lesson.kind === "python"
         ? validatePython(circuit, analyzePython(code), lesson.circuit.required as PartType[])
-        : validate(circuit, analyzeSketch(code), lesson.circuit.required as PartType[]),
-    [circuit, code, lesson.circuit.required, lesson.kind],
+        : lesson.kind === "serial"
+          ? // The learner types Python; the wired circuit must match the running
+            // companion sketch's pins, so validate against that fixed sketch.
+            validate(
+              circuit,
+              analyzeSketch(lesson.arduinoSketch ?? ""),
+              lesson.circuit.required as PartType[],
+            )
+          : validate(circuit, analyzeSketch(code), lesson.circuit.required as PartType[]),
+    [circuit, code, lesson.circuit.required, lesson.kind, lesson.arduinoSketch],
   );
   const circuitOk = !diagnoses.some((d) => d.level === "error");
 
@@ -776,7 +880,13 @@ export default function App() {
 
             <div className="editor">
               <div className="panel-label editor-bar">
-                <span>{lesson.kind === "python" ? "Code IDE — Python (RPi.GPIO)" : "Code IDE — Arduino C++"}</span>
+                <span>
+                  {lesson.kind === "python"
+                    ? "Code IDE — Python (RPi.GPIO)"
+                    : lesson.kind === "serial"
+                      ? "Code IDE — Python (pyserial)"
+                      : "Code IDE — Arduino C++"}
+                </span>
                 {running ? (
                   <button className="run stop" onClick={stopSim}>
                     ■ Stop
@@ -805,6 +915,14 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              {lesson.kind === "serial" && lesson.arduinoSketch && (
+                <div className="companion-sketch">
+                  <div className="panel-label">
+                    Arduino sketch (running) — pre-flashed, read-only
+                  </div>
+                  <pre className="companion-code">{lesson.arduinoSketch}</pre>
+                </div>
+              )}
             </div>
           </section>
 

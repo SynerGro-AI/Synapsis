@@ -28,6 +28,12 @@ export interface PyGpioIO {
   pwmStop(pin: number): void;
   cleanup(): void;
   print(line: string): void;
+  /** Write bytes out the PC's serial port toward the Arduino; returns the count. */
+  serialWrite(bytes: number[]): number;
+  /** Bytes waiting from the Arduino for the PC to read (ser.in_waiting). */
+  serialAvailable(): number;
+  /** Consume one byte the Arduino sent, or -1 when the wire is empty. */
+  serialReadByte(): number;
   onError(message: string): void;
 }
 
@@ -57,9 +63,19 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ---------- Values ----------
 
-type PyNamespace = { __ns: "GPIO" | "time" | "random" };
+type PyNamespace = { __ns: "GPIO" | "time" | "random" | "serial" };
 type PyPwm = { __pwm: number; freq: number; running: boolean };
 type PyFunc = { __func: FuncDef };
+/** A real byte string (Python `bytes`) — every element 0–255. */
+type PyBytes = { __bytes: number[] };
+/** An open pyserial port. Reads/writes cross the shared WorldState FIFOs. */
+type PySerial = {
+  __serial: true;
+  port: string;
+  baud: number;
+  timeout: number | null;
+  open: boolean;
+};
 type PyValue =
   | number
   | string
@@ -68,7 +84,9 @@ type PyValue =
   | PyValue[]
   | PyNamespace
   | PyPwm
-  | PyFunc;
+  | PyFunc
+  | PyBytes
+  | PySerial;
 
 const isNamespace = (v: PyValue): v is PyNamespace =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__ns" in v;
@@ -76,12 +94,41 @@ const isPwm = (v: PyValue): v is PyPwm =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__pwm" in v;
 const isFunc = (v: PyValue): v is PyFunc =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__func" in v;
+const isBytes = (v: PyValue): v is PyBytes =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__bytes" in v;
+const isSerial = (v: PyValue): v is PySerial =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__serial" in v;
+
+/** Render a bytes value the way CPython's repr does: b'...' with escapes. */
+function bytesRepr(b: number[]): string {
+  let out = "b'";
+  for (const c of b) {
+    if (c === 10) out += "\\n";
+    else if (c === 13) out += "\\r";
+    else if (c === 9) out += "\\t";
+    else if (c === 39) out += "\\'";
+    else if (c === 92) out += "\\\\";
+    else if (c >= 32 && c < 127) out += String.fromCharCode(c);
+    else out += "\\x" + c.toString(16).padStart(2, "0");
+  }
+  return out + "'";
+}
+
+/** Python str.lstrip/rstrip with an explicit character set. */
+function trimChars(s: string, chars: string, left: boolean, right: boolean): string {
+  let start = 0;
+  let end = s.length;
+  if (left) while (start < end && chars.includes(s[start])) start++;
+  if (right) while (end > start && chars.includes(s[end - 1])) end--;
+  return s.slice(start, end);
+}
 
 function truthy(v: PyValue): boolean {
   if (v === null || v === false) return false;
   if (v === 0) return false;
   if (v === "") return false;
   if (Array.isArray(v)) return v.length > 0;
+  if (isBytes(v)) return v.__bytes.length > 0;
   return true;
 }
 
@@ -92,6 +139,8 @@ function pyStr(v: PyValue): string {
   if (typeof v === "number") return numStr(v);
   if (typeof v === "string") return v;
   if (Array.isArray(v)) return `[${v.map(pyRepr).join(", ")}]`;
+  if (isBytes(v)) return bytesRepr(v.__bytes);
+  if (isSerial(v)) return `Serial<port=${v.port}, baudrate=${v.baud}, open=${v.open}>`;
   if (isPwm(v)) return `<PWM on GPIO${v.__pwm}>`;
   if (isNamespace(v)) return `<module ${v.__ns}>`;
   return "<function>";
@@ -109,6 +158,8 @@ function typeName(v: PyValue): string {
   if (typeof v === "number") return Number.isInteger(v) ? "int" : "float";
   if (typeof v === "string") return "str";
   if (Array.isArray(v)) return "list";
+  if (isBytes(v)) return "bytes";
+  if (isSerial(v)) return "Serial";
   return "object";
 }
 
@@ -117,6 +168,7 @@ function typeName(v: PyValue): string {
 type Expr =
   | { k: "num"; v: number }
   | { k: "str"; v: string }
+  | { k: "bytes"; v: number[] }
   | { k: "bool"; v: boolean }
   | { k: "none" }
   | { k: "name"; name: string }
@@ -158,9 +210,10 @@ type Stmt =
 // ---------- Tokenizer (indentation-aware) ----------
 
 interface Token {
-  t: string; // "NAME" "NUM" "STR" "FSTR" "OP" "KW" "NEWLINE" "INDENT" "DEDENT" "EOF"
+  t: string; // "NAME" "NUM" "STR" "FSTR" "BYTES" "OP" "KW" "NEWLINE" "INDENT" "DEDENT" "EOF"
   v?: string | number;
   parts?: FStrPart[];
+  bytes?: number[];
 }
 
 const KEYWORDS = new Set([
@@ -228,6 +281,16 @@ function lineTokens(s: string, tokens: Token[]): number {
       continue;
     }
     if (c === "#") break; // trailing comment
+    // bytes literal b"..." / b'...' — a real byte string, not text
+    if ((c === "b" || c === "B") && (s[i + 1] === '"' || s[i + 1] === "'")) {
+      const q = s[i + 1];
+      const [body, next] = readString(s, i + 2, q);
+      const bytes: number[] = [];
+      for (let k = 0; k < body.length; k++) bytes.push(body.charCodeAt(k) & 0xff);
+      tokens.push({ t: "BYTES", bytes });
+      i = next;
+      continue;
+    }
     // f-string?
     if ((c === "f" || c === "F") && (s[i + 1] === '"' || s[i + 1] === "'")) {
       const q = s[i + 1];
@@ -761,6 +824,10 @@ class Parser {
       this.p++;
       return { k: "str", v: String(t.v) };
     }
+    if (t.t === "BYTES") {
+      this.p++;
+      return { k: "bytes", v: (t.bytes ?? []).slice() };
+    }
     if (t.t === "FSTR") {
       this.p++;
       return { k: "fstr", parts: t.parts ?? [] };
@@ -1023,6 +1090,10 @@ export class PythonSim {
       this.scope.set(alias ?? "random", { __ns: "random" });
       return;
     }
+    if (module === "serial") {
+      this.scope.set(alias ?? "serial", { __ns: "serial" });
+      return;
+    }
     if (module === "RPi") {
       // `import RPi` alone doesn't expose GPIO; the real hint is to import RPi.GPIO.
       throw new PyError(
@@ -1039,6 +1110,11 @@ export class PythonSim {
         if (n === "sleep") this.scope.set("sleep", { __ns: "time" });
         else throw new PyError("ImportError", `cannot import name '${n}' from 'time'`);
       return;
+    }
+    if (module === "serial") {
+      // pyserial is used as `import serial` then `serial.Serial(...)`, which keeps the
+      // timeout= keyword; steer the learner there rather than a kwarg-losing name call.
+      throw new PyError("ImportError", "use 'import serial' then 'serial.Serial(port, baud, timeout=...)'");
     }
     throw new PyError("ModuleNotFoundError", `No module named '${module}'`);
   }
@@ -1065,6 +1141,8 @@ export class PythonSim {
         return e.v;
       case "str":
         return e.v;
+      case "bytes":
+        return { __bytes: e.v.slice() };
       case "bool":
         return e.v;
       case "none":
@@ -1106,6 +1184,13 @@ export class PythonSim {
           if (i < 0 || i >= obj.length) throw new PyError("IndexError", "index out of range");
           return obj[i];
         }
+        if (isBytes(obj)) {
+          if (typeof idx !== "number") throw new PyError("TypeError", "indices must be integers");
+          const arr = obj.__bytes;
+          const i = idx < 0 ? arr.length + idx : idx;
+          if (i < 0 || i >= arr.length) throw new PyError("IndexError", "index out of range");
+          return arr[i]; // indexing bytes yields the int value, like CPython
+        }
         throw new PyError("TypeError", `'${typeName(obj)}' object is not subscriptable`);
       }
       case "attr": {
@@ -1119,6 +1204,14 @@ export class PythonSim {
 
   private getAttr(obj: PyValue, name: string): PyValue {
     if (isNamespace(obj) && obj.__ns === "GPIO" && name in GPIO_CONSTS) return GPIO_CONSTS[name];
+    if (isSerial(obj)) {
+      // Real pyserial read-only properties.
+      if (name === "in_waiting") return this.io.serialAvailable();
+      if (name === "is_open") return obj.open;
+      if (name === "port") return obj.port;
+      if (name === "baudrate") return obj.baud;
+      throw new PyError("AttributeError", `'Serial' object has no attribute '${name}'`);
+    }
     // Methods are resolved at call-time via a bound marker.
     return { __ns: "__attr__" } as unknown as PyValue; // placeholder; real dispatch in evalCall
   }
@@ -1163,6 +1256,9 @@ export class PythonSim {
       throw new PyError("AttributeError", `module 'time' has no attribute '${name}'`);
     }
     if (isNamespace(obj) && obj.__ns === "random") return this.randomCall(name, args);
+    if (isNamespace(obj) && obj.__ns === "serial") return this.serialModuleCall(name, args, kwargs);
+    if (isSerial(obj)) return this.serialObjCall(obj, name, args);
+    if (isBytes(obj)) return this.bytesMethod(obj, name, args);
     if (isPwm(obj)) return this.pwmCall(obj, name, args);
     if (typeof obj === "string") return this.strMethod(obj, name, args);
     if (Array.isArray(obj)) return this.listMethod(obj, name, args);
@@ -1179,6 +1275,7 @@ export class PythonSim {
       case "len": {
         const v = args[0];
         if (Array.isArray(v) || typeof v === "string") return v.length;
+        if (isBytes(v)) return v.__bytes.length;
         throw new PyError("TypeError", `object of type '${typeName(v)}' has no len()`);
       }
       case "int":
@@ -1325,6 +1422,94 @@ export class PythonSim {
     return null;
   }
 
+  // ----- pyserial: serial.Serial(...) and its methods -----
+  // The port is genuinely opened over the shared WorldState FIFOs; every byte
+  // written or read really crosses the wire to/from the running Arduino sketch.
+  private serialModuleCall(name: string, args: PyValue[], kwargs: Map<string, PyValue>): PyValue {
+    if (name !== "Serial")
+      throw new PyError("AttributeError", `module 'serial' has no attribute '${name}'`);
+    const portVal = args[0] ?? kwargs.get("port");
+    if (portVal === undefined || portVal === null)
+      throw new PyError("TypeError", "Serial() needs a port, e.g. serial.Serial('COM4', 9600)");
+    const port = pyStr(portVal);
+    const baudVal = args[1] ?? kwargs.get("baudrate") ?? 9600;
+    const baud = Math.trunc(Number(baudVal));
+    const tVal = kwargs.get("timeout");
+    const timeout = tVal === undefined || tVal === null ? null : Number(tVal);
+    return { __serial: true, port, baud, timeout, open: true };
+  }
+
+  private async serialObjCall(ser: PySerial, name: string, args: PyValue[]): Promise<PyValue> {
+    if (name === "write") {
+      const b = args[0];
+      if (!isBytes(b))
+        // pyserial rejects str — teaches the learner to use b'...' or .encode().
+        throw new PyError("TypeError", "unicode strings are not supported, please encode to bytes");
+      if (!ser.open) throw new PyError("SerialException", "attempting to use a port that is not open");
+      return this.io.serialWrite(b.__bytes.slice());
+    }
+    if (name === "readline") return this.serialRead(ser, -1);
+    if (name === "read") return this.serialRead(ser, args.length ? Math.trunc(Number(args[0])) : 1);
+    if (name === "close") {
+      ser.open = false;
+      return null;
+    }
+    if (name === "flush" || name === "reset_output_buffer") return null;
+    if (name === "reset_input_buffer") {
+      while (this.io.serialReadByte() !== -1) {
+        /* drain the incoming wire */
+      }
+      return null;
+    }
+    throw new PyError("AttributeError", `'Serial' object has no attribute '${name}'`);
+  }
+
+  // Blocking read shared by readline() (limit < 0 → read through '\n') and read(n)
+  // (limit ≥ 0 → read n bytes). Mirrors the timeSleep poll: yields cooperatively,
+  // honors stop(), resets the watchdog each poll, and respects the port timeout.
+  private async serialRead(ser: PySerial, limit: number): Promise<PyValue> {
+    if (!ser.open) throw new PyError("SerialException", "attempting to use a port that is not open");
+    this.stepsSinceDelay = 0;
+    const bytes: number[] = [];
+    const hasTimeout = ser.timeout !== null;
+    const deadline = hasTimeout ? Date.now() + Math.max(0, ser.timeout as number) * 1000 : 0;
+    const hardCap = Date.now() + 10_000; // never wedge the JS thread, even with timeout=None
+    while (!this.stopped) {
+      if (limit >= 0 && bytes.length >= limit) break;
+      const c = this.io.serialReadByte();
+      if (c === -1) {
+        if (hasTimeout && Date.now() >= deadline) break; // pyserial returns what it has
+        if (Date.now() >= hardCap) break;
+        await sleep(20);
+        this.stepsSinceDelay = 0;
+        continue;
+      }
+      bytes.push(c);
+      if (limit < 0 && c === 10) break; // '\n' terminates a line (newline kept, as in pyserial)
+    }
+    if (this.stopped) throw new PyError("KeyboardInterrupt", "");
+    return { __bytes: bytes };
+  }
+
+  private bytesMethod(b: PyBytes, name: string, args: PyValue[]): PyValue {
+    switch (name) {
+      case "decode":
+        // bytes.decode() -> real UTF-8 text (the string the Arduino printed).
+        return new TextDecoder().decode(new Uint8Array(b.__bytes));
+      case "rstrip":
+      case "lstrip":
+      case "strip": {
+        const drop = args.length && isBytes(args[0]) ? new Set(args[0].__bytes) : new Set([9, 10, 13, 32]);
+        const arr = b.__bytes.slice();
+        if (name !== "rstrip") while (arr.length && drop.has(arr[0])) arr.shift();
+        if (name !== "lstrip") while (arr.length && drop.has(arr[arr.length - 1])) arr.pop();
+        return { __bytes: arr };
+      }
+      default:
+        throw new PyError("AttributeError", `'bytes' object has no attribute '${name}'`);
+    }
+  }
+
   // The `random` module's authentic subset: randint/random/uniform/choice.
   // Backed by Math.random(), so results are genuinely unpredictable — exactly
   // what a reaction-timer game needs. Bad args raise Python-style errors.
@@ -1394,6 +1579,13 @@ export class PythonSim {
         return s.toLowerCase();
       case "strip":
         return s.trim();
+      case "rstrip":
+        return args.length ? trimChars(s, String(args[0]), false, true) : s.replace(/\s+$/, "");
+      case "lstrip":
+        return args.length ? trimChars(s, String(args[0]), true, false) : s.replace(/^\s+/, "");
+      case "encode":
+        // str.encode() -> real UTF-8 bytes (what pyserial's .write wants).
+        return { __bytes: Array.from(new TextEncoder().encode(s)) };
       case "format":
         return s.replace(/\{\}/g, () => pyStr(args.shift() ?? ""));
       case "split":
@@ -1443,6 +1635,8 @@ export class PythonSim {
   private eq(a: PyValue, b: PyValue): boolean {
     if (Array.isArray(a) && Array.isArray(b))
       return a.length === b.length && a.every((x, i) => this.eq(x, b[i]));
+    if (isBytes(a) && isBytes(b))
+      return a.__bytes.length === b.__bytes.length && a.__bytes.every((x, i) => x === b.__bytes[i]);
     return a === b;
   }
 

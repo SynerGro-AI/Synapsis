@@ -28,6 +28,7 @@ const SCALE: Record<string, number> = {
   shiftreg: 0.8,
   imu: 0.8,
   pi: 0.8,
+  pc: 1,
 };
 
 const ID_PREFIX: Record<PartType, string> = {
@@ -50,6 +51,7 @@ const ID_PREFIX: Record<PartType, string> = {
   shiftreg: "SR",
   imu: "IMU",
   pi: "PI",
+  pc: "PC",
 };
 
 /**
@@ -101,6 +103,7 @@ const FALLBACK_PINS: Partial<Record<PartType, WokwiPinInfo[]>> = {
     { name: "SCL", x: 105, y: 88 },
   ],
   pi: piHeaderAnchors(),
+  pc: [{ name: "USB", x: 122, y: 70 }],
 };
 
 /**
@@ -211,6 +214,28 @@ function ImuVisual({ heading, pitch, roll }: { heading: number; pitch: number; r
       <text x="65" y="74" textAnchor="middle" fontSize="6" fill="#9fe8c2" fontFamily="monospace">
         {`H${Math.round(heading)} P${Math.round(pitch)} R${Math.round(roll)}`}
       </text>
+    </svg>
+  );
+}
+
+/** The learner's laptop, linked to the Uno by the USB serial cable. Purely a
+ *  visual anchor for the bridge lessons — the USB pin lets the canvas draw the
+ *  cable, but the serial transport never depends on it being wired. */
+function PcVisual() {
+  return (
+    <svg width="140" height="100" viewBox="0 0 140 100">
+      {/* screen */}
+      <rect x="18" y="8" width="90" height="58" rx="4" fill="#1a1d22" stroke="#0a0c0f" strokeWidth="2" />
+      <rect x="24" y="14" width="78" height="46" rx="2" fill="#0d47a1" />
+      <text x="63" y="42" textAnchor="middle" fontSize="10" fill="#8fd0ff" fontFamily="monospace">
+        &gt;_
+      </text>
+      {/* hinge + keyboard base */}
+      <path d="M8 78 L118 78 L108 66 L18 66 Z" fill="#2a2e35" stroke="#14161a" strokeWidth="1.5" />
+      <rect x="52" y="70" width="22" height="4" rx="2" fill="#14161a" />
+      {/* USB serial port + cable stub on the right, at FALLBACK_PINS.pc */}
+      <rect x="112" y="66" width="14" height="8" rx="1" fill="#3a3f47" stroke="#20242a" />
+      <rect x="119" y="67" width="9" height="6" fill="#c9a227" />
     </svg>
   );
 }
@@ -722,6 +747,7 @@ export default function CircuitCanvas({
           <ImuVisual heading={imuOrient.heading} pitch={imuOrient.pitch} roll={imuOrient.roll} />
         )}
         {type === "pi" && <RaspberryPiVisual />}
+        {type === "pc" && <PcVisual />}
         {isSelected && id !== "uno" && <span className="part-tag">{id}</span>}
       </div>
     );

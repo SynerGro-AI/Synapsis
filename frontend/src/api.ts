@@ -31,8 +31,12 @@ export interface Lesson {
   title: string;
   description: string;
   source?: string;
-  /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO. */
-  kind?: "arduino" | "terminal" | "python";
+  /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO;
+   *  "serial" = a Python program bridging over a serial port to a running Arduino sketch. */
+  kind?: "arduino" | "terminal" | "python" | "serial";
+  /** For "serial" lessons: the fixed companion Arduino sketch (shown read-only,
+   *  "pre-flashed" and run in the background while the learner types Python). */
+  arduinoSketch?: string;
   terminal?: {
     shell: string;
     /** Prompt user (defaults to "you"); Pi lessons use "pi". */

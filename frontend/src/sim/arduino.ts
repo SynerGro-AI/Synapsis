@@ -27,6 +27,14 @@ export interface SimIO {
   noTone(pin: number): void;
   lcd(op: "clear" | "setCursor" | "print", a?: number | string, b?: number): void;
   serial(line: string): void;
+  /** Push one byte transmitted by Serial.print/println onto the PC-bound wire. */
+  serialTx(byte: number): void;
+  /** Bytes waiting from the PC on the serial wire — Serial.available(). */
+  serialAvailable(): number;
+  /** Consume and return the next byte from the PC, or -1 — Serial.read(). */
+  serialRead(): number;
+  /** Return the next byte from the PC without consuming it, or -1 — Serial.peek(). */
+  serialPeek(): number;
   onError(message: string): void;
 }
 
@@ -98,6 +106,21 @@ function tokenize(source: string): Token[] {
       }
       tokens.push({ type: "str", value });
       i = j + 1;
+    } else if (ch === "'") {
+      // Char literal: in C a 'H' IS an int equal to its character code (72), so
+      // we tokenize it as a number. That keeps `c == 'H'` an honest byte compare
+      // against whatever Serial.read() returned — no string-matching shortcut.
+      let code: number;
+      if (s[i + 1] === "\\") {
+        const esc = s[i + 2];
+        const map: Record<string, number> = { n: 10, r: 13, t: 9, "0": 0, "\\": 92, "'": 39 };
+        code = esc in map ? map[esc] : esc.charCodeAt(0);
+        i += 4; // '\?'  -> quote, backslash, esc, closing quote
+      } else {
+        code = s.charCodeAt(i + 1);
+        i += 3; // 'X' -> quote, char, closing quote
+      }
+      tokens.push({ type: "num", value: String(code) });
     } else {
       const two = s.slice(i, i + 2);
       if (puncts.includes(two)) {
@@ -1017,15 +1040,72 @@ export class ArduinoSim {
               : String(value);
         }
         this.serialBuffer += text;
+        // Every byte print()/println() emits really crosses the wire to the PC.
+        // println() terminates the line with "\r\n", exactly like Arduino's
+        // Print::println, so a pyserial readline() sees the '\n' and a
+        // .rstrip()/.strip() drops the trailing CR.
+        const wire = expr.name === "Serial.println" ? text + "\r\n" : text;
+        for (let i = 0; i < wire.length; i++) io.serialTx(wire.charCodeAt(i));
         if (expr.name === "Serial.println") {
           io.serial(this.serialBuffer);
           this.serialBuffer = "";
         }
         return 0;
       }
+      case "Serial.available":
+        return io.serialAvailable();
+      case "Serial.read":
+        return io.serialRead();
+      case "Serial.peek":
+        return io.serialPeek();
+      case "Serial.parseInt":
+        return await this.serialParseNumber(io, false);
+      case "Serial.parseFloat":
+        return await this.serialParseNumber(io, true);
       default:
         throw new SimError(`'${expr.name}()' isn't supported yet`);
     }
+  }
+
+  /** Arduino Stream::parseInt / parseFloat: wait (up to the ~1 s timeout) for
+   *  numeric bytes from the PC, skip leading non-numeric bytes, read the number,
+   *  then stop at (and consume) the first non-numeric byte that follows. Only
+   *  bytes that genuinely crossed the wire are parsed — no faked values. */
+  private async serialParseNumber(io: SimIO, allowFloat: boolean): Promise<number> {
+    this.stepsSinceDelay = 0;
+    const timeout = 1000;
+    const start = Date.now();
+    let result = "";
+    let sawDigit = false;
+    let sawDot = false;
+    while (!this.stopped) {
+      if (io.serialAvailable() <= 0) {
+        if (sawDigit) break; // have a number and the stream paused — done
+        if (Date.now() - start > timeout) break; // timed out waiting for input
+        await sleep(Math.min(50, Math.max(0, timeout - (Date.now() - start))));
+        this.stepsSinceDelay = 0;
+        continue;
+      }
+      const ch = String.fromCharCode(io.serialPeek());
+      if (ch >= "0" && ch <= "9") {
+        result += ch;
+        sawDigit = true;
+        io.serialRead();
+      } else if (!sawDigit && (ch === "-" || ch === "+") && result === "") {
+        result += ch;
+        io.serialRead();
+      } else if (allowFloat && ch === "." && !sawDot && sawDigit) {
+        result += ch;
+        sawDot = true;
+        io.serialRead();
+      } else {
+        io.serialRead(); // skip leading junk, or consume the terminator
+        if (sawDigit) break;
+      }
+    }
+    const n = allowFloat ? parseFloat(result) : parseInt(result, 10);
+    if (Number.isNaN(n)) return 0;
+    return allowFloat ? n : Math.trunc(n);
   }
 }
 
