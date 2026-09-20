@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/wrangler/config-schema.json",
   "name": "synapsis",
+  "account_id": "ff1f7aa57999e3d7914dd00d2ff46632",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-01",
   "assets": {
