@@ -4726,6 +4726,121 @@
         "initial": "LED: off",
         "status": "Waiting for your Python..."
       }
+    },
+    {
+      "id": 403,
+      "phase": "python_serial",
+      "title": "Read a Sensor",
+      "description": "In 401 the Arduino sent a plain count; now it sends something that changes — a real sensor. A potentiometer's wiper feeds pin A0, and the sketch calls analogRead(A0), which measures the voltage there and digitizes it to a whole number from 0 (0 V) up to 1023 (5 V). Serial.println pushes that number out every fifth of a second. On your end you already know readline().decode().rstrip() hands you the line as a string — but a string like \"742\" can't be compared to a number, so int() converts it into a real integer. Once value is an int you can DECIDE with it: past the halfway mark, print HIGH; otherwise, low. Turn the knob in the simulation and both the numbers and your decision follow it, because value is the exact reading the Arduino measured — never a canned sequence.",
+      "source": "Paul McWhorter, Python with Arduino — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "serial",
+      "arduinoSketch": "void setup() {\n    Serial.begin(9600);\n}\n\nvoid loop() {\n    int value = analogRead(A0);\n    Serial.println(value);\n    delay(200);\n}\n",
+      "featuredComponent": "potentiometer",
+      "circuit": {
+        "palette": [
+          "pc",
+          "potentiometer"
+        ],
+        "required": [
+          "pc",
+          "potentiometer"
+        ],
+        "notes": "The Uno runs the sensor sketch shown on the right. Wire the potentiometer: VCC -> 5V, GND -> a GND pin, SIG -> A0. Connect the PC to the Uno with the USB cable. Your Python reads each number, turns it into an int, and reacts when it passes 500."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import serial\n\nser = serial.Serial('COM4', 9600, timeout=1)\n\n# The Arduino sends the potentiometer reading (0-1023) every fifth of a second.\n# Read each line, turn it into an int with int(), and print HIGH or low\n# depending on whether it is past the middle (500).\n"
+      },
+      "hints": [
+        "while True:",
+        "line = ser.readline()",
+        "value = int(line.decode().rstrip())",
+        "if value > 500:",
+        "print('HIGH', value)",
+        "else:",
+        "print('low', value)"
+      ],
+      "output": {
+        "initial": "Serial monitor: waiting",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 404,
+      "phase": "python_serial",
+      "title": "Brightness from Python",
+      "description": "In 402 your bytes flipped the LED fully on or fully off. Now you'll set it to any level in between. The sketch calls Serial.parseInt(), which watches the incoming bytes and assembles the digits into one whole number — send \"180\" and it hands back the int 180 — then analogWrite(ledPin, that) drives the LED at that brightness with PWM, where 0 is off and 255 is full. parseInt keeps reading until it meets a non-digit, so you finish every value with \"\\n\" to tell it the number is complete. You can't write an int straight onto the wire — the wire only carries bytes — so str(level) makes it text, + \"\\n\" adds the terminator, and .encode() turns the whole string into bytes for ser.write. Step through a few levels with a pause between each and the LED fades, every step exactly the number you sent.",
+      "source": "Paul McWhorter, Python with Arduino — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "serial",
+      "arduinoSketch": "int ledPin = 9;\n\nvoid setup() {\n    Serial.begin(9600);\n    pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n    if (Serial.available() > 0) {\n        int brightness = Serial.parseInt();\n        analogWrite(ledPin, brightness);\n    }\n}\n",
+      "featuredComponent": "led",
+      "circuit": {
+        "palette": [
+          "pc",
+          "led",
+          "resistor"
+        ],
+        "required": [
+          "pc",
+          "led",
+          "resistor"
+        ],
+        "notes": "The Uno runs the brightness sketch shown on the right. Wire pin 9 -> resistor -> LED -> a GND pin (pin 9 can do PWM), and connect the PC to the Uno with the USB cable. Your Python sends brightness numbers from 0 to 255."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import serial\nimport time\n\nser = serial.Serial('COM4', 9600, timeout=1)\ntime.sleep(2)\n\n# Send a brightness (0-255) as text ending in \"\\n\" so parseInt knows the\n# number is finished. Step through several levels and watch the LED fade.\n"
+      },
+      "hints": [
+        "for level in [0, 64, 128, 192, 255]:",
+        "command = str(level) + '\\n'",
+        "ser.write(command.encode())",
+        "print('brightness', level)",
+        "time.sleep(1)"
+      ],
+      "output": {
+        "initial": "LED: off",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 405,
+      "phase": "python_serial",
+      "title": "Two Values (CSV)",
+      "description": "One line can carry more than one reading. This sketch measures TWO sensors — a potentiometer on A0 and a light sensor on A1 — and sends them on a single line separated by a comma: Serial.print(pot), then Serial.print(\",\"), then Serial.println(light) produces a line like \"742,318\". That comma-separated shape is called CSV, and every language knows how to take it apart. On your side, after readline().decode().rstrip() gives you the string \"742,318\", line.split(',') breaks it at the comma into a list: ['742', '318']. Index that list — parts[0] is the first value, parts[1] the second — and int() each into a real number. Now both sensors are in Python at the same moment, each the genuine reading its own pin measured.",
+      "source": "Paul McWhorter, Python with Arduino — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "serial",
+      "arduinoSketch": "void setup() {\n    Serial.begin(9600);\n}\n\nvoid loop() {\n    int pot = analogRead(A0);\n    int light = analogRead(A1);\n    Serial.print(pot);\n    Serial.print(\",\");\n    Serial.println(light);\n    delay(200);\n}\n",
+      "featuredComponent": "potentiometer",
+      "circuit": {
+        "palette": [
+          "pc",
+          "potentiometer",
+          "photoresistor"
+        ],
+        "required": [
+          "pc",
+          "potentiometer",
+          "photoresistor"
+        ],
+        "notes": "The Uno runs the two-sensor sketch shown on the right. Wire the potentiometer SIG -> A0 (VCC -> 5V, GND -> a GND pin) and the light sensor AO -> A1 (VCC -> 5V, GND -> a GND pin). Connect the PC to the Uno with the USB cable. Your Python splits each line into its two readings."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import serial\n\nser = serial.Serial('COM4', 9600, timeout=1)\n\n# Each line is two sensor readings joined by a comma, like \"742,318\".\n# Read the line, split it on the comma, and turn each piece into an int.\n"
+      },
+      "hints": [
+        "while True:",
+        "line = ser.readline().decode().rstrip()",
+        "parts = line.split(',')",
+        "pot = int(parts[0])",
+        "light = int(parts[1])",
+        "print('pot', pot, 'light', light)"
+      ],
+      "output": {
+        "initial": "Serial monitor: waiting",
+        "status": "Waiting for your Python..."
+      }
     }
   ]
 }
