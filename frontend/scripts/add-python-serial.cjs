@@ -173,6 +173,28 @@ const allLessons = [
     { initial: "Serial monitor: waiting", status: "Waiting for your Python..." },
     "potentiometer",
   ),
+  lesson(
+    406,
+    "Closed Loop",
+    "This is the whole course in one program. You have READ a sensor (403) and you have SENT a command (402); now you do both in one loop, and the PC becomes the brain of the machine. This sketch does two things every pass: it reads the potentiometer with analogRead(A0) and Serial.println's it, AND it checks Serial.available() for a command byte, turning the LED on for 'H' or off for 'L'. Notice the Arduino no longer decides anything — it only reports and obeys. The thinking is yours: read the line, int() it, and if the reading is past 500 send ser.write(b'H'), otherwise ser.write(b'L'). The LED now tracks the knob — but only because your Python read the real value, made the decision, and sent the byte back that actually drove digitalWrite. Sensor in, decision on the PC, command out, actuator moves: that round trip is a closed loop, the pattern behind every thermostat, autopilot, and robot. You just built one.",
+    "The Uno runs the closed-loop sketch shown on the right. Wire the potentiometer (VCC -> 5V, GND -> a GND pin, SIG -> A0) and pin 13 -> resistor -> LED -> a GND pin. Connect the PC to the Uno with the USB cable. Your Python reads the knob, decides, and sends 'H'/'L' back to drive the LED.",
+    ["pc", "led", "resistor", "potentiometer"],
+    "import serial\n\nser = serial.Serial('COM4', 9600, timeout=1)\n\n# You have read a sensor and you have sent a command. Now do both in one\n# loop: read the reading, DECIDE, and send a command back. The PC is the brain.\n# Past 500 -> send b'H' to light the LED; otherwise send b'L' to turn it off.\n",
+    "int ledPin = 13;\n\nvoid setup() {\n    Serial.begin(9600);\n    pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n    int value = analogRead(A0);\n    Serial.println(value);\n    if (Serial.available() > 0) {\n        char command = Serial.read();\n        if (command == 'H') {\n            digitalWrite(ledPin, HIGH);\n        }\n        if (command == 'L') {\n            digitalWrite(ledPin, LOW);\n        }\n    }\n    delay(200);\n}\n",
+    [
+      "while True:",
+      "line = ser.readline()",
+      "value = int(line.decode().rstrip())",
+      "if value > 500:",
+      "ser.write(b'H')",
+      "print('bright', value, '-> LED on')",
+      "else:",
+      "ser.write(b'L')",
+      "print('dark', value, '-> LED off')",
+    ],
+    { initial: "LED: off", status: "Waiting for your Python..." },
+    "led",
+  ),
 ];
 
 const toAdd = allLessons.filter((l) => l.id <= LIMIT);
