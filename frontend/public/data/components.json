@@ -331,6 +331,21 @@
       },
       "notes": "The baud rate in serial.Serial(port, 9600) must equal the sketch's Serial.begin(9600) or the bytes arrive garbled. readline() returns bytes ending in the newline — call .decode().rstrip() before int() or split(','). Arduino's println sends '\r\n', so rstrip() (not just strip of '\n') is the safe choice.",
       "terminals": "USB (serial to the Arduino)"
+    },
+    {
+      "id": "camera",
+      "name": "Camera Module — Digital Eye",
+      "category": "input",
+      "function": "Turns light into pixels. A lens focuses the scene onto a grid of tiny light sensors, and the module reports each sensor's brightness and colour as a number — millions of them per frame. That grid of numbers IS the image your Python reads: computer vision is just arithmetic on those pixels.",
+      "science": "The sensor is a CMOS array of photodiodes, one per pixel. Each converts incoming photons into a charge, which is measured and digitised to a value (0–255 per channel with 8-bit depth). A colour filter over the array (a Bayer pattern of red, green, and blue) lets each site record one colour; the module interpolates the rest, producing three channels — OpenCV stores them as B, G, R. More light means a higher number; that is why grayscale (brightness) is just a weighted blend of the three.",
+      "specs": {
+        "output": "Frames of pixels (width × height × 3 colour channels)",
+        "depth": "8-bit per channel (0–255)",
+        "colourOrder": "OpenCV reads B, G, R",
+        "connection": "Ribbon cable to the Pi's camera (CSI) port or USB"
+      },
+      "notes": "In these lessons the camera looks at a sample photo so results are exact and repeatable. cv2.imread() gives you the same pixel grid a real frame would; everything you learn here works unchanged on a live camera feed.",
+      "terminals": "Ribbon/USB to the host — no breadboard wiring."
     }
   ]
 }

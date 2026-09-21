@@ -32,11 +32,20 @@ export interface Lesson {
   description: string;
   source?: string;
   /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO;
-   *  "serial" = a Python program bridging over a serial port to a running Arduino sketch. */
-  kind?: "arduino" | "terminal" | "python" | "serial";
+   *  "serial" = a Python program bridging over a serial port to a running Arduino sketch;
+   *  "vision" = a Python (OpenCV/cv2) program that reads real image pixels. */
+  kind?: "arduino" | "terminal" | "python" | "serial" | "vision";
   /** For "serial" lessons: the fixed companion Arduino sketch (shown read-only,
    *  "pre-flashed" and run in the background while the learner types Python). */
   arduinoSketch?: string;
+  /** For "vision" lessons: which real-pixel scene the camera looks at. "photo" loads a
+   *  committed sample image (sampleImage); "ball"/"led" draw a procedural scene with
+   *  known ground truth. The CV always reads the resulting pixels, never engine state. */
+  vision?: {
+    scene: "photo" | "ball" | "led";
+    /** For scene "photo": the file under public/vision/ that cv2.imread() decodes. */
+    sampleImage?: string;
+  };
   terminal?: {
     shell: string;
     /** Prompt user (defaults to "you"); Pi lessons use "pi". */

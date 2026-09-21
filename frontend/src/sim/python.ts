@@ -14,6 +14,8 @@
 // Pin numbers here are Broadcom (BCM) GPIO numbers, matching GPIO.setmode(GPIO.BCM).
 
 import type { PySketchInfo } from "../circuit/engine";
+import type { Frame } from "./cv";
+import { toGray, inRange } from "./cv";
 
 // ---------- IO surface the runtime drives ----------
 
@@ -34,6 +36,11 @@ export interface PyGpioIO {
   serialAvailable(): number;
   /** Consume one byte the Arduino sent, or -1 when the wire is empty. */
   serialReadByte(): number;
+  /** Decode a committed sample image (or the current procedural scene) to real
+   *  RGBA pixels for cv2.imread; null → the file was not found (cv2 returns None). */
+  loadImage?(path: string): Frame | null;
+  /** Hand a produced frame to the vision display pane (cv2.imshow). */
+  showFrame?(frame: Frame): void;
   onError(message: string): void;
 }
 
@@ -63,7 +70,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ---------- Values ----------
 
-type PyNamespace = { __ns: "GPIO" | "time" | "random" | "serial" };
+type PyNamespace = { __ns: "GPIO" | "time" | "random" | "serial" | "cv2" | "numpy" };
 type PyPwm = { __pwm: number; freq: number; running: boolean };
 type PyFunc = { __func: FuncDef };
 /** A real byte string (Python `bytes`) — every element 0–255. */
@@ -76,6 +83,8 @@ type PySerial = {
   timeout: number | null;
   open: boolean;
 };
+/** A real image/mask: an RGBA pixel buffer the CV ops genuinely read and write. */
+type PyFrame = { __frame: true; frame: Frame };
 type PyValue =
   | number
   | string
@@ -86,7 +95,8 @@ type PyValue =
   | PyPwm
   | PyFunc
   | PyBytes
-  | PySerial;
+  | PySerial
+  | PyFrame;
 
 const isNamespace = (v: PyValue): v is PyNamespace =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__ns" in v;
@@ -98,6 +108,8 @@ const isBytes = (v: PyValue): v is PyBytes =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__bytes" in v;
 const isSerial = (v: PyValue): v is PySerial =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__serial" in v;
+const isFrame = (v: PyValue): v is PyFrame =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__frame" in v;
 
 /** Render a bytes value the way CPython's repr does: b'...' with escapes. */
 function bytesRepr(b: number[]): string {
@@ -141,6 +153,7 @@ function pyStr(v: PyValue): string {
   if (Array.isArray(v)) return `[${v.map(pyRepr).join(", ")}]`;
   if (isBytes(v)) return bytesRepr(v.__bytes);
   if (isSerial(v)) return `Serial<port=${v.port}, baudrate=${v.baud}, open=${v.open}>`;
+  if (isFrame(v)) return `<ndarray ${v.frame.height}x${v.frame.width}x4 uint8>`;
   if (isPwm(v)) return `<PWM on GPIO${v.__pwm}>`;
   if (isNamespace(v)) return `<module ${v.__ns}>`;
   return "<function>";
@@ -160,6 +173,7 @@ function typeName(v: PyValue): string {
   if (Array.isArray(v)) return "list";
   if (isBytes(v)) return "bytes";
   if (isSerial(v)) return "Serial";
+  if (isFrame(v)) return "numpy.ndarray";
   return "object";
 }
 
@@ -896,6 +910,15 @@ const GPIO_CONSTS: Record<string, PyValue> = {
   BOTH: "BOTH",
 };
 
+// Real OpenCV integer codes, so `cv2.COLOR_BGR2GRAY` is the genuine 6 that cvtColor
+// checks — the learner sees and passes the same constants the real library uses.
+// Only codes whose operation is actually implemented are exposed (an unimplemented
+// `cv2.<X>` must raise an honest AttributeError, never resolve to a dead constant).
+const CV2_CONSTS: Record<string, PyValue> = {
+  COLOR_BGR2GRAY: 6,
+  COLOR_RGB2GRAY: 7,
+};
+
 // ---------- Interpreter ----------
 
 export class PythonSim {
@@ -1094,6 +1117,14 @@ export class PythonSim {
       this.scope.set(alias ?? "serial", { __ns: "serial" });
       return;
     }
+    if (module === "cv2") {
+      this.scope.set(alias ?? "cv2", { __ns: "cv2" });
+      return;
+    }
+    if (module === "numpy") {
+      this.scope.set(alias ?? "numpy", { __ns: "numpy" });
+      return;
+    }
     if (module === "RPi") {
       // `import RPi` alone doesn't expose GPIO; the real hint is to import RPi.GPIO.
       throw new PyError(
@@ -1204,6 +1235,7 @@ export class PythonSim {
 
   private getAttr(obj: PyValue, name: string): PyValue {
     if (isNamespace(obj) && obj.__ns === "GPIO" && name in GPIO_CONSTS) return GPIO_CONSTS[name];
+    if (isNamespace(obj) && obj.__ns === "cv2" && name in CV2_CONSTS) return CV2_CONSTS[name];
     if (isSerial(obj)) {
       // Real pyserial read-only properties.
       if (name === "in_waiting") return this.io.serialAvailable();
@@ -1257,6 +1289,8 @@ export class PythonSim {
     }
     if (isNamespace(obj) && obj.__ns === "random") return this.randomCall(name, args);
     if (isNamespace(obj) && obj.__ns === "serial") return this.serialModuleCall(name, args, kwargs);
+    if (isNamespace(obj) && obj.__ns === "cv2") return this.cv2ModuleCall(name, args, kwargs);
+    if (isNamespace(obj) && obj.__ns === "numpy") return this.numpyCall(name, args);
     if (isSerial(obj)) return this.serialObjCall(obj, name, args);
     if (isBytes(obj)) return this.bytesMethod(obj, name, args);
     if (isPwm(obj)) return this.pwmCall(obj, name, args);
@@ -1437,6 +1471,76 @@ export class PythonSim {
     const tVal = kwargs.get("timeout");
     const timeout = tVal === undefined || tVal === null ? null : Number(tVal);
     return { __serial: true, port, baud, timeout, open: true };
+  }
+
+  // ----- OpenCV: cv2.<fn>(...) -----
+  // Every operation is a pure function over the frame's real pixel buffer (see
+  // src/sim/cv.ts): grayscale is the genuine luminance of each pixel; imshow hands
+  // the produced pixels to the display. Nothing here reads engine or LED state.
+  private cv2ModuleCall(name: string, args: PyValue[], _kwargs: Map<string, PyValue>): PyValue {
+    switch (name) {
+      case "imread": {
+        // cv2.imread(path): decode a real image to pixels, or None if not found.
+        const path = pyStr(args[0] ?? "");
+        const loaded = this.io.loadImage ? this.io.loadImage(path) : null;
+        return loaded ? { __frame: true, frame: loaded } : null;
+      }
+      case "imshow": {
+        // cv2.imshow(winname, img): display the produced frame.
+        const frame = this.frameArg(args[1], "imshow");
+        if (this.io.showFrame) this.io.showFrame(frame);
+        return null;
+      }
+      case "cvtColor": {
+        // cv2.cvtColor(img, code): only the grayscale codes are implemented so far.
+        const frame = this.frameArg(args[0], "cvtColor");
+        const code = Number(args[1]);
+        if (code === 6 || code === 7) return { __frame: true, frame: toGray(frame) };
+        throw new PyError("error", `cvtColor conversion code ${code} is not supported yet`);
+      }
+      case "inRange": {
+        // cv2.inRange(img, lower, upper): genuine per-pixel colour test → mask.
+        const frame = this.frameArg(args[0], "inRange");
+        const lo = this.bgrTriple(args[1], "inRange");
+        const hi = this.bgrTriple(args[2], "inRange");
+        return { __frame: true, frame: inRange(frame, lo, hi) };
+      }
+      case "waitKey":
+        // No physical keyboard in the sandbox: no key is ever pressed.
+        return -1;
+      case "namedWindow":
+      case "destroyWindow":
+      case "destroyAllWindows":
+      case "imwrite":
+        // GUI/file-system side effects with no visible sandbox meaning: safe no-ops.
+        return null;
+      default:
+        throw new PyError("AttributeError", `module 'cv2' has no attribute '${name}'`);
+    }
+  }
+
+  /** Assert an argument is a real frame, or raise the honest cv2/OpenCV TypeError. */
+  private frameArg(v: PyValue, fn: string): Frame {
+    if (isFrame(v)) return v.frame;
+    throw new PyError("error", `cv2.${fn}() expected an image, got ${typeName(v)}`);
+  }
+
+  /** Coerce an inRange bound — a [B, G, R] list (or np.array of one) — to 3 numbers. */
+  private bgrTriple(v: PyValue, fn: string): [number, number, number] {
+    if (!Array.isArray(v) || v.length !== 3)
+      throw new PyError("error", `cv2.${fn}() bounds must be a list of 3 numbers [B, G, R]`);
+    return [Number(v[0]), Number(v[1]), Number(v[2])];
+  }
+
+  // ----- numpy: the tiny slice the vision lessons use -----
+  private numpyCall(name: string, args: PyValue[]): PyValue {
+    if (name === "array") {
+      // np.array([...]): we keep the plain Python list; cv2 accepts array-likes.
+      const v = args[0];
+      if (Array.isArray(v)) return v.slice();
+      throw new PyError("TypeError", "np.array() expected a sequence");
+    }
+    throw new PyError("AttributeError", `module 'numpy' has no attribute '${name}'`);
   }
 
   private async serialObjCall(ser: PySerial, name: string, args: PyValue[]): Promise<PyValue> {

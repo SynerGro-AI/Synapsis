@@ -7,6 +7,7 @@ import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
+import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
 import {
@@ -79,6 +80,11 @@ export default function App() {
   const [buzzerFreqs, setBuzzerFreqs] = useState<Map<string, number>>(new Map());
   const [lcdLines, setLcdLines] = useState<[string, string] | null>(null);
   const [boardLed, setBoardLed] = useState(false);
+
+  // Vision lessons: the pixel buffer the learner's cv2.imshow() last painted, and
+  // a cache of decoded sample photos keyed by file name (real pixels, no engine).
+  const [visionFrame, setVisionFrame] = useState<VisionFrame | null>(null);
+  const sampleFramesRef = useRef<Map<string, VisionFrame>>(new Map());
 
   // World: what physically surrounds the circuit
   const [potValue, setPotValue] = useState(512);
@@ -272,6 +278,7 @@ export default function App() {
     setBuzzerFreqs(new Map());
     setLcdLines(null);
     setBoardLed(false);
+    setVisionFrame(null);
   }, []);
 
   // Changing lessons resets the workspace.
@@ -284,6 +291,34 @@ export default function App() {
     setCircuit(saved[lesson.id]?.circuit ?? EMPTY_CIRCUIT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lesson.id, restoreCount, stopSim]);
+
+  // Decode a vision lesson's committed sample photo into REAL pixels once, via an
+  // offscreen canvas getImageData. cv2.imread() then hands these bytes to the
+  // learner's code — the same pixels the CV algorithms genuinely read.
+  useEffect(() => {
+    if (lesson.kind !== "vision" || lesson.vision?.scene !== "photo") return;
+    const file = lesson.vision.sampleImage;
+    if (!file) return;
+    const key = file.split("/").pop() ?? file;
+    if (sampleFramesRef.current.has(key)) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const cx = c.getContext("2d");
+      if (!cx) return;
+      cx.drawImage(img, 0, 0);
+      const id = cx.getImageData(0, 0, c.width, c.height);
+      sampleFramesRef.current.set(key, { width: id.width, height: id.height, data: id.data });
+    };
+    img.src = `/vision/${key}`;
+    return () => {
+      cancelled = true;
+    };
+  }, [lesson.id, lesson.kind, lesson.vision?.scene, lesson.vision?.sampleImage]);
 
   const refreshOutputs = useCallback(() => {
     const rt = runtimeRef.current;
@@ -380,7 +415,53 @@ export default function App() {
       return;
     }
 
-    // The Arduino IO bag is identical whether the sketch runs alone or beside a
+    // "vision" lesson: the learner writes Python (OpenCV/cv2) that reads REAL
+    // pixels. cv2.imread() hands back the decoded sample photo's buffer, every
+    // cv2 op (grayscale, mask, ...) genuinely computes over those bytes in cv.ts,
+    // and cv2.imshow() paints the produced frame. Nothing is read from engine or
+    // LED state — the vision only ever sees pixels.
+    if (lesson.kind === "vision") {
+      const sim = new PythonSim();
+      engineRef.current = sim;
+      const noop = () => {};
+      const io: PyGpioIO = {
+        // A vision lesson has no GPIO; these stay inert.
+        setmode: noop,
+        setup: noop,
+        output: noop,
+        input: () => false,
+        pwmStart: noop,
+        pwmChangeDuty: noop,
+        pwmChangeFreq: noop,
+        pwmStop: noop,
+        cleanup: noop,
+        print: (line) => {
+          setRanClean(true);
+          setSerial((s) => [...s.slice(-30), line]);
+        },
+        serialWrite: () => 0,
+        serialAvailable: () => 0,
+        serialReadByte: () => -1,
+        // Decoded sample pixels, by file name. A copy is handed out so learner
+        // ops can never disturb the cached source (cv2.imread returns a fresh Mat).
+        loadImage: (imgPath) => {
+          const key = imgPath.split("/").pop() ?? imgPath;
+          const f = sampleFramesRef.current.get(key);
+          if (!f) return null;
+          setRanClean(true);
+          return { width: f.width, height: f.height, data: new Uint8ClampedArray(f.data) };
+        },
+        showFrame: (f) => {
+          setRanClean(true);
+          setVisionFrame({ width: f.width, height: f.height, data: new Uint8ClampedArray(f.data) });
+        },
+        onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
+      };
+      sim.run(sketch, io).finally(() => {
+        if (engineRef.current === sim) setRunning(false);
+      });
+      return;
+    }
     // Python program — only the serial wiring differs, so both paths share it.
     const buildArduinoIO = (
       bridge: Pick<SimIO, "serial" | "serialTx" | "serialAvailable" | "serialRead" | "serialPeek">,
@@ -534,7 +615,7 @@ export default function App() {
   // ---- Live diagnostics: circuit + code, explained bottom-right ----
   const diagnoses = useMemo(
     () =>
-      lesson.kind === "python"
+      lesson.kind === "python" || lesson.kind === "vision"
         ? validatePython(circuit, analyzePython(code), lesson.circuit.required as PartType[])
         : lesson.kind === "serial"
           ? // The learner types Python; the wired circuit must match the running
@@ -755,8 +836,15 @@ export default function App() {
 
           <section className="content">
             <div className="canvas">
-              <div className="panel-label">Circuit Canvas — click a pin, drag to another pin to wire</div>
-              <CircuitCanvas
+              {lesson.kind === "vision" ? (
+                <>
+                  <div className="panel-label">Camera — the real pixels your cv2 code sees</div>
+                  <VisionCanvas frame={visionFrame} sampleImage={lesson.vision?.sampleImage} />
+                </>
+              ) : (
+                <>
+                  <div className="panel-label">Circuit Canvas — click a pin, drag to another pin to wire</div>
+                  <CircuitCanvas
                 key={`${lesson.id}:${restoreCount}`}
                 palette={lesson.circuit.palette as PartType[]}
                 circuit={circuit}
@@ -848,6 +936,8 @@ export default function App() {
                 )}
               </div>
               <div className="circuit-notes">{lesson.circuit.notes}</div>
+                </>
+              )}
             </div>
 
             <div className="guide">
@@ -885,7 +975,9 @@ export default function App() {
                     ? "Code IDE — Python (RPi.GPIO)"
                     : lesson.kind === "serial"
                       ? "Code IDE — Python (pyserial)"
-                      : "Code IDE — Arduino C++"}
+                      : lesson.kind === "vision"
+                        ? "Code IDE — Python (OpenCV)"
+                        : "Code IDE — Arduino C++"}
                 </span>
                 {running ? (
                   <button className="run stop" onClick={stopSim}>

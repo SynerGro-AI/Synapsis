@@ -788,6 +788,50 @@
   overflow: hidden;
 }
 
+/* Vision lessons paint real pixels here instead of the circuit. */
+.vision-view {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 16px;
+  background:
+    repeating-conic-gradient(#2a2a2a 0% 25%, #262626 0% 50%) 50% / 24px 24px;
+}
+
+.vision-canvas {
+  max-width: 100%;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  image-rendering: pixelated;
+}
+
+.vision-placeholder {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.vision-placeholder code {
+  color: #c58cff;
+}
+
+.vision-eye {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.vision-hint {
+  color: #888;
+  font-size: 12px;
+}
+
 .guide {
   background: #2d2d2d;
   overflow-y: auto;

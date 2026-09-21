@@ -317,7 +317,6 @@
       "track": "ai",
       "name": "Give It Eyes",
       "range": "501-508",
-      "status": "coming-soon",
       "concepts": [
         "Raspberry Pi 5",
         "Camera setup",
@@ -330,7 +329,6 @@
       "track": "ai",
       "name": "OpenCV",
       "range": "509-518",
-      "status": "coming-soon",
       "concepts": [
         "Image basics",
         "Color & thresholds",
@@ -4884,6 +4882,101 @@
       "output": {
         "initial": "LED: off",
         "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 501,
+      "phase": "vision_setup",
+      "title": "Open Your Eyes",
+      "description": "This is where your programs start to SEE. An image is not magic — it is a grid of tiny coloured squares called pixels, and a photo is just a very big grid of them. import cv2 loads OpenCV, the classic computer-vision library. cv2.imread('scene.png') reads a picture file from disk and hands you back that whole grid of pixels as one object (OpenCV calls it an image, or a Mat). cv2.imshow('camera', img) opens a window titled 'camera' and paints those exact pixels — the same ones the file stored. cv2.waitKey(0) holds the window open until a key is pressed. Run it and the camera pane fills with the real scene: blue sky, green grass, a yellow sun, a red ball. You have not changed anything yet — you have simply opened your eyes and looked. One warning for later: OpenCV stores colour as B, G, R (blue first), not R, G, B — remember that when you start picking colours apart.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "photo",
+        "sampleImage": "scene.png"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "No breadboard here — the AI camera is pointed at a sample photo (scene.png). Type your Python on the right and press Run; cv2.imshow paints the real pixels in the camera pane."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\n# An image is a grid of pixels. Read the photo from disk, then show it.\n"
+      },
+      "hints": [
+        "img = cv2.imread('scene.png')",
+        "cv2.imshow('camera', img)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to open your eyes..."
+      }
+    },
+    {
+      "id": 502,
+      "phase": "vision_setup",
+      "title": "Shades of Gray",
+      "description": "Before a computer can find shapes in a picture, it usually throws the colour away and keeps only the brightness — it is easier to reason about one number per pixel than three. cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) does exactly that: it CONVERTS the colour image to grayscale. But it is not a crude average. The human eye is far more sensitive to green than to blue, so OpenCV weights the channels the way your eye does: gray = 0.299·R + 0.587·G + 0.114·B. That is why the green grass turns a fairly light gray while the pure-blue sky turns quite dark, even though both looked 'bright' in colour. Every pixel in the result is the genuine luminance of the pixel it came from — a real, checkable number. Show the gray image and compare it to the colour one: same scene, one channel of brightness instead of three of colour.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "photo",
+        "sampleImage": "scene.png"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "The camera still looks at scene.png. Convert the colour pixels to grayscale and show the result — each gray value is that pixel's true brightness."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('scene.png')\n\n# Convert the colour image to grayscale (brightness only), then show it.\n"
+      },
+      "hints": [
+        "gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)",
+        "cv2.imshow('gray', gray)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to see in gray..."
+      }
+    },
+    {
+      "id": 503,
+      "phase": "vision_setup",
+      "title": "The Colour Slice",
+      "description": "Now you make the computer pick out ONE colour and ignore the rest — the first real step of detecting an object. cv2.inRange(img, lower, upper) tests every pixel: if its colour falls between the lower and upper bounds it becomes white (255) in the result, and if not it becomes black (0). The white-on-black result is called a mask — it marks WHERE your colour is. Remember OpenCV's order is B, G, R, so a bound is [blue, green, red]. To catch the red ball you want pixels that are HIGH in red and LOW in blue and green: lower = [0, 0, 120] and upper = [90, 90, 255]. Run it and only the ball lights up white — the sky, grass, and yellow sun all fail the test (the sun is bright but its green is far too high), so they stay black. That mask is not decoration: it is a precise, per-pixel answer to 'is this pixel my colour?', and everything that follows — counting, locating, tracking — is built on it.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "photo",
+        "sampleImage": "scene.png"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "The camera still looks at scene.png. Build a colour mask that keeps only the red ball: white where a pixel's B, G, R all fall in range, black everywhere else."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('scene.png')\n\n# OpenCV order is [B, G, R]. Keep pixels that are high in red, low in blue/green.\n# Build the mask with cv2.inRange, then show it.\n"
+      },
+      "hints": [
+        "lower = [0, 0, 120]",
+        "upper = [90, 90, 255]",
+        "mask = cv2.inRange(img, lower, upper)",
+        "cv2.imshow('mask', mask)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to slice out the colour..."
       }
     }
   ]
