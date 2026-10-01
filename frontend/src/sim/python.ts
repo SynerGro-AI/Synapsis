@@ -15,7 +15,7 @@
 
 import type { PySketchInfo } from "../circuit/engine";
 import type { Frame } from "./cv";
-import { toGray, inRange } from "./cv";
+import { toGray, inRange, countNonZero, threshold, boundingRect, drawRectangle } from "./cv";
 
 // ---------- IO surface the runtime drives ----------
 
@@ -84,7 +84,8 @@ type PySerial = {
   open: boolean;
 };
 /** A real image/mask: an RGBA pixel buffer the CV ops genuinely read and write. */
-type PyFrame = { __frame: true; frame: Frame };
+type PyFrame = { __frame: true; frame: Frame; channels: 1 | 3 };
+type PyTuple = { __tuple: PyValue[] };
 type PyValue =
   | number
   | string
@@ -96,7 +97,8 @@ type PyValue =
   | PyFunc
   | PyBytes
   | PySerial
-  | PyFrame;
+  | PyFrame
+  | PyTuple;
 
 const isNamespace = (v: PyValue): v is PyNamespace =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__ns" in v;
@@ -110,6 +112,8 @@ const isSerial = (v: PyValue): v is PySerial =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__serial" in v;
 const isFrame = (v: PyValue): v is PyFrame =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__frame" in v;
+const isTuple = (v: PyValue): v is PyTuple =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__tuple" in v;
 
 /** Render a bytes value the way CPython's repr does: b'...' with escapes. */
 function bytesRepr(b: number[]): string {
@@ -141,6 +145,7 @@ function truthy(v: PyValue): boolean {
   if (v === "") return false;
   if (Array.isArray(v)) return v.length > 0;
   if (isBytes(v)) return v.__bytes.length > 0;
+  if (isTuple(v)) return v.__tuple.length > 0;
   return true;
 }
 
@@ -151,9 +156,11 @@ function pyStr(v: PyValue): string {
   if (typeof v === "number") return numStr(v);
   if (typeof v === "string") return v;
   if (Array.isArray(v)) return `[${v.map(pyRepr).join(", ")}]`;
+  if (isTuple(v))
+    return `(${v.__tuple.map(pyRepr).join(", ")}${v.__tuple.length === 1 ? "," : ""})`;
   if (isBytes(v)) return bytesRepr(v.__bytes);
   if (isSerial(v)) return `Serial<port=${v.port}, baudrate=${v.baud}, open=${v.open}>`;
-  if (isFrame(v)) return `<ndarray ${v.frame.height}x${v.frame.width}x4 uint8>`;
+  if (isFrame(v)) return `<ndarray ${v.frame.height}x${v.frame.width}x${v.channels} uint8>`;
   if (isPwm(v)) return `<PWM on GPIO${v.__pwm}>`;
   if (isNamespace(v)) return `<module ${v.__ns}>`;
   return "<function>";
@@ -171,6 +178,7 @@ function typeName(v: PyValue): string {
   if (typeof v === "number") return Number.isInteger(v) ? "int" : "float";
   if (typeof v === "string") return "str";
   if (Array.isArray(v)) return "list";
+  if (isTuple(v)) return "tuple";
   if (isBytes(v)) return "bytes";
   if (isSerial(v)) return "Serial";
   if (isFrame(v)) return "numpy.ndarray";
@@ -187,6 +195,7 @@ type Expr =
   | { k: "none" }
   | { k: "name"; name: string }
   | { k: "list"; items: Expr[] }
+  | { k: "tuple"; items: Expr[] }
   | { k: "fstr"; parts: FStrPart[] }
   | { k: "unary"; op: string; e: Expr }
   | { k: "binary"; op: string; a: Expr; b: Expr }
@@ -561,11 +570,22 @@ class Parser {
       }
     }
     const target = this.parseExpr();
+    let assignmentTarget = target;
+    if (this.isOp(",")) {
+      const items = [target];
+      while (this.isOp(",")) {
+        this.p++;
+        if (this.peek().t === "NEWLINE" || (this.peek().t === "OP" && this.peek().v === "="))
+          break;
+        items.push(this.parseExpr());
+      }
+      assignmentTarget = { k: "tuple", items };
+    }
     const op = this.peek();
     if (op.t === "OP" && op.v === "=") {
       this.p++;
       const value = this.parseExpr();
-      return this.finishSimple({ k: "assign", target, value });
+      return this.finishSimple({ k: "assign", target: assignmentTarget, value });
     }
     if (op.t === "OP" && typeof op.v === "string" && /^(\+|-|\*|\/|%|\*\*|\/\/)=$/.test(op.v)) {
       this.p++;
@@ -805,7 +825,17 @@ class Parser {
         e = { k: "call", callee: e, args, kwargs };
       } else if (this.isOp("[")) {
         this.p++;
-        const idx = this.parseExpr();
+        const first = this.parseExpr();
+        let idx = first;
+        if (this.isOp(",")) {
+          const items = [first];
+          while (this.isOp(",")) {
+            this.p++;
+            if (this.isOp("]")) break;
+            items.push(this.parseExpr());
+          }
+          idx = { k: "tuple", items };
+        }
         this.eatOp("]");
         e = { k: "index", obj: e, idx };
       } else break;
@@ -866,7 +896,21 @@ class Parser {
     }
     if (this.isOp("(")) {
       this.p++;
-      const e = this.parseExpr();
+      if (this.isOp(")")) {
+        this.p++;
+        return { k: "tuple", items: [] };
+      }
+      const first = this.parseExpr();
+      let e = first;
+      if (this.isOp(",")) {
+        const items = [first];
+        while (this.isOp(",")) {
+          this.p++;
+          if (this.isOp(")")) break;
+          items.push(this.parseExpr());
+        }
+        e = { k: "tuple", items };
+      }
       this.eatOp(")");
       return e;
     }
@@ -917,6 +961,7 @@ const GPIO_CONSTS: Record<string, PyValue> = {
 const CV2_CONSTS: Record<string, PyValue> = {
   COLOR_BGR2GRAY: 6,
   COLOR_RGB2GRAY: 7,
+  THRESH_BINARY: 0,
 };
 
 // ---------- Interpreter ----------
@@ -1155,6 +1200,21 @@ export class PythonSim {
       this.scope.set(target.name, value);
       return;
     }
+    if (target.k === "tuple") {
+      const values = isTuple(value) ? value.__tuple : Array.isArray(value) ? value : null;
+      if (!values)
+        throw new PyError("TypeError", `cannot unpack non-iterable ${typeName(value)} object`);
+      if (values.length !== target.items.length)
+        throw new PyError(
+          "ValueError",
+          values.length < target.items.length
+            ? `not enough values to unpack (expected ${target.items.length}, got ${values.length})`
+            : `too many values to unpack (expected ${target.items.length})`,
+        );
+      for (let i = 0; i < target.items.length; i++)
+        await this.assign(target.items[i], values[i]);
+      return;
+    }
     if (target.k === "index") {
       const obj = await this.evalExpr(target.obj);
       const idx = await this.evalExpr(target.idx);
@@ -1182,6 +1242,8 @@ export class PythonSim {
         return this.lookup(e.name);
       case "list":
         return Promise.all(e.items.map((it) => this.evalExpr(it)));
+      case "tuple":
+        return { __tuple: await Promise.all(e.items.map((it) => this.evalExpr(it))) };
       case "fstr": {
         let out = "";
         for (const part of e.parts) {
@@ -1209,6 +1271,30 @@ export class PythonSim {
       case "index": {
         const obj = await this.evalExpr(e.obj);
         const idx = await this.evalExpr(e.idx);
+        if (isFrame(obj)) {
+          if (!isTuple(idx) || idx.__tuple.length !== 2)
+            throw new PyError("IndexError", "image indices must be [row, column]");
+          const [row, column] = idx.__tuple;
+          if (typeof row !== "number" || typeof column !== "number" ||
+              !Number.isInteger(row) || !Number.isInteger(column))
+            throw new PyError("TypeError", "image indices must be integers");
+          const y = row < 0 ? obj.frame.height + row : row;
+          const x = column < 0 ? obj.frame.width + column : column;
+          if (y < 0 || y >= obj.frame.height || x < 0 || x >= obj.frame.width)
+            throw new PyError("IndexError", "image index out of range");
+          const i = (y * obj.frame.width + x) * 4;
+          return obj.channels === 1
+            ? [obj.frame.data[i]]
+            : [obj.frame.data[i + 2], obj.frame.data[i + 1], obj.frame.data[i]];
+        }
+        if (isTuple(obj)) {
+          if (typeof idx !== "number" || !Number.isInteger(idx))
+            throw new PyError("TypeError", "tuple indices must be integers");
+          const i = idx < 0 ? obj.__tuple.length + idx : idx;
+          if (i < 0 || i >= obj.__tuple.length)
+            throw new PyError("IndexError", "tuple index out of range");
+          return obj.__tuple[i];
+        }
         if (Array.isArray(obj) || typeof obj === "string") {
           if (typeof idx !== "number") throw new PyError("TypeError", "indices must be integers");
           const i = idx < 0 ? obj.length + idx : idx;
@@ -1236,6 +1322,13 @@ export class PythonSim {
   private getAttr(obj: PyValue, name: string): PyValue {
     if (isNamespace(obj) && obj.__ns === "GPIO" && name in GPIO_CONSTS) return GPIO_CONSTS[name];
     if (isNamespace(obj) && obj.__ns === "cv2" && name in CV2_CONSTS) return CV2_CONSTS[name];
+    if (isFrame(obj)) {
+      if (name === "shape")
+        return { __tuple: obj.channels === 1
+          ? [obj.frame.height, obj.frame.width]
+          : [obj.frame.height, obj.frame.width, obj.channels] };
+      throw new PyError("AttributeError", `'numpy.ndarray' object has no attribute '${name}'`);
+    }
     if (isSerial(obj)) {
       // Real pyserial read-only properties.
       if (name === "in_waiting") return this.io.serialAvailable();
@@ -1309,6 +1402,7 @@ export class PythonSim {
       case "len": {
         const v = args[0];
         if (Array.isArray(v) || typeof v === "string") return v.length;
+        if (isTuple(v)) return v.__tuple.length;
         if (isBytes(v)) return v.__bytes.length;
         throw new PyError("TypeError", `object of type '${typeName(v)}' has no len()`);
       }
@@ -1474,16 +1568,16 @@ export class PythonSim {
   }
 
   // ----- OpenCV: cv2.<fn>(...) -----
-  // Every operation is a pure function over the frame's real pixel buffer (see
-  // src/sim/cv.ts): grayscale is the genuine luminance of each pixel; imshow hands
-  // the produced pixels to the display. Nothing here reads engine or LED state.
+  // Every operation reads the frame's real pixel buffer (see src/sim/cv.ts);
+  // rectangle preserves OpenCV's in-place drawing behavior. Nothing reads engine
+  // or LED state.
   private cv2ModuleCall(name: string, args: PyValue[], _kwargs: Map<string, PyValue>): PyValue {
     switch (name) {
       case "imread": {
         // cv2.imread(path): decode a real image to pixels, or None if not found.
         const path = pyStr(args[0] ?? "");
         const loaded = this.io.loadImage ? this.io.loadImage(path) : null;
-        return loaded ? { __frame: true, frame: loaded } : null;
+        return loaded ? { __frame: true, frame: loaded, channels: 3 } : null;
       }
       case "imshow": {
         // cv2.imshow(winname, img): display the produced frame.
@@ -1495,7 +1589,8 @@ export class PythonSim {
         // cv2.cvtColor(img, code): only the grayscale codes are implemented so far.
         const frame = this.frameArg(args[0], "cvtColor");
         const code = Number(args[1]);
-        if (code === 6 || code === 7) return { __frame: true, frame: toGray(frame) };
+        if (code === 6 || code === 7)
+          return { __frame: true, frame: toGray(frame), channels: 1 };
         throw new PyError("error", `cvtColor conversion code ${code} is not supported yet`);
       }
       case "inRange": {
@@ -1503,7 +1598,51 @@ export class PythonSim {
         const frame = this.frameArg(args[0], "inRange");
         const lo = this.bgrTriple(args[1], "inRange");
         const hi = this.bgrTriple(args[2], "inRange");
-        return { __frame: true, frame: inRange(frame, lo, hi) };
+        return { __frame: true, frame: inRange(frame, lo, hi), channels: 1 };
+      }
+      case "threshold": {
+        const image = args[0];
+        const frame = this.frameArg(image, "threshold");
+        if (!isFrame(image) || image.channels !== 1)
+          throw new PyError("error", "cv2.threshold() supports single-channel images only");
+        if (Number(args[3]) !== 0)
+          throw new PyError("error", `threshold type ${pyStr(args[3] ?? null)} is not supported`);
+        const cutoff = Number(args[1]);
+        const maxValue = Number(args[2]);
+        if (!Number.isFinite(cutoff) || !Number.isFinite(maxValue))
+          throw new PyError("TypeError", "threshold values must be numbers");
+        return {
+          __tuple: [
+            cutoff,
+            { __frame: true, frame: threshold(frame, cutoff, maxValue), channels: 1 },
+          ],
+        };
+      }
+      case "countNonZero": {
+        const image = args[0];
+        const frame = this.frameArg(image, "countNonZero");
+        if (!isFrame(image) || image.channels !== 1)
+          throw new PyError("error", "cv2.countNonZero() supports single-channel images only");
+        return countNonZero(frame);
+      }
+      case "boundingRect": {
+        const image = args[0];
+        const frame = this.frameArg(image, "boundingRect");
+        if (!isFrame(image) || image.channels !== 1)
+          throw new PyError("error", "cv2.boundingRect() expects a single-channel mask");
+        return { __tuple: boundingRect(frame) };
+      }
+      case "rectangle": {
+        const image = args[0];
+        const frame = this.frameArg(image, "rectangle");
+        const topLeft = this.intPair(args[1], "rectangle", "point1");
+        const bottomRight = this.intPair(args[2], "rectangle", "point2");
+        const color = this.bgrTriple(args[3], "rectangle");
+        const thickness = Number(args[4] ?? 1);
+        if (!Number.isInteger(thickness) || thickness === 0 || thickness < -1)
+          throw new PyError("error", "cv2.rectangle() thickness must be positive or -1");
+        drawRectangle(frame, topLeft, bottomRight, color, thickness);
+        return null;
       }
       case "waitKey":
         // No physical keyboard in the sandbox: no key is ever pressed.
@@ -1527,9 +1666,36 @@ export class PythonSim {
 
   /** Coerce an inRange bound — a [B, G, R] list (or np.array of one) — to 3 numbers. */
   private bgrTriple(v: PyValue, fn: string): [number, number, number] {
-    if (!Array.isArray(v) || v.length !== 3)
-      throw new PyError("error", `cv2.${fn}() bounds must be a list of 3 numbers [B, G, R]`);
-    return [Number(v[0]), Number(v[1]), Number(v[2])];
+    const values = Array.isArray(v) ? v : isTuple(v) ? v.__tuple : null;
+    if (!values || values.length !== 3)
+      throw new PyError(
+        "error",
+        fn === "inRange"
+          ? "cv2.inRange() bounds must contain 3 numeric BGR values"
+          : "cv2.rectangle() colour must contain 3 numeric BGR values",
+      );
+    const [blue, green, red] = values;
+    if (
+      typeof blue !== "number" || !Number.isFinite(blue) ||
+      typeof green !== "number" || !Number.isFinite(green) ||
+      typeof red !== "number" || !Number.isFinite(red)
+    )
+      throw new PyError(
+        "error",
+        fn === "inRange"
+          ? "cv2.inRange() bounds must contain 3 numeric BGR values"
+          : "cv2.rectangle() colour must contain 3 numeric BGR values",
+      );
+    return [blue, green, red];
+  }
+
+  private intPair(v: PyValue, fn: string, label: string): [number, number] {
+    const values = Array.isArray(v) ? v : isTuple(v) ? v.__tuple : null;
+    if (!values || values.length !== 2 ||
+        typeof values[0] !== "number" || !Number.isInteger(values[0]) ||
+        typeof values[1] !== "number" || !Number.isInteger(values[1]))
+      throw new PyError("error", `cv2.${fn}() ${label} must be a pair of integers`);
+    return [values[0], values[1]];
   }
 
   // ----- numpy: the tiny slice the vision lessons use -----

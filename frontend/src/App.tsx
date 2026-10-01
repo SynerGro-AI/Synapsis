@@ -826,6 +826,7 @@ export default function App() {
               <button
                 key={t.id}
                 className={mobileTab === t.id ? "active" : ""}
+                aria-pressed={mobileTab === t.id}
                 onClick={() => setMobileTab(t.id)}
               >
                 {t.label}

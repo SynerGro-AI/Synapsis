@@ -936,6 +936,8 @@
     transform: translateX(-102%);
     transition: transform 0.2s ease;
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.5);
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
   .sidebar.open {
     transform: translateX(0);
@@ -961,9 +963,12 @@
     border: none;
     border-bottom: 2px solid transparent;
     color: #999;
-    padding: 10px 4px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 8px 2px;
     font-size: 12px;
     font-weight: bold;
+    line-height: 1.2;
     cursor: pointer;
   }
   .mobile-tabs button.active {
@@ -982,10 +987,31 @@
   }
 
   .topbar {
-    padding: 8px 12px;
+    align-items: center;
+    gap: 8px;
+    min-height: 54px;
+    padding: 6px max(12px, env(safe-area-inset-right)) 6px
+      max(12px, env(safe-area-inset-left));
   }
   .topbar h3 {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
     font-size: 15px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar .lesson-done,
+  .topbar .offline {
+    flex: 0 0 auto;
+    margin-left: 0;
+    font-size: 10px;
+  }
+  .nav-toggle {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
   }
 
   /* Show exactly one region for the active tab; the rest collapse. */
@@ -994,7 +1020,8 @@
     flex-direction: column;
     flex: 1;
     min-height: 0;
-    padding: 8px;
+    padding: 6px max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
     gap: 0;
   }
   .canvas,
@@ -1022,7 +1049,29 @@
     display: flex;
     flex: 1;
     height: auto;
+    min-height: 0;
     flex-direction: row;
+  }
+  .main.m-guide .guide,
+  .main.m-console .console-pane {
+    overscroll-behavior: contain;
+  }
+  .main.m-editor .editor {
+    min-height: 0;
+  }
+  .editor-bar {
+    gap: 8px;
+  }
+  .editor-bar > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .run {
+    flex: 0 0 auto;
+    min-width: 64px;
+    min-height: 40px;
   }
 
   /* Stack serial + diagnostics vertically on narrow screens. */
@@ -1035,6 +1084,20 @@
 @media (max-width: 560px) {
   .main.m-console .console {
     flex-direction: column;
+  }
+  .main.m-console .console-pane {
+    min-height: 0;
+  }
+  .main.m-console .console-pane.diagnostics {
+    flex: 0 0 40%;
+  }
+  .panel-label {
+    padding: 6px 8px;
+    font-size: 10px;
+    letter-spacing: 0.7px;
+  }
+  .vision-view {
+    padding: 8px;
   }
 }
 
@@ -1851,4 +1914,3 @@
     overflow: visible;
   }
 }
-

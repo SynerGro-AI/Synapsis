@@ -38,7 +38,7 @@ export function makeFrame(
   return { width, height, data };
 }
 
-/** A deep copy — CV ops never mutate their input, exactly like cv2. */
+/** A deep copy for CV operations that return a new image. */
 export function cloneFrame(f: Frame): Frame {
   return { width: f.width, height: f.height, data: new Uint8ClampedArray(f.data) };
 }
@@ -105,4 +105,76 @@ export function countNonZero(f: Frame): number {
     if (f.data[i] > 0) n++;
   }
   return n;
+}
+
+/** cv2.threshold(..., THRESH_BINARY): compare each gray pixel with the cutoff. */
+export function threshold(f: Frame, cutoff: number, maxValue: number): Frame {
+  const out = new Uint8ClampedArray(f.data.length);
+  for (let i = 0; i < f.data.length; i += 4) {
+    const value = f.data[i] > cutoff ? maxValue : 0;
+    out[i] = value;
+    out[i + 1] = value;
+    out[i + 2] = value;
+    out[i + 3] = 255;
+  }
+  return { width: f.width, height: f.height, data: out };
+}
+
+/** cv2.boundingRect(mask): return the smallest inclusive pixel bounds of nonzero data. */
+export function boundingRect(f: Frame): [number, number, number, number] {
+  let left = f.width;
+  let top = f.height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < f.height; y++) {
+    for (let x = 0; x < f.width; x++) {
+      if (f.data[(y * f.width + x) * 4] === 0) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  return right < left || bottom < top
+    ? [0, 0, 0, 0]
+    : [left, top, right - left + 1, bottom - top + 1];
+}
+
+/** Draw a BGR rectangle into the frame, matching cv2.rectangle's in-place effect. */
+export function drawRectangle(
+  f: Frame,
+  topLeft: [number, number],
+  bottomRight: [number, number],
+  color: [number, number, number],
+  thickness: number,
+): void {
+  const x0 = Math.min(topLeft[0], bottomRight[0]);
+  const y0 = Math.min(topLeft[1], bottomRight[1]);
+  const x1 = Math.max(topLeft[0], bottomRight[0]);
+  const y1 = Math.max(topLeft[1], bottomRight[1]);
+  const [b, g, r] = color;
+  const fill = thickness < 0;
+  const lineWidth = Math.max(1, thickness);
+  const startX = Math.max(0, Math.min(x0, x1));
+  const endX = Math.min(f.width - 1, Math.max(x0, x1));
+  const startY = Math.max(0, Math.min(y0, y1));
+  const endY = Math.min(f.height - 1, Math.max(y0, y1));
+
+  for (let y = startY; y <= endY; y++) {
+    for (let x = startX; x <= endX; x++) {
+      if (
+        !fill &&
+        x - x0 >= lineWidth &&
+        x1 - x >= lineWidth &&
+        y - y0 >= lineWidth &&
+        y1 - y >= lineWidth
+      )
+        continue;
+      const i = (y * f.width + x) * 4;
+      f.data[i] = r;
+      f.data[i + 1] = g;
+      f.data[i + 2] = b;
+      f.data[i + 3] = 255;
+    }
+  }
 }
