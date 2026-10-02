@@ -123,7 +123,18 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
     headers: { "Content-Type": "application/json", ...headers },
   });
 
-const error = (message: string, status: number) => json({ error: message }, status);
+const error = (message: string, status: number, headers: Record<string, string> = {}) =>
+  json({ error: message }, status, headers);
+
+function allowedMethods(path: string): string[] | null {
+  if (path === "/api/health" || path === "/api/components" || path === "/api/lessons")
+    return ["GET", "HEAD"];
+  if (path === "/api/auth/register" || path === "/api/auth/login" || path === "/api/auth/logout")
+    return ["POST"];
+  if (path === "/api/auth/me" || path === "/api/progress") return ["GET", "HEAD"];
+  if (/^\/api\/progress\/\d+$/.test(path)) return ["PUT"];
+  return null;
+}
 
 // ---------- schema (self-migrating) ----------
 // D1 never runs schema.sql for us, so ensure the tables the handlers assume
@@ -282,11 +293,16 @@ export default {
 
     if (!path.startsWith("/api/")) return env.ASSETS.fetch(request);
 
+    const methods = allowedMethods(path);
+    if (!methods) return error("Not found", 404);
+    if (!methods.includes(request.method))
+      return error("Method not allowed", 405, { Allow: methods.join(", ") });
+
     if (path === "/api/health") return json({ status: "ok" });
     if (path === "/api/lessons")
-      return env.ASSETS.fetch(new URL("/data/lessons.json", url.origin).toString());
+      return env.ASSETS.fetch(new Request(new URL("/data/lessons.json", url.origin), request));
     if (path === "/api/components")
-      return env.ASSETS.fetch(new URL("/data/components.json", url.origin).toString());
+      return env.ASSETS.fetch(new Request(new URL("/data/components.json", url.origin), request));
 
     // Every route below this point reads or writes D1; make sure the tables exist.
     await ensureSchema(env);

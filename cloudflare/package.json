@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "test": "node --test tests/worker-router.test.cjs"
   },
   "devDependencies": {
     "wrangler": "^4.132.0"
