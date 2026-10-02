@@ -5143,6 +5143,229 @@
         "initial": "Camera: waiting",
         "status": "Run your first complete vision pipeline..."
       }
+    },
+    {
+      "id": 509,
+      "phase": "opencv",
+      "title": "Contours",
+      "description": "A colour mask may contain several separate objects. cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) finds each separate connected region of white pixels and returns the contours plus a hierarchy that links neighbouring regions. Here the red mask contains a small red marker and a larger red ball; the blue object and dark background do not pass the red range. Count the returned contours, then look at the mask that produced them.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Make a red mask, find its external contours, print how many separate red regions were found, and show the mask."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('ball')\n\n# Find separate connected red regions in the binary mask.\n"
+      },
+      "hints": [
+        "mask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])",
+        "contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)",
+        "print(len(contours))",
+        "print(hierarchy[0][0])",
+        "cv2.imshow('red contours', mask)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to find the red regions..."
+      }
+    },
+    {
+      "id": 510,
+      "phase": "opencv",
+      "title": "The Biggest Blob",
+      "description": "A scene can contain more than one object of the same colour. cv2.contourArea(contour) measures the pixel area of each connected region, so compare every contour and keep the one with the largest area. The movable red ball is larger than the small red marker. In this simulator, area is the exact number of foreground pixels in the component, making the winner easy to verify.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Find all red contours, keep the largest by area, and print its pixel area."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('ball')\nmask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])\ncontours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\n\n# Compare each connected region's pixel area to find the largest.\n"
+      },
+      "hints": [
+        "largest = contours[0]",
+        "largest_area = cv2.contourArea(largest)",
+        "for contour in contours:",
+        "    area = cv2.contourArea(contour)",
+        "    if area > largest_area:",
+        "        largest = contour",
+        "        largest_area = area",
+        "print(largest_area)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to measure the largest red object..."
+      }
+    },
+    {
+      "id": 511,
+      "phase": "opencv",
+      "title": "The Centroid",
+      "description": "The centroid is the balance point of a shape. cv2.moments(contour) calculates spatial moments from the component's mask pixels. Divide m10 by m00 to get the horizontal centre and m01 by m00 to get the vertical centre. Draw that measured point with cv2.circle. Move the red ball slider and run again: the green dot follows the largest red region because its position is computed from image pixels.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Find the largest red contour, calculate its centre from moments, draw a green dot, and show it."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('ball')\nmask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])\ncontours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\n\n# Use the largest contour's spatial moments to find its centre.\n"
+      },
+      "hints": [
+        "largest = contours[0]",
+        "for contour in contours:",
+        "    if cv2.contourArea(contour) > cv2.contourArea(largest):",
+        "        largest = contour",
+        "moments = cv2.moments(largest)",
+        "cx = int(moments['m10'] / moments['m00'])",
+        "cy = int(moments['m01'] / moments['m00'])",
+        "print(cx, cy)",
+        "cv2.circle(img, (cx, cy), 5, (0, 255, 0), -1)",
+        "cv2.imshow('centroid', img)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to calculate and draw the centroid..."
+      }
+    },
+    {
+      "id": 512,
+      "phase": "opencv",
+      "title": "Track It",
+      "description": "Tracking repeats the same pixel measurements over time. Each loop reads a fresh ball-scene frame, finds the largest red contour, computes its centroid, and draws the centre. The slider changes the position used to generate each new frame, so move the subject while the program runs and watch the measured dot follow it. Press Stop when you are done. The tracker never reads the slider value directly — it only sees the pixels returned by imread.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Continuously read fresh frames, detect the largest red region, and draw its pixel-derived centroid as you move the ball."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\nimport time\n\n# Read a fresh scene in each pass; press Stop to end the loop.\n"
+      },
+      "hints": [
+        "while True:",
+        "    img = cv2.imread('ball')",
+        "    mask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])",
+        "    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)",
+        "    largest = contours[0]",
+        "    for contour in contours:",
+        "        if cv2.contourArea(contour) > cv2.contourArea(largest):",
+        "            largest = contour",
+        "    moments = cv2.moments(largest)",
+        "    cx = int(moments['m10'] / moments['m00'])",
+        "    cy = int(moments['m01'] / moments['m00'])",
+        "    cv2.circle(img, (cx, cy), 5, (0, 255, 0), -1)",
+        "    cv2.imshow('tracking', img)",
+        "    time.sleep(0.08)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run, then move the slider to track the ball..."
+      }
+    },
+    {
+      "id": 513,
+      "phase": "opencv",
+      "title": "Left or Right",
+      "description": "A measured centre lets a program make a decision about where an object is. Compare the horizontal centroid, cx, with half the image width, img.shape[1] // 2. If cx is smaller, the object is on the left; otherwise it is on the right. The decision comes from the centroid computed from image pixels. Move the ball slider across the centre line and rerun to test both branches.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Calculate the largest red object's centroid and report whether it is left or right of the image centre."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('ball')\nmask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])\ncontours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\n\n# Decide which side the measured centroid is on.\n"
+      },
+      "hints": [
+        "largest = contours[0]",
+        "for contour in contours:",
+        "    if cv2.contourArea(contour) > cv2.contourArea(largest):",
+        "        largest = contour",
+        "moments = cv2.moments(largest)",
+        "cx = int(moments['m10'] / moments['m00'])",
+        "if cx < img.shape[1] // 2:",
+        "    print('LEFT')",
+        "else:",
+        "    print('RIGHT')"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Move the ball and classify its side..."
+      }
+    },
+    {
+      "id": 514,
+      "phase": "opencv",
+      "title": "Two Colors",
+      "description": "A vision program can ask two questions of the same frame. Build one mask for red and another for blue with cv2.inRange, then count each mask's nonzero pixels. The red count includes the large moving ball and its small marker; the blue count comes from the separate blue object. Comparing the computed counts tells you which colour covers more of the image. Both results are read from real pixel masks.",
+      "source": "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "vision",
+      "vision": {
+        "scene": "ball"
+      },
+      "featuredComponent": "camera",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": "Create separate red and blue masks, count their pixels, and report which colour covers more of the scene."
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "import cv2\n\nimg = cv2.imread('ball')\n\n# Compare two independently computed colour masks.\n"
+      },
+      "hints": [
+        "red_mask = cv2.inRange(img, [0, 0, 120], [90, 90, 255])",
+        "blue_mask = cv2.inRange(img, [120, 40, 0], [255, 140, 100])",
+        "red_count = cv2.countNonZero(red_mask)",
+        "blue_count = cv2.countNonZero(blue_mask)",
+        "print('red', red_count)",
+        "print('blue', blue_count)",
+        "if red_count > blue_count:",
+        "    print('More red pixels')",
+        "else:",
+        "    print('More blue pixels')",
+        "cv2.imshow('red mask', red_mask)",
+        "cv2.waitKey(0)"
+      ],
+      "output": {
+        "initial": "Camera: waiting",
+        "status": "Run to compare the two colour masks..."
+      }
     }
   ]
 }

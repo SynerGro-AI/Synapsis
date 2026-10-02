@@ -10,6 +10,7 @@ import Transcript from "./components/Transcript";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
+import { makeBallScene } from "./sim/cv";
 import {
   CircuitRuntime,
   validate,
@@ -84,6 +85,9 @@ export default function App() {
   // Vision lessons: the pixel buffer the learner's cv2.imshow() last painted, and
   // a cache of decoded sample photos keyed by file name (real pixels, no engine).
   const [visionFrame, setVisionFrame] = useState<VisionFrame | null>(null);
+  const [visionBallX, setVisionBallX] = useState(120);
+  const visionBallXRef = useRef(visionBallX);
+  visionBallXRef.current = visionBallX;
   const sampleFramesRef = useRef<Map<string, VisionFrame>>(new Map());
 
   // World: what physically surrounds the circuit
@@ -446,6 +450,11 @@ export default function App() {
         // ops can never disturb the cached source (cv2.imread returns a fresh Mat).
         loadImage: (imgPath) => {
           const key = imgPath.split("/").pop() ?? imgPath;
+          if (key === "ball") {
+            const frame = makeBallScene(visionBallXRef.current);
+            setRanClean(true);
+            return frame;
+          }
           const f = sampleFramesRef.current.get(key);
           if (!f) return null;
           setRanClean(true);
@@ -841,6 +850,22 @@ export default function App() {
                 <>
                   <div className="panel-label">Camera — the real pixels your cv2 code sees</div>
                   <VisionCanvas frame={visionFrame} sampleImage={lesson.vision?.sampleImage} />
+                  {lesson.vision?.scene === "ball" && (
+                    <div className="world-controls vision-controls">
+                      <label>
+                        Move red ball
+                        <input
+                          type="range"
+                          min={50}
+                          max={175}
+                          value={visionBallX}
+                          onChange={(event) => setVisionBallX(Number(event.target.value))}
+                          aria-label="Move the red ball horizontally"
+                        />
+                        <code>{visionBallX}px</code>
+                      </label>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

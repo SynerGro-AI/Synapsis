@@ -53,32 +53,17 @@ npm run dev
 5. **Expert (29+):** wire gauge physics, signal calibration, interrupts, I2C
    (planned: [avr8js](https://github.com/wokwi/avr8js) for cycle-accurate AVR simulation)
 
-## Deployment — synapsis.school (Cloudflare)
+## Deployment — synapsis.school (Cloudflare Workers Builds)
 
-The site deploys as a single Cloudflare Worker: the built frontend is served
-as static assets and `cloudflare/src/worker.ts` implements the same API as
-the .NET backend, storing accounts/progress in D1 (Cloudflare's SQLite).
+Cloudflare Workers Builds is the sole publisher for the site. It watches the
+configured `main` branch and builds/deploys the Worker when changes are pushed.
+To publish, commit and push to `main`; do not deploy with Wrangler or GitHub
+Actions. A local `npm run build` in `frontend/` is for verification only.
 
-One-time setup (from `cloudflare/`):
-
-```bash
-npx wrangler login                       # opens browser, sign in to Cloudflare
-npx wrangler d1 create synapsis          # copy the database_id it prints
-#   -> paste the id into wrangler.jsonc (d1_databases[0].database_id)
-npx wrangler d1 execute synapsis --remote --file schema.sql
-npx wrangler secret put SESSION_SECRET   # paste any long random string
-```
-
-Deploy (any time after `npm run build` in frontend/):
-
-```bash
-cd frontend && npm run build && cd ../cloudflare && npx wrangler deploy
-```
-
-The `routes` in `wrangler.jsonc` bind the worker to **synapsis.school** and
-**www.synapsis.school** (the zone must be in the same Cloudflare account).
-There is also a manual GitHub Actions deploy (`.github/workflows/deploy.yml`)
-— add a `CLOUDFLARE_API_TOKEN` repo secret and run it from the Actions tab.
+The Worker serves the built frontend as static assets, while
+`cloudflare/src/worker.ts` implements the API and stores accounts/progress in
+D1 (Cloudflare's SQLite). D1, secrets, domains, and the build configuration
+are managed in Cloudflare; do not put secret values in the repository.
 
 ## Planned features
 
@@ -106,4 +91,3 @@ Building and running happens **through GitHub** — no local SDK required:
 cd backend && dotnet run --project Synapsys.Api   # API
 cd frontend && npm run dev                        # UI
 ```
-

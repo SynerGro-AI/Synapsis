@@ -22,6 +22,17 @@ export interface Frame {
   data: Uint8ClampedArray;
 }
 
+export interface Blob {
+  area: number;
+  m00: number;
+  m10: number;
+  m01: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** A fresh frame filled with one RGBA colour (default opaque black). */
 export function makeFrame(
   width: number,
@@ -36,6 +47,30 @@ export function makeFrame(
     data[i + 3] = fill[3];
   }
   return { width, height, data };
+}
+
+/** Build a repeatable two-colour test scene from its real RGBA pixel buffer. */
+export function makeBallScene(redX: number): Frame {
+  const frame = makeFrame(240, 160, [40, 40, 40, 255]);
+  drawDisk(frame, redX, 80, 20, [220, 40, 40, 255]);
+  drawDisk(frame, 25, 80, 7, [220, 40, 40, 255]);
+  drawDisk(frame, 220, 80, 12, [40, 80, 220, 255]);
+  return frame;
+}
+
+function drawDisk(
+  frame: Frame,
+  cx: number,
+  cy: number,
+  radius: number,
+  rgba: [number, number, number, number],
+): void {
+  for (let y = Math.max(0, cy - radius); y <= Math.min(frame.height - 1, cy + radius); y++) {
+    for (let x = Math.max(0, cx - radius); x <= Math.min(frame.width - 1, cx + radius); x++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 > radius ** 2) continue;
+      frame.data.set(rgba, (y * frame.width + x) * 4);
+    }
+  }
 }
 
 /** A deep copy for CV operations that return a new image. */
@@ -175,6 +210,92 @@ export function drawRectangle(
       f.data[i + 1] = g;
       f.data[i + 2] = b;
       f.data[i + 3] = 255;
+    }
+  }
+}
+
+/** Return each 8-connected nonzero region and its exact pixel moments. */
+export function findBlobs(frame: Frame): Blob[] {
+  const visited = new Uint8Array(frame.width * frame.height);
+  const blobs: Blob[] = [];
+  const neighbours: [number, number][] = [
+    [-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0],
+    [-1, 1], [0, 1], [1, 1],
+  ];
+
+  for (let y = 0; y < frame.height; y++) {
+    for (let x = 0; x < frame.width; x++) {
+      const first = y * frame.width + x;
+      if (visited[first] || frame.data[first * 4] === 0) continue;
+      const pending = [first];
+      visited[first] = 1;
+      let area = 0;
+      let m10 = 0;
+      let m01 = 0;
+      let left = x;
+      let top = y;
+      let right = x;
+      let bottom = y;
+
+      while (pending.length > 0) {
+        const index = pending.pop()!;
+        const px = index % frame.width;
+        const py = Math.floor(index / frame.width);
+        area++;
+        m10 += px;
+        m01 += py;
+        left = Math.min(left, px);
+        top = Math.min(top, py);
+        right = Math.max(right, px);
+        bottom = Math.max(bottom, py);
+
+        for (const [dx, dy] of neighbours) {
+          const nx = px + dx;
+          const ny = py + dy;
+          if (nx < 0 || nx >= frame.width || ny < 0 || ny >= frame.height) continue;
+          const next = ny * frame.width + nx;
+          if (visited[next] || frame.data[next * 4] === 0) continue;
+          visited[next] = 1;
+          pending.push(next);
+        }
+      }
+
+      blobs.push({
+        area,
+        m00: area,
+        m10,
+        m01,
+        x: left,
+        y: top,
+        width: right - left + 1,
+        height: bottom - top + 1,
+      });
+    }
+  }
+  return blobs;
+}
+
+/** Draw a BGR circle into a frame; negative thickness fills the disk. */
+export function drawCircle(
+  frame: Frame,
+  center: [number, number],
+  radius: number,
+  color: [number, number, number],
+  thickness: number,
+): void {
+  const [cx, cy] = center;
+  const [b, g, r] = color;
+  const outerRadius = radius ** 2;
+  const innerRadius = thickness < 0 ? -1 : Math.max(0, radius - thickness) ** 2;
+  for (let y = Math.max(0, cy - radius); y <= Math.min(frame.height - 1, cy + radius); y++) {
+    for (let x = Math.max(0, cx - radius); x <= Math.min(frame.width - 1, cx + radius); x++) {
+      const distance = (x - cx) ** 2 + (y - cy) ** 2;
+      if (distance > outerRadius || (innerRadius >= 0 && distance < innerRadius)) continue;
+      const i = (y * frame.width + x) * 4;
+      frame.data[i] = r;
+      frame.data[i + 1] = g;
+      frame.data[i + 2] = b;
+      frame.data[i + 3] = 255;
     }
   }
 }

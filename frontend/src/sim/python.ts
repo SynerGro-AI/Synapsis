@@ -14,8 +14,18 @@
 // Pin numbers here are Broadcom (BCM) GPIO numbers, matching GPIO.setmode(GPIO.BCM).
 
 import type { PySketchInfo } from "../circuit/engine";
-import type { Frame } from "./cv";
-import { toGray, inRange, countNonZero, threshold, boundingRect, drawRectangle } from "./cv";
+import {
+  toGray,
+  inRange,
+  countNonZero,
+  threshold,
+  boundingRect,
+  drawRectangle,
+  drawCircle,
+  findBlobs,
+  type Blob,
+  type Frame,
+} from "./cv";
 
 // ---------- IO surface the runtime drives ----------
 
@@ -86,6 +96,8 @@ type PySerial = {
 /** A real image/mask: an RGBA pixel buffer the CV ops genuinely read and write. */
 type PyFrame = { __frame: true; frame: Frame; channels: 1 | 3 };
 type PyTuple = { __tuple: PyValue[] };
+type PyContour = { __contour: Blob };
+type PyMoments = { __moments: Blob };
 type PyValue =
   | number
   | string
@@ -98,7 +110,9 @@ type PyValue =
   | PyBytes
   | PySerial
   | PyFrame
-  | PyTuple;
+  | PyTuple
+  | PyContour
+  | PyMoments;
 
 const isNamespace = (v: PyValue): v is PyNamespace =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__ns" in v;
@@ -114,6 +128,10 @@ const isFrame = (v: PyValue): v is PyFrame =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__frame" in v;
 const isTuple = (v: PyValue): v is PyTuple =>
   typeof v === "object" && v !== null && !Array.isArray(v) && "__tuple" in v;
+const isContour = (v: PyValue): v is PyContour =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__contour" in v;
+const isMoments = (v: PyValue): v is PyMoments =>
+  typeof v === "object" && v !== null && !Array.isArray(v) && "__moments" in v;
 
 /** Render a bytes value the way CPython's repr does: b'...' with escapes. */
 function bytesRepr(b: number[]): string {
@@ -161,6 +179,8 @@ function pyStr(v: PyValue): string {
   if (isBytes(v)) return bytesRepr(v.__bytes);
   if (isSerial(v)) return `Serial<port=${v.port}, baudrate=${v.baud}, open=${v.open}>`;
   if (isFrame(v)) return `<ndarray ${v.frame.height}x${v.frame.width}x${v.channels} uint8>`;
+  if (isContour(v)) return `<contour area=${v.__contour.area}>`;
+  if (isMoments(v)) return "<moments>";
   if (isPwm(v)) return `<PWM on GPIO${v.__pwm}>`;
   if (isNamespace(v)) return `<module ${v.__ns}>`;
   return "<function>";
@@ -182,6 +202,8 @@ function typeName(v: PyValue): string {
   if (isBytes(v)) return "bytes";
   if (isSerial(v)) return "Serial";
   if (isFrame(v)) return "numpy.ndarray";
+  if (isContour(v)) return "ndarray";
+  if (isMoments(v)) return "dict";
   return "object";
 }
 
@@ -962,6 +984,8 @@ const CV2_CONSTS: Record<string, PyValue> = {
   COLOR_BGR2GRAY: 6,
   COLOR_RGB2GRAY: 7,
   THRESH_BINARY: 0,
+  RETR_EXTERNAL: 0,
+  CHAIN_APPROX_SIMPLE: 2,
 };
 
 // ---------- Interpreter ----------
@@ -1295,6 +1319,11 @@ export class PythonSim {
             throw new PyError("IndexError", "tuple index out of range");
           return obj.__tuple[i];
         }
+        if (isMoments(obj)) {
+          if (typeof idx !== "string" || !(idx in obj.__moments))
+            throw new PyError("KeyError", ` '${pyStr(idx)}'`);
+          return obj.__moments[idx as keyof Blob];
+        }
         if (Array.isArray(obj) || typeof obj === "string") {
           if (typeof idx !== "number") throw new PyError("TypeError", "indices must be integers");
           const i = idx < 0 ? obj.length + idx : idx;
@@ -1329,6 +1358,10 @@ export class PythonSim {
           : [obj.frame.height, obj.frame.width, obj.channels] };
       throw new PyError("AttributeError", `'numpy.ndarray' object has no attribute '${name}'`);
     }
+    if (isMoments(obj) && name in obj.__moments)
+      return obj.__moments[name as keyof Blob];
+    if (isMoments(obj))
+      throw new PyError("AttributeError", `'dict' object has no attribute '${name}'`);
     if (isSerial(obj)) {
       // Real pyserial read-only properties.
       if (name === "in_waiting") return this.io.serialAvailable();
@@ -1643,6 +1676,56 @@ export class PythonSim {
           throw new PyError("error", "cv2.rectangle() thickness must be positive or -1");
         drawRectangle(frame, topLeft, bottomRight, color, thickness);
         return null;
+      }
+      case "circle": {
+        const image = args[0];
+        const frame = this.frameArg(image, "circle");
+        if (!isFrame(image) || image.channels !== 3)
+          throw new PyError("error", "cv2.circle() expects a three-channel image");
+        const center = this.intPair(args[1], "circle", "center");
+        const radius = Number(args[2]);
+        const color = this.bgrTriple(args[3], "circle");
+        const thickness = Number(args[4] ?? 1);
+        if (!Number.isInteger(radius) || radius < 0 ||
+            !Number.isInteger(thickness) || thickness === 0 || thickness < -1)
+          throw new PyError("error", "cv2.circle() radius must be nonnegative and thickness positive or -1");
+        drawCircle(frame, center, radius, color, thickness);
+        return null;
+      }
+      case "findContours": {
+        const image = args[0];
+        const frame = this.frameArg(image, "findContours");
+        if (!isFrame(image) || image.channels !== 1)
+          throw new PyError("error", "cv2.findContours() expects a single-channel binary image");
+        if (Number(args[1]) !== 0 || Number(args[2]) !== 2)
+          throw new PyError("error", "only RETR_EXTERNAL with CHAIN_APPROX_SIMPLE is supported");
+        const blobs = findBlobs(frame);
+        const hierarchy = blobs.length > 0
+          ? [blobs.map((_, i) => [
+              i + 1 < blobs.length ? i + 1 : -1,
+              i > 0 ? i - 1 : -1,
+              -1,
+              -1,
+            ])]
+          : null;
+        return {
+          __tuple: [
+            blobs.map((blob) => ({ __contour: blob })),
+            hierarchy,
+          ],
+        };
+      }
+      case "contourArea": {
+        const contour = args[0];
+        if (!isContour(contour))
+          throw new PyError("TypeError", "contourArea() expects a contour");
+        return contour.__contour.area;
+      }
+      case "moments": {
+        const contour = args[0];
+        if (!isContour(contour))
+          throw new PyError("TypeError", "moments() expects a contour");
+        return { __moments: contour.__contour };
       }
       case "waitKey":
         // No physical keyboard in the sandbox: no key is ever pressed.
