@@ -43,6 +43,18 @@ const numericOutput = (line: string) =>
       const value = Number(token);
       return Number.isFinite(value) ? [value] : [];
     });
+const parseMathAnswer = (answer: string) => {
+  const tokens = answer.split(",").map((token) => token.trim());
+  if (
+    !answer.trim() ||
+    tokens.some((token) => !/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(token))
+  ) {
+    return null;
+  }
+  const values = tokens.map(Number);
+  return values.every(Number.isFinite) ? values : null;
+};
+type MathAnswerFeedback = "correct" | "incorrect" | "invalid" | "no-result";
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
 const CodeEditor = lazy(() => import("./components/CodeEditor"));
 
@@ -79,6 +91,8 @@ export default function App() {
   const [ranClean, setRanClean] = useState(false);
   const [serial, setSerial] = useState<string[]>([]);
   const [mathValues, setMathValues] = useState<number[]>([]);
+  const [mathAnswer, setMathAnswer] = useState("");
+  const [mathAnswerFeedback, setMathAnswerFeedback] = useState<MathAnswerFeedback | null>(null);
   const [ledLevels, setLedLevels] = useState<Map<string, number>>(new Map());
   const [currentWires, setCurrentWires] = useState<Map<number, boolean>>(new Map());
   const [rgbLevels, setRgbLevels] = useState<Map<string, { r: number; g: number; b: number }>>(new Map());
@@ -309,6 +323,8 @@ export default function App() {
     stopSim();
     setSerial([]);
     setMathValues([]);
+    setMathAnswer("");
+    setMathAnswerFeedback(null);
     setRanClean(false);
     setSelected(null);
     setCode(starter);
@@ -373,19 +389,23 @@ export default function App() {
     worldRef.current.irQueue.push(code);
   }, []);
 
-  function runSketch() {
+  function runSketch(onMathComplete?: (values: number[], failed: boolean) => void) {
     stopSim();
     const sketch = editorRef.current?.getValue() ?? code;
     const rt = new CircuitRuntime(circuit, worldRef.current);
     runtimeRef.current = rt;
     setSerial([]);
-    if (lesson.kind === "math") setMathValues([]);
+    if (lesson.kind === "math") {
+      setMathValues([]);
+      setMathAnswerFeedback(null);
+    }
     setRunning(true);
 
     if (lesson.kind === "math") {
       const sim = new PythonSim();
       engineRef.current = sim;
       let failed = false;
+      const runValues: number[] = [];
       setSerial(["$ python lesson.py"]);
       const noop = () => undefined;
       const io: PyGpioIO = {
@@ -403,6 +423,7 @@ export default function App() {
           setSerial((s) => [...s.slice(-30), line]);
           const values = numericOutput(line);
           if (values.length) {
+            runValues.push(...values);
             setMathValues((current) => [...current, ...values].slice(-20));
           }
         },
@@ -418,6 +439,7 @@ export default function App() {
         if (engineRef.current === sim) {
           setRunning(false);
           setSerial((s) => [...s, `[process exited with status ${failed ? 1 : 0}]`]);
+          onMathComplete?.(runValues.slice(-20), failed);
         }
       });
       return;
@@ -711,11 +733,37 @@ export default function App() {
   const codeNorm = normalize(code);
   const typedHints = lesson.hints.map((h) => codeNorm.includes(normalize(h)));
   const allTyped = lesson.hints.length > 0 && typedHints.every(Boolean);
-  const completed =
-    Boolean(saved[lesson.id]?.completed) || (allTyped && ranClean && circuitOk);
+  const lessonPassed =
+    lesson.kind === "math"
+      ? ranClean && mathAnswerFeedback === "correct"
+      : allTyped && ranClean && circuitOk;
+  const completed = Boolean(saved[lesson.id]?.completed) || lessonPassed;
+
+  const checkMathAnswer = () => {
+    const submitted = parseMathAnswer(mathAnswer);
+    if (!submitted) {
+      setMathAnswerFeedback("invalid");
+      return;
+    }
+    setMathAnswerFeedback(null);
+    runSketch((values, failed) => {
+      if (failed || !values.length) {
+        setMathAnswerFeedback("no-result");
+        return;
+      }
+      const matches =
+        submitted.length === values.length &&
+        submitted.every(
+          (value, index) =>
+            Math.abs(value - values[index]) <=
+            1e-9 * Math.max(1, Math.abs(value), Math.abs(values[index])),
+        );
+      setMathAnswerFeedback(matches ? "correct" : "incorrect");
+    });
+  };
 
   useEffect(() => {
-    if (allTyped && ranClean && circuitOk && !saved[lesson.id]?.completed) {
+    if (lessonPassed && !saved[lesson.id]?.completed) {
       setSaved((s) => ({
         ...s,
         [lesson.id]: {
@@ -725,7 +773,7 @@ export default function App() {
         },
       }));
     }
-  }, [allTyped, ranClean, circuitOk, lesson.id, saved]);
+  }, [lessonPassed, lesson.id, saved]);
 
   // Autosave sketch + circuit + completion + current lesson (debounced).
   useEffect(() => {
@@ -1118,14 +1166,63 @@ export default function App() {
               {lesson.kind === "math" ? (
                 <>
                   <div className="panel-label">Math Guide</div>
-                  <h4>Explore with code</h4>
+                  <h4>Lesson theory</h4>
                   <p className="why">
-                    Edit the values shown in the starter program, add the
-                    calculation from the hints, and run it to check the
-                    result. The sandbox evaluates the arithmetic you write.
+                    {lesson.math?.theory ?? lessonDescription}
                   </p>
-                  <h5>{t("objective")}</h5>
-                  <p className="why">{lessonDescription}</p>
+                  <h5>Try this problem</h5>
+                  <p className="math-problem">{lesson.math?.problem ?? lessonDescription}</p>
+                  <p className="why">
+                    Work out the blanks and type your answer. “Check with Python” runs your
+                    program; its printed result appears in Program Output and on the graph.
+                  </p>
+                  <form
+                    className="math-answer-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      checkMathAnswer();
+                    }}
+                  >
+                    <label htmlFor="math-answer">Your answer</label>
+                    <div className="math-answer-controls">
+                      <input
+                        id="math-answer"
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        placeholder="Type your answer"
+                        value={mathAnswer}
+                        onChange={(event) => {
+                          setMathAnswer(event.target.value);
+                          setMathAnswerFeedback(null);
+                        }}
+                      />
+                      <button type="submit" disabled={running}>
+                        Check with Python
+                      </button>
+                    </div>
+                    {lesson.math?.problem.includes("____") &&
+                      lesson.math.problem.split("____").length > 2 && (
+                      <span className="math-answer-help">
+                        Enter answers in blank order, separated by commas.
+                      </span>
+                      )}
+                    {mathAnswerFeedback && (
+                      <p
+                        className={`math-answer-feedback ${mathAnswerFeedback}`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {mathAnswerFeedback === "correct"
+                          ? "Correct — your answer matches the result of your Python program."
+                          : mathAnswerFeedback === "incorrect"
+                            ? "Not quite. Review the lesson theory or adjust your Python calculation, then try again."
+                            : mathAnswerFeedback === "invalid"
+                              ? "Enter a number for each blank. Separate multiple answers with commas."
+                              : "Your program must run successfully and print numeric results before the answer can be checked."}
+                      </p>
+                    )}
+                  </form>
                   {lesson.source && <p className="lesson-source">{lesson.source}</p>}
                 </>
               ) : (
@@ -1177,7 +1274,7 @@ export default function App() {
                     {t("stop")}
                   </button>
                 ) : (
-                  <button className="run" onClick={runSketch}>
+                  <button className="run" onClick={() => runSketch()}>
                     {t("run")}
                   </button>
                 )}
@@ -1215,14 +1312,28 @@ export default function App() {
               )}
               <div className="hints">
                 <div className="hints-title">{t("hintsTitle")}</div>
-                {lesson.hints.map((hint, i) => (
-                  <div className={typedHints[i] ? "hint done" : "hint"} key={hint}>
-                    <span className="hint-label">
-                      {typedHints[i] ? "✓" : (HINT_LABELS[i] ?? "•")}
-                    </span>
-                    <code>{hint}</code>
-                  </div>
-                ))}
+                {lesson.kind === "math" ? (
+                  <details className="math-hints">
+                    <summary>Need a coding hint? Show steps.</summary>
+                    {lesson.hints.map((hint, i) => (
+                      <div className={typedHints[i] ? "hint done" : "hint"} key={hint}>
+                        <span className="hint-label">
+                          {typedHints[i] ? "✓" : (HINT_LABELS[i] ?? "•")}
+                        </span>
+                        <code>{hint}</code>
+                      </div>
+                    ))}
+                  </details>
+                ) : (
+                  lesson.hints.map((hint, i) => (
+                    <div className={typedHints[i] ? "hint done" : "hint"} key={hint}>
+                      <span className="hint-label">
+                        {typedHints[i] ? "✓" : (HINT_LABELS[i] ?? "•")}
+                      </span>
+                      <code>{hint}</code>
+                    </div>
+                  ))
+                )}
               </div>
               {lesson.kind === "serial" && lesson.arduinoSketch && (
                 <div className="companion-sketch">

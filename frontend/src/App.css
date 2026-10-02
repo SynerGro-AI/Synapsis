@@ -938,6 +938,107 @@
   text-align: center;
 }
 
+.guide .math-problem {
+  margin: 8px 0 12px;
+  padding: 12px;
+  border: 1px solid #57472f;
+  border-radius: 6px;
+  background: #2d271d;
+  color: #f2d7a0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.math-answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 14px;
+}
+
+.math-answer-form > label {
+  color: #ddd;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.math-answer-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.math-answer-controls input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #171717;
+  color: #f5f5f5;
+  font: inherit;
+}
+
+.math-answer-controls input:focus-visible {
+  outline: 2px solid #e8a33d;
+  outline-offset: 1px;
+}
+
+.math-answer-controls button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: #e8a33d;
+  color: #1e1e1e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.math-answer-controls button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.math-answer-help {
+  color: #999;
+  font-size: 11px;
+}
+
+.math-answer-feedback {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.math-answer-feedback.correct {
+  color: #80d69b;
+}
+
+.math-answer-feedback.incorrect,
+.math-answer-feedback.invalid,
+.math-answer-feedback.no-result {
+  color: #f0b46f;
+}
+
+.math-hints {
+  padding: 8px 10px;
+  border-top: 1px solid #333;
+}
+
+.math-hints summary {
+  color: #e8a33d;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.math-hints[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 
 .sidebar-roadmap {
   margin: 16px 12px;

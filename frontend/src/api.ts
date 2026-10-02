@@ -54,6 +54,10 @@ export interface Lesson {
     /** For scene "photo": the file under public/vision/ that cv2.imread() decodes. */
     sampleImage?: string;
   };
+  math?: {
+    theory: string;
+    problem: string;
+  };
   terminal?: {
     shell: string;
     /** Prompt user (defaults to "you"); Pi lessons use "pi". */
