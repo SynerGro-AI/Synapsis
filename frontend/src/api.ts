@@ -57,6 +57,22 @@ export interface Lesson {
   math?: {
     theory: string;
     problem: string;
+    visual?: {
+      kind:
+        | "count"
+        | "combine"
+        | "compare"
+        | "place-value"
+        | "groups"
+        | "length"
+        | "share"
+        | "fraction"
+        | "convert"
+        | "rectangle"
+        | "mean";
+      values: number[];
+      unit?: string;
+    };
   };
   terminal?: {
     shell: string;

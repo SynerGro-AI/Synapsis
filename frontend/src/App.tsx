@@ -9,6 +9,7 @@ import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import MathGraph from "./components/MathGraph";
+import MathVisualModel from "./components/MathVisualModel";
 import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
 import { makeBallScene, makeLedBlinkFrame } from "./sim/cv";
@@ -1199,6 +1200,7 @@ export default function App() {
                   </p>
                   <h5>Try this problem</h5>
                   <p className="math-problem">{lesson.math?.problem ?? lessonDescription}</p>
+                  <MathVisualModel visual={lesson.math?.visual} />
                   <h5>Python code to type</h5>
                   <p className="why">
                     Type this example into the editor, then enter your answer. Check with Python
