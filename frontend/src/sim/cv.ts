@@ -58,6 +58,20 @@ export function makeBallScene(redX: number): Frame {
   return frame;
 }
 
+/** Build a fresh camera frame with a bright or dark LED from its actual pixels. */
+export function makeLedScene(ledOn: boolean): Frame {
+  const frame = makeFrame(240, 160, [24, 24, 24, 255]);
+  drawDisk(frame, 120, 80, 34, [52, 52, 52, 255]);
+  drawDisk(frame, 120, 80, 27, ledOn ? [255, 48, 48, 255] : [48, 12, 12, 255]);
+  return frame;
+}
+
+/** The LED stays on/off for one half-period; pure time input keeps tests exact. */
+export function makeLedBlinkFrame(elapsedMs: number, halfPeriodMs = 400): Frame {
+  const phase = Math.floor(Math.max(0, elapsedMs) / halfPeriodMs);
+  return makeLedScene(phase % 2 === 0);
+}
+
 function drawDisk(
   frame: Frame,
   cx: number,

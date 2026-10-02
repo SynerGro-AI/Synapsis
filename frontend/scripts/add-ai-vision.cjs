@@ -43,8 +43,8 @@ const CREDIT =
   "Paul McWhorter, OpenCV with Python — toptechboy.com; support at patreon.com/PaulMcWhorter";
 
 // A vision lesson: the learner types Python (codeTemplate) that reads real pixels
-// via cv2. There is no circuit — the camera looks at a committed sample photo, so
-// palette/required are empty and the featured part is the camera.
+// via cv2. There is no circuit — the camera uses a committed photo or generated
+// scene, so palette/required are empty and the featured part is the camera.
 const lesson = (id, phase, title, description, notes, starter, hints, output) => ({
   id,
   phase,
@@ -63,6 +63,11 @@ const lesson = (id, phase, title, description, notes, starter, hints, output) =>
 const ballLesson = (id, title, description, notes, starter, hints, output) => ({
   ...lesson(id, "opencv", title, description, notes, starter, hints, output),
   vision: { scene: "ball" },
+});
+
+const ledLesson = (id, title, description, notes, starter, hints, output) => ({
+  ...lesson(id, "opencv", title, description, notes, starter, hints, output),
+  vision: { scene: "led" },
 });
 
 const allLessons = [
@@ -311,6 +316,88 @@ const allLessons = [
     ],
     { initial: "Camera: waiting", status: "Run to compare the two colour masks..." },
   ),
+  ledLesson(
+    515,
+    "Meet the Blinking LED",
+    "The sandbox camera sees a red LED that stays bright for 0.4 seconds, then dark for 0.4 seconds. Capture a fresh frame with cv2.grabFrame() and display it. This camera hook is specific to the lesson sandbox; the image it returns is an ordinary pixel frame that the same OpenCV operations can inspect.",
+    "The camera scene is generated from pixels on a steady clock: the LED alternates between bright red and dim red every 0.4 seconds. cv2.grabFrame() is the sandbox's live-camera source and returns a new frame each time; it does not report whether the LED is on. Every later decision must be computed from those pixel values.",
+    "import cv2\n\n# Capture and display one fresh frame from the camera.\n",
+    [
+      "frame = cv2.grabFrame()",
+      "cv2.imshow('LED camera', frame)",
+      "cv2.waitKey(0)",
+    ],
+    { initial: "Camera: waiting", status: "Capture a fresh pixel frame from the blinking LED..." },
+  ),
+  ledLesson(
+    516,
+    "Is the LED On?",
+    "A camera does not know what an LED is; it only measures pixel brightness. Convert a fresh frame to grayscale, threshold the image, and count the bright pixels. A nonzero count means the red LED is bright in the pixels you captured; a zero count means it is dark.",
+    "The LED centre is at x=120, y=80. Its on pixels have grayscale luminance above 80; the off LED and background are below that threshold. cv2.threshold returns the cutoff and a new binary mask, and countNonZero counts that mask's actual white pixels.",
+    "import cv2\n\nframe = cv2.grabFrame()\ngray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)\n# Turn brightness into a black-and-white mask.\n",
+    [
+      "ret, bright = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)",
+      "lit = cv2.countNonZero(bright)",
+      "if lit > 0:",
+      "    print('LED is ON')",
+      "else:",
+      "    print('LED is OFF')",
+      "cv2.imshow('brightness mask', bright)",
+    ],
+    { initial: "Camera: waiting", status: "Threshold the frame to decide from its pixels..." },
+  ),
+  ledLesson(
+    517,
+    "Count the Blinks",
+    "One frame can say whether the light is on; a sequence of frames reveals when it blinks. Sample the camera repeatedly, threshold each image, and count only transitions from dark to bright. The total comes from changes in measured pixels, not a hidden LED flag.",
+    "The camera scene alternates every 0.4 seconds. Twenty samples, 0.1 seconds apart, span about two seconds. `previous` stores the last pixel-derived state (0=dark, 1=bright); increment the count only when the new state is 1 and the previous state was 0.",
+    "import cv2\nimport time\n\nprevious = -1\nblinks = 0\n# Sample the camera over time and count dark-to-bright changes.\n",
+    [
+      "for sample in range(20):",
+      "    frame = cv2.grabFrame()",
+      "    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)",
+      "    ret, bright = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)",
+      "    lit = cv2.countNonZero(bright)",
+      "    state = 0",
+      "    if lit > 0:",
+      "        state = 1",
+      "    if previous == 0 and state == 1:",
+      "        blinks = blinks + 1",
+      "        print('BLINK')",
+      "    previous = state",
+      "    cv2.imshow('LED camera', frame)",
+      "    time.sleep(0.1)",
+      "print('Blinks:', blinks)",
+    ],
+    { initial: "Camera: waiting", status: "Count OFF-to-ON changes across fresh frames..." },
+  ),
+  ledLesson(
+    518,
+    "Capstone — Watch and React",
+    "Build the complete vision loop: capture each new frame, threshold its brightness, compare the measured state with the previous one, and react when the LED changes. The bounded two-second run reports ON and OFF events as they happen, then stops on its own.",
+    "This capstone uses only cv2.grabFrame pixel buffers, grayscale conversion, thresholding and a previous-state comparison. It does not read an LED variable or circuit output. The loop is bounded to 20 frames so the program finishes without a manual Stop.",
+    "import cv2\nimport time\n\nprevious = -1\n# Watch each camera frame and report changes in measured brightness.\n",
+    [
+      "for sample in range(20):",
+      "    frame = cv2.grabFrame()",
+      "    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)",
+      "    ret, bright = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)",
+      "    lit = cv2.countNonZero(bright)",
+      "    state = 0",
+      "    if lit > 0:",
+      "        state = 1",
+      "    if state != previous:",
+      "        if state == 1:",
+      "            print('LED turned ON')",
+      "        else:",
+      "            print('LED turned OFF')",
+      "    previous = state",
+      "    cv2.imshow('LED response', frame)",
+      "    time.sleep(0.1)",
+      "print('Monitoring complete')",
+    ],
+    { initial: "Camera: waiting", status: "Run the complete pixel-based response loop..." },
+  ),
 ];
 
 const toAdd = allLessons.filter((l) => l.id <= LIMIT);
@@ -344,7 +431,7 @@ const camera = {
     connection: "Ribbon cable to the Pi's camera (CSI) port or USB",
   },
   notes:
-    "In these lessons the camera looks at a sample photo so results are exact and repeatable. cv2.imread() gives you the same pixel grid a real frame would; everything you learn here works unchanged on a live camera feed.",
+    "Vision lessons use a committed sample photo or a generated scene, so results are repeatable. cv2.imread() and the sandbox frame-capture hook both deliver pixel buffers; every CV operation works on those pixels.",
   terminals: "Ribbon/USB to the host — no breadboard wiring.",
 };
 const ci = components.components.findIndex((c) => c.id === "camera");

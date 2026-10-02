@@ -51,6 +51,8 @@ export interface PyGpioIO {
   loadImage?(path: string): Frame | null;
   /** Hand a produced frame to the vision display pane (cv2.imshow). */
   showFrame?(frame: Frame): void;
+  /** Capture a fresh camera frame for temporal vision lessons. */
+  grabFrame?(): Frame | null;
   onError(message: string): void;
 }
 
@@ -1617,6 +1619,12 @@ export class PythonSim {
         const frame = this.frameArg(args[1], "imshow");
         if (this.io.showFrame) this.io.showFrame(frame);
         return null;
+      }
+      case "grabFrame": {
+        const frame = this.io.grabFrame?.();
+        if (!frame)
+          throw new PyError("error", "cv2.grabFrame() could not capture a camera frame");
+        return { __frame: true, frame, channels: 3 };
       }
       case "cvtColor": {
         // cv2.cvtColor(img, code): only the grayscale codes are implemented so far.

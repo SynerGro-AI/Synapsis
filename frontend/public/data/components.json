@@ -344,7 +344,7 @@
         "colourOrder": "OpenCV reads B, G, R",
         "connection": "Ribbon cable to the Pi's camera (CSI) port or USB"
       },
-      "notes": "In these lessons the camera looks at a sample photo so results are exact and repeatable. cv2.imread() gives you the same pixel grid a real frame would; everything you learn here works unchanged on a live camera feed.",
+      "notes": "Vision lessons use a committed sample photo or a generated scene, so results are repeatable. cv2.imread() and the sandbox frame-capture hook both deliver pixel buffers; every CV operation works on those pixels.",
       "terminals": "Ribbon/USB to the host — no breadboard wiring."
     }
   ]

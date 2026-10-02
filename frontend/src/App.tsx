@@ -10,7 +10,7 @@ import Transcript from "./components/Transcript";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
-import { makeBallScene } from "./sim/cv";
+import { makeBallScene, makeLedBlinkFrame } from "./sim/cv";
 import {
   CircuitRuntime,
   validate,
@@ -88,6 +88,7 @@ export default function App() {
   const [visionBallX, setVisionBallX] = useState(120);
   const visionBallXRef = useRef(visionBallX);
   visionBallXRef.current = visionBallX;
+  const visionSceneStartRef = useRef(0);
   const sampleFramesRef = useRef<Map<string, VisionFrame>>(new Map());
 
   // World: what physically surrounds the circuit
@@ -427,6 +428,7 @@ export default function App() {
     if (lesson.kind === "vision") {
       const sim = new PythonSim();
       engineRef.current = sim;
+      visionSceneStartRef.current = performance.now();
       const noop = () => {};
       const io: PyGpioIO = {
         // A vision lesson has no GPIO; these stay inert.
@@ -460,6 +462,10 @@ export default function App() {
           setRanClean(true);
           return { width: f.width, height: f.height, data: new Uint8ClampedArray(f.data) };
         },
+        grabFrame: () =>
+          lesson.vision?.scene === "led"
+            ? makeLedBlinkFrame(performance.now() - visionSceneStartRef.current)
+            : null,
         showFrame: (f) => {
           setRanClean(true);
           setVisionFrame({ width: f.width, height: f.height, data: new Uint8ClampedArray(f.data) });
@@ -624,7 +630,9 @@ export default function App() {
   // ---- Live diagnostics: circuit + code, explained bottom-right ----
   const diagnoses = useMemo(
     () =>
-      lesson.kind === "python" || lesson.kind === "vision"
+      lesson.kind === "vision"
+        ? []
+        : lesson.kind === "python"
         ? validatePython(circuit, analyzePython(code), lesson.circuit.required as PartType[])
         : lesson.kind === "serial"
           ? // The learner types Python; the wired circuit must match the running
@@ -1060,15 +1068,22 @@ export default function App() {
             <div className="console-pane diagnostics">
               <p className="panel-label">Diagnostics — why it works (or doesn't)</p>
               <div className="diag-list">
-                {diagnoses.map((d, i) => (
-                  <div key={i} className={`diag diag-${d.level}`}>
-                    <span className="diag-badge">
-                      {d.level === "error" ? "✖" : d.level === "warn" ? "▲" : "✓"}{" "}
-                      {d.source}
-                    </span>
-                    {d.message}
+                {lesson.kind === "vision" ? (
+                  <div className="diag diag-ok">
+                    <span className="diag-badge">✓ pixels</span>
+                    The camera scene is clock-driven; cv2 decisions use captured pixel values, not GPIO state.
                   </div>
-                ))}
+                ) : (
+                  diagnoses.map((d, i) => (
+                    <div key={i} className={`diag diag-${d.level}`}>
+                      <span className="diag-badge">
+                        {d.level === "error" ? "✖" : d.level === "warn" ? "▲" : "✓"}{" "}
+                        {d.source}
+                      </span>
+                      {d.message}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </footer>
