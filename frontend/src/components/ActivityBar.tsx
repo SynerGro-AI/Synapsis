@@ -1,4 +1,5 @@
 import type { Track } from "../api";
+import { useI18n } from "../i18n";
 
 interface ActivityBarProps {
   tracks: Track[];
@@ -18,6 +19,7 @@ export default function ActivityBar({
   onSelectTrack,
   onOpenTranscript,
 }: ActivityBarProps) {
+  const { t: translate } = useI18n();
   return (
     <nav className="activity-bar">
       <div className="activity-tracks">
@@ -30,7 +32,7 @@ export default function ActivityBar({
               className={`activity-btn${active ? " active" : ""}${live ? "" : " soon"}`}
               style={active ? { color: t.accent, borderColor: t.accent } : undefined}
               onClick={() => onSelectTrack(t.id)}
-              title={live ? t.name : `${t.name} — coming soon`}
+              title={live ? t.name : `${t.name} — ${translate("comingSoon").toLowerCase()}`}
             >
               <span className="activity-icon">{t.icon}</span>
               {!live && <span className="soon-dot" />}
@@ -41,7 +43,7 @@ export default function ActivityBar({
       <button
         className={`activity-btn transcript${view === "transcript" ? " active" : ""}`}
         onClick={onOpenTranscript}
-        title="Transcript & badges"
+        title={translate("transcriptBadges")}
       >
         <span className="activity-icon">🎓</span>
       </button>

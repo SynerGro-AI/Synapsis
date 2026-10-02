@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login, logout, register, type User } from "../auth";
+import { useI18n } from "../i18n";
 
 interface AccountPanelProps {
   user: User | null;
@@ -7,6 +8,7 @@ interface AccountPanelProps {
 }
 
 export default function AccountPanel({ user, onAuth }: AccountPanelProps) {
+  const { t } = useI18n();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,7 +32,7 @@ export default function AccountPanel({ user, onAuth }: AccountPanelProps) {
   if (user) {
     return (
       <div className="account">
-        <div className="account-user">Signed in as <strong>{user.username}</strong></div>
+        <div className="account-user">{t("signedInAs")} <strong>{user.username}</strong></div>
         <button
           className="account-btn"
           onClick={async () => {
@@ -41,7 +43,7 @@ export default function AccountPanel({ user, onAuth }: AccountPanelProps) {
             }
           }}
         >
-          Sign out
+          {t("signOut")}
         </button>
       </div>
     );
@@ -49,16 +51,16 @@ export default function AccountPanel({ user, onAuth }: AccountPanelProps) {
 
   return (
     <div className="account">
-      <div className="account-title">Save your progress</div>
+      <div className="account-title">{t("saveProgress")}</div>
       <input
-        placeholder="username"
+        placeholder={t("username")}
         value={username}
         autoComplete="username"
         onChange={(e) => setUsername(e.target.value)}
       />
       <input
         type="password"
-        placeholder="password (8+ chars)"
+        placeholder={t("passwordPlaceholder")}
         value={password}
         autoComplete="current-password"
         onChange={(e) => setPassword(e.target.value)}
@@ -67,10 +69,10 @@ export default function AccountPanel({ user, onAuth }: AccountPanelProps) {
       {error && <div className="account-error">{error}</div>}
       <div className="account-buttons">
         <button className="account-btn" disabled={busy} onClick={() => submit(login)}>
-          Sign in
+          {t("signIn")}
         </button>
         <button className="account-btn alt" disabled={busy} onClick={() => submit(register)}>
-          Sign up
+          {t("signUp")}
         </button>
       </div>
     </div>

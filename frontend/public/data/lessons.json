@@ -5411,7 +5411,7 @@
       "circuit": {
         "palette": [],
         "required": [],
-        "notes": "The LED centre is at x=120, y=80. Its on pixels have grayscale luminance above 80; the off LED and background are below that threshold. cv2.threshold returns the cutoff and a new binary mask, and countNonZero counts that mask's actual white pixels."
+        "notes": "The LED centre is at x=120, y=80. Its on pixels have grayscale luminance above 80; the off LED and background are below that threshold. cv2.threshold returns the cutoff and a new binary mask, and countNonZero counts that mask's actual white pixels. Python uses 4 spaces per indent level: press Enter after the colon in `if lit > 0:` and the editor will indent the next line. Put `print('LED is ON')` four spaces inside the if block. Align `else:` with `if lit > 0:`, then indent `print('LED is OFF')` four spaces inside the else block. Tab inserts four spaces."
       },
       "codeTemplate": {
         "language": "python",

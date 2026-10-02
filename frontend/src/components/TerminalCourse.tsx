@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FsNode } from "../sim/shell";
 import type { Lesson } from "../api";
 import { Shell } from "../sim/shell";
+import { useI18n } from "../i18n";
 
 interface TerminalCourseProps {
   lesson: Lesson;
@@ -27,6 +28,7 @@ export default function TerminalCourse({
   onComplete,
   restoreKey,
 }: TerminalCourseProps) {
+  const { t } = useI18n();
   const steps = lesson.terminal?.steps ?? [];
 
   // A fresh shell whenever the lesson changes.
@@ -127,7 +129,7 @@ export default function TerminalCourse({
     if (!editor) return;
     shell.writeFile(editor.path, editor.content);
     const count = editor.content ? editor.content.split("\n").length : 0;
-    setEditor({ ...editor, saved: `[ Wrote ${count} line${count === 1 ? "" : "s"} ]` });
+    setEditor({ ...editor, saved: `[ ${t("wroteLines", { count })} ]` });
   }
 
   // ^X — leave nano, returning to the shell.
@@ -183,7 +185,9 @@ export default function TerminalCourse({
             <span className="term-dot term-red" />
             <span className="term-dot term-amber" />
             <span className="term-dot term-green" />
-            <span className="terminal-title">{lesson.terminal?.shell ?? "bash"} — practice terminal</span>
+            <span className="terminal-title">
+              {lesson.terminal?.shell ?? "bash"} — {t("practiceTerminal")}
+            </span>
           </div>
           <div className="terminal-scroll" ref={scrollRef}>
             {lines.map((l, i) => (
@@ -201,10 +205,14 @@ export default function TerminalCourse({
                 autoCapitalize="off"
                 autoCorrect="off"
                 autoComplete="off"
-                placeholder={nextStep >= 0 ? `type: ${steps[nextStep].cmd}` : "all steps done — explore freely"}
+                placeholder={
+                  nextStep >= 0
+                    ? t("typeCommand", { command: steps[nextStep].cmd })
+                    : t("allStepsDone")
+                }
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={onKeyDown}
-                aria-label="terminal input"
+                aria-label={t("terminalInput")}
               />
             </div>
           </div>
@@ -214,7 +222,7 @@ export default function TerminalCourse({
               <div className="nano-titlebar">
                 <span className="nano-brand">GNU nano 7.2</span>
                 <span className="nano-file">{editor.path}</span>
-                <span className="nano-flag">{editor.saved ? "" : "Modified"}</span>
+                <span className="nano-flag">{editor.saved ? "" : t("modified")}</span>
               </div>
               <textarea
                 ref={editorRef}
@@ -230,10 +238,10 @@ export default function TerminalCourse({
               <div className="nano-status">{editor.saved ?? ""}</div>
               <div className="nano-keys">
                 <button type="button" onClick={saveEditor}>
-                  <span className="nano-key">^O</span> Write Out
+                  <span className="nano-key">^O</span> {t("writeOut")}
                 </button>
                 <button type="button" onClick={exitEditor}>
-                  <span className="nano-key">^X</span> Exit
+                  <span className="nano-key">^X</span> {t("exit")}
                 </button>
               </div>
             </div>
@@ -275,13 +283,12 @@ export default function TerminalCourse({
 
         {allDone && (
           <div className="tg-complete">
-            🎉 Lesson complete — every command run. You just used a real developer workflow.
+            {t("terminalLessonComplete")}
           </div>
         )}
 
         <p className="tg-tip">
-          Tip: type the commands yourself — muscle memory is the point. Use <kbd>↑</kbd> to
-          recall a previous command, and <code>help</code> to list what this terminal understands.
+          {t("terminalTip")}
         </p>
       </aside>
     </div>

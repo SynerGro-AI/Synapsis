@@ -66,6 +66,33 @@
   text-decoration: none;
 }
 
+.language-picker select {
+  max-width: 150px;
+  padding: 4px 8px;
+  border: 1px solid #6b5a3d;
+  border-radius: 8px;
+  background: #1e1e1e;
+  color: #f2e8d5;
+  font: inherit;
+}
+
+.language-picker select:focus-visible {
+  outline: 2px solid #e8a33d;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .app {
   display: flex;
   flex: 1;
@@ -285,6 +312,19 @@
 
 .hint.done .hint-label {
   color: #7fbf7f;
+}
+
+.python-indent-note {
+  margin: 0;
+  padding: 5px 10px;
+  border-top: 1px solid #333;
+  color: #c5c5c5;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.python-indent-note code {
+  color: #e8a33d;
 }
 
 .hints-title {

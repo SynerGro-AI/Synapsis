@@ -1,0 +1,480 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+
+export const LOCALES = ["en", "nl", "fr", "de", "pt-BR"] as const;
+export type Locale = (typeof LOCALES)[number];
+
+export const LOCALE_NAMES: Record<Locale, string> = {
+  en: "English",
+  nl: "Nederlands",
+  fr: "Français",
+  de: "Deutsch",
+  "pt-BR": "Português (Brasil)",
+};
+
+const english = {
+  language: "Language",
+  sponsoredBy: "Sponsored by",
+  lessonsBasedOn: "Lessons based on the Arduino tutorials of",
+  supportPaul: "❤ Support Paul on Patreon",
+  transcriptBadges: "Transcript & badges",
+  comingSoon: "Coming soon",
+  lessonsComingSoon: "Lessons coming soon",
+  openLessons: "Open lessons",
+  lesson: "Lesson",
+  completed: "completed",
+  backendOffline: "backend offline — using built-in data",
+  tabCircuit: "◆ Circuit",
+  tabCode: "‹› Code",
+  tabGuide: "ℹ Guide",
+  tabConsole: "▤ Console",
+  cameraLabel: "Camera — the real pixels your cv2 code sees",
+  moveRedBall: "Move red ball",
+  circuitCanvasLabel: "Circuit Canvas — click a pin, drag to another pin to wire",
+  potentiometer: "Pot",
+  light: "Light",
+  temperature: "Temp",
+  humidity: "Humidity",
+  heading: "Heading",
+  pitch: "Pitch",
+  roll: "Roll",
+  distance: "Distance",
+  pushButtonHint: "Click & hold the button on the canvas to press it",
+  remoteHint: "Click a key on the remote to beam its code to the receiver",
+  componentGuide: "Component Guide",
+  whatItDoes: "What it does",
+  science: "The science",
+  terminals: "Terminals",
+  objective: "Objective",
+  pythonIndentation:
+    "Python indentation: use 4 spaces per level. Press Enter after a colon to auto-indent. Align else: with its if; indent its body one level. Tab inserts four spaces.",
+  hintsTitle: "Type these to build your sketch:",
+  companionSketch: "Arduino sketch (running) — pre-flashed, read-only",
+  run: "▶ Run",
+  stop: "■ Stop",
+  serialOutput: "Serial Output",
+  running: "running",
+  sketchRunning: "Sketch running...",
+  diagnostics: "Diagnostics — why it works (or doesn't)",
+  pixelDiagnostic: "The camera scene is clock-driven; cv2 decisions use captured pixel values, not GPIO state.",
+  languageEnglish: "English",
+  wroteLines: "wrote {count} lines",
+  saveProgress: "Save your progress",
+  username: "username",
+  passwordPlaceholder: "password (8+ chars)",
+  signIn: "Sign in",
+  signUp: "Sign up",
+  signOut: "Sign out",
+  signedInAs: "Signed in as",
+  transcript: "Transcript",
+  signedInProgress: "Signed in as {user} · {done}/{total} lessons complete across all tracks",
+  signInProgress: "Sign in to save badges and earn certificates · {done}/{total} complete",
+  lessonCount: "{done} / {total} lessons",
+  startTrack: "Start track",
+  continueTrack: "Continue",
+  certificate: "Certificate",
+  certificateTitle: "Certificate of Completion",
+  certPresented: "This certifies that",
+  certCompletedTrack: "has successfully completed the track",
+  learner: "Learner",
+  sponsor: "Sponsor",
+  curriculumCredit: "Curriculum · toptechboy.com",
+  printSavePdf: "🖨 Print / Save as PDF",
+  close: "Close",
+  practiceTerminal: "practice terminal",
+  typeCommand: "type: {command}",
+  allStepsDone: "all steps done — explore freely",
+  terminalInput: "terminal input",
+  modified: "Modified",
+  writeOut: "Write Out",
+  exit: "Exit",
+  terminalLessonComplete: "🎉 Lesson complete — every command run. You just used a real developer workflow.",
+  terminalTip:
+    "Tip: type the commands yourself — muscle memory is the point. Use ↑ to recall a previous command, and help to list what this terminal understands.",
+} as const;
+
+type CopyKey = keyof typeof english;
+type Copy = Partial<Record<CopyKey, string>>;
+
+const translations: Record<Exclude<Locale, "en">, Copy> = {
+  nl: {
+    language: "Taal",
+    sponsoredBy: "Gesponsord door",
+    lessonsBasedOn: "Lessen gebaseerd op de Arduino-tutorials van",
+    supportPaul: "❤ Steun Paul op Patreon",
+    transcriptBadges: "Overzicht & badges",
+    comingSoon: "Binnenkort beschikbaar",
+    lessonsComingSoon: "Lessen binnenkort beschikbaar",
+    openLessons: "Lessen openen",
+    lesson: "Les",
+    completed: "voltooid",
+    backendOffline: "backend offline — ingebouwde gegevens worden gebruikt",
+    tabCircuit: "◆ Circuit",
+    tabCode: "‹› Code",
+    tabGuide: "ℹ Gids",
+    tabConsole: "▤ Console",
+    cameraLabel: "Camera — de echte pixels die je cv2-code ziet",
+    moveRedBall: "Verplaats de rode bal",
+    circuitCanvasLabel: "Circuitcanvas — klik op een pin en sleep naar een andere pin om te verbinden",
+    potentiometer: "Potmeter",
+    light: "Licht",
+    temperature: "Temp.",
+    humidity: "Luchtvochtigheid",
+    heading: "Koers",
+    pitch: "Helling",
+    roll: "Rol",
+    distance: "Afstand",
+    pushButtonHint: "Klik en houd de knop op het canvas ingedrukt",
+    remoteHint: "Klik op een toets van de afstandsbediening om de code te verzenden",
+    componentGuide: "Onderdelengids",
+    whatItDoes: "Wat het doet",
+    science: "De wetenschap",
+    terminals: "Aansluitingen",
+    objective: "Doel",
+    pythonIndentation:
+      "Python-inspringing: gebruik 4 spaties per niveau. Druk na een dubbele punt op Enter om automatisch in te springen. Lijn else: uit met if; spring in de inhoud één niveau in. Tab voegt vier spaties in.",
+    hintsTitle: "Typ deze regels om je programma te bouwen:",
+    companionSketch: "Arduino-programma (actief) — vooraf geladen, alleen-lezen",
+    run: "▶ Uitvoeren",
+    stop: "■ Stoppen",
+    serialOutput: "Seriële uitvoer",
+    running: "actief",
+    sketchRunning: "Programma wordt uitgevoerd...",
+    diagnostics: "Diagnose — waarom het wel of niet werkt",
+    pixelDiagnostic: "De camerascène volgt de klok; cv2-beslissingen gebruiken vastgelegde pixelwaarden, niet de GPIO-status.",
+    wroteLines: "{count} regels geschreven",
+    saveProgress: "Bewaar je voortgang",
+    username: "gebruikersnaam",
+    passwordPlaceholder: "wachtwoord (min. 8 tekens)",
+    signIn: "Inloggen",
+    signUp: "Account maken",
+    signOut: "Uitloggen",
+    signedInAs: "Ingelogd als",
+    transcript: "Overzicht",
+    signedInProgress: "Ingelogd als {user} · {done}/{total} lessen voltooid in alle tracks",
+    signInProgress: "Log in om badges op te slaan en certificaten te verdienen · {done}/{total} voltooid",
+    lessonCount: "{done} / {total} lessen",
+    startTrack: "Track starten",
+    continueTrack: "Doorgaan",
+    certificate: "Certificaat",
+    certificateTitle: "Certificaat van voltooiing",
+    certPresented: "Dit certificeert dat",
+    certCompletedTrack: "de track succesvol heeft voltooid",
+    learner: "Leerling",
+    sponsor: "Sponsor",
+    curriculumCredit: "Lesprogramma · toptechboy.com",
+    printSavePdf: "🖨 Afdrukken / opslaan als PDF",
+    close: "Sluiten",
+    practiceTerminal: "oefenterminal",
+    typeCommand: "typ: {command}",
+    allStepsDone: "alle stappen voltooid — ontdek verder",
+    terminalInput: "terminalinvoer",
+    modified: "Gewijzigd",
+    writeOut: "Opslaan",
+    exit: "Afsluiten",
+    terminalLessonComplete: "🎉 Les voltooid — alle opdrachten uitgevoerd. Je hebt een echte ontwikkelaarsworkflow gebruikt.",
+    terminalTip:
+      "Tip: typ de opdrachten zelf — zo bouw je spiergeheugen op. Gebruik ↑ voor de vorige opdracht en help voor een lijst met terminalopdrachten.",
+  },
+  fr: {
+    language: "Langue",
+    sponsoredBy: "Sponsorisé par",
+    lessonsBasedOn: "Leçons basées sur les tutoriels Arduino de",
+    supportPaul: "❤ Soutenir Paul sur Patreon",
+    transcriptBadges: "Parcours et badges",
+    comingSoon: "Bientôt disponible",
+    lessonsComingSoon: "Leçons bientôt disponibles",
+    openLessons: "Ouvrir les leçons",
+    lesson: "Leçon",
+    completed: "terminée",
+    backendOffline: "serveur hors ligne — données intégrées utilisées",
+    tabCircuit: "◆ Circuit",
+    tabCode: "‹› Code",
+    tabGuide: "ℹ Guide",
+    tabConsole: "▤ Console",
+    cameraLabel: "Caméra — les vrais pixels lus par votre code cv2",
+    moveRedBall: "Déplacer la balle rouge",
+    circuitCanvasLabel: "Circuit — cliquez sur une broche et faites-la glisser vers une autre",
+    potentiometer: "Potentiomètre",
+    light: "Lumière",
+    temperature: "Temp.",
+    humidity: "Humidité",
+    heading: "Cap",
+    pitch: "Tangage",
+    roll: "Roulis",
+    distance: "Distance",
+    pushButtonHint: "Cliquez et maintenez le bouton sur le canevas",
+    remoteHint: "Cliquez sur une touche de la télécommande pour envoyer son code",
+    componentGuide: "Guide des composants",
+    whatItDoes: "Fonctionnement",
+    science: "La science",
+    terminals: "Broches",
+    objective: "Objectif",
+    pythonIndentation:
+      "Indentation Python : utilisez 4 espaces par niveau. Après les deux-points, appuyez sur Entrée pour indenter automatiquement. Alignez else: avec if et indentez son bloc d’un niveau. Tab insère quatre espaces.",
+    hintsTitle: "Saisissez ces lignes pour construire votre programme :",
+    companionSketch: "Programme Arduino (en cours) — préchargé, en lecture seule",
+    run: "▶ Exécuter",
+    stop: "■ Arrêter",
+    serialOutput: "Sortie série",
+    running: "en cours",
+    sketchRunning: "Programme en cours d’exécution...",
+    diagnostics: "Diagnostics — pourquoi cela fonctionne (ou non)",
+    pixelDiagnostic: "La scène caméra suit l’horloge ; cv2 prend ses décisions à partir des pixels capturés, pas de l’état GPIO.",
+    wroteLines: "{count} lignes écrites",
+    saveProgress: "Enregistrer votre progression",
+    username: "nom d’utilisateur",
+    passwordPlaceholder: "mot de passe (8 caractères ou plus)",
+    signIn: "Connexion",
+    signUp: "Créer un compte",
+    signOut: "Déconnexion",
+    signedInAs: "Connecté en tant que",
+    transcript: "Parcours",
+    signedInProgress: "Connecté en tant que {user} · {done}/{total} leçons terminées dans tous les parcours",
+    signInProgress: "Connectez-vous pour enregistrer vos badges et obtenir des certificats · {done}/{total} terminées",
+    lessonCount: "{done} / {total} leçons",
+    startTrack: "Commencer",
+    continueTrack: "Continuer",
+    certificate: "Certificat",
+    certificateTitle: "Certificat de réussite",
+    certPresented: "Le présent certificat atteste que",
+    certCompletedTrack: "a terminé le parcours avec succès",
+    learner: "Élève",
+    sponsor: "Partenaire",
+    curriculumCredit: "Programme · toptechboy.com",
+    printSavePdf: "🖨 Imprimer / enregistrer en PDF",
+    close: "Fermer",
+    practiceTerminal: "terminal d’exercice",
+    typeCommand: "saisissez : {command}",
+    allStepsDone: "toutes les étapes sont terminées — explorez librement",
+    terminalInput: "saisie du terminal",
+    modified: "Modifié",
+    writeOut: "Enregistrer",
+    exit: "Quitter",
+    terminalLessonComplete: "🎉 Leçon terminée — toutes les commandes ont été exécutées. Vous venez d’utiliser un véritable flux de développement.",
+    terminalTip:
+      "Conseil : saisissez vous-même les commandes pour acquérir les bons réflexes. Utilisez ↑ pour rappeler la commande précédente et help pour afficher les commandes disponibles.",
+  },
+  de: {
+    language: "Sprache",
+    sponsoredBy: "Gesponsert von",
+    lessonsBasedOn: "Lektionen nach den Arduino-Tutorials von",
+    supportPaul: "❤ Paul auf Patreon unterstützen",
+    transcriptBadges: "Lernübersicht & Abzeichen",
+    comingSoon: "Demnächst verfügbar",
+    lessonsComingSoon: "Lektionen folgen in Kürze",
+    openLessons: "Lektionen öffnen",
+    lesson: "Lektion",
+    completed: "abgeschlossen",
+    backendOffline: "Backend offline — integrierte Daten werden verwendet",
+    tabCircuit: "◆ Schaltung",
+    tabCode: "‹› Code",
+    tabGuide: "ℹ Anleitung",
+    tabConsole: "▤ Konsole",
+    cameraLabel: "Kamera — die echten Pixel, die dein cv2-Code sieht",
+    moveRedBall: "Roter Ball bewegen",
+    circuitCanvasLabel: "Schaltungsfläche — Pin anklicken und zum Verbinden auf einen anderen ziehen",
+    potentiometer: "Poti",
+    light: "Licht",
+    temperature: "Temp.",
+    humidity: "Luftfeuchtigkeit",
+    heading: "Kurs",
+    pitch: "Neigung",
+    roll: "Rollen",
+    distance: "Abstand",
+    pushButtonHint: "Zum Drücken die Taste auf der Fläche anklicken und halten",
+    remoteHint: "Eine Taste auf der Fernbedienung anklicken, um den Code zu senden",
+    componentGuide: "Bauteilübersicht",
+    whatItDoes: "Funktion",
+    science: "Wissenschaft",
+    terminals: "Anschlüsse",
+    objective: "Lernziel",
+    pythonIndentation:
+      "Python-Einrückung: 4 Leerzeichen pro Ebene verwenden. Nach einem Doppelpunkt Enter drücken, um automatisch einzurücken. else: an if ausrichten und den Block eine Ebene einrücken. Tab fügt vier Leerzeichen ein.",
+    hintsTitle: "Gib diese Zeilen ein, um dein Programm zu erstellen:",
+    companionSketch: "Arduino-Programm (läuft) — vorinstalliert, schreibgeschützt",
+    run: "▶ Starten",
+    stop: "■ Stoppen",
+    serialOutput: "Serielle Ausgabe",
+    running: "läuft",
+    sketchRunning: "Programm läuft...",
+    diagnostics: "Diagnose — warum es funktioniert (oder nicht)",
+    pixelDiagnostic: "Die Kameraszene folgt der Uhr; cv2-Entscheidungen basieren auf aufgenommenen Pixelwerten, nicht auf dem GPIO-Zustand.",
+    wroteLines: "{count} Zeilen geschrieben",
+    saveProgress: "Fortschritt speichern",
+    username: "Benutzername",
+    passwordPlaceholder: "Passwort (mindestens 8 Zeichen)",
+    signIn: "Anmelden",
+    signUp: "Registrieren",
+    signOut: "Abmelden",
+    signedInAs: "Angemeldet als",
+    transcript: "Lernübersicht",
+    signedInProgress: "Angemeldet als {user} · {done}/{total} Lektionen in allen Kursen abgeschlossen",
+    signInProgress: "Melde dich an, um Abzeichen zu speichern und Zertifikate zu erhalten · {done}/{total} abgeschlossen",
+    lessonCount: "{done} / {total} Lektionen",
+    startTrack: "Kurs starten",
+    continueTrack: "Fortsetzen",
+    certificate: "Zertifikat",
+    certificateTitle: "Abschlusszertifikat",
+    certPresented: "Hiermit wird bestätigt, dass",
+    certCompletedTrack: "den Kurs erfolgreich abgeschlossen hat",
+    learner: "Lernende Person",
+    sponsor: "Sponsor",
+    curriculumCredit: "Lehrplan · toptechboy.com",
+    printSavePdf: "🖨 Drucken / als PDF speichern",
+    close: "Schließen",
+    practiceTerminal: "Übungsterminal",
+    typeCommand: "eingeben: {command}",
+    allStepsDone: "alle Schritte erledigt — frei weiter erkunden",
+    terminalInput: "Terminaleingabe",
+    modified: "Geändert",
+    writeOut: "Speichern",
+    exit: "Beenden",
+    terminalLessonComplete: "🎉 Lektion abgeschlossen — alle Befehle ausgeführt. Du hast einen echten Entwickler-Workflow verwendet.",
+    terminalTip:
+      "Tipp: Gib die Befehle selbst ein — so entsteht Routine. Mit ↑ rufst du den vorherigen Befehl auf; help zeigt die verfügbaren Terminalbefehle.",
+  },
+  "pt-BR": {
+    language: "Idioma",
+    sponsoredBy: "Patrocinado por",
+    lessonsBasedOn: "Aulas baseadas nos tutoriais de Arduino de",
+    supportPaul: "❤ Apoie Paul no Patreon",
+    transcriptBadges: "Histórico e emblemas",
+    comingSoon: "Em breve",
+    lessonsComingSoon: "Aulas em breve",
+    openLessons: "Abrir aulas",
+    lesson: "Aula",
+    completed: "concluída",
+    backendOffline: "servidor offline — usando dados integrados",
+    tabCircuit: "◆ Circuito",
+    tabCode: "‹› Código",
+    tabGuide: "ℹ Guia",
+    tabConsole: "▤ Console",
+    cameraLabel: "Câmera — os pixels reais que seu código cv2 enxerga",
+    moveRedBall: "Mover bola vermelha",
+    circuitCanvasLabel: "Área do circuito — clique em um pino e arraste até outro para conectar",
+    potentiometer: "Potenciômetro",
+    light: "Luz",
+    temperature: "Temp.",
+    humidity: "Umidade",
+    heading: "Direção",
+    pitch: "Inclinação",
+    roll: "Rolagem",
+    distance: "Distância",
+    pushButtonHint: "Clique e segure o botão na área para pressioná-lo",
+    remoteHint: "Clique em uma tecla do controle para enviar o código ao receptor",
+    componentGuide: "Guia de componentes",
+    whatItDoes: "O que faz",
+    science: "A ciência",
+    terminals: "Terminais",
+    objective: "Objetivo",
+    pythonIndentation:
+      "Indentação Python: use 4 espaços por nível. Depois dos dois-pontos, pressione Enter para indentar automaticamente. Alinhe else: com if e indente o bloco um nível. Tab insere quatro espaços.",
+    hintsTitle: "Digite estas linhas para montar seu programa:",
+    companionSketch: "Programa Arduino (em execução) — pré-carregado, somente leitura",
+    run: "▶ Executar",
+    stop: "■ Parar",
+    serialOutput: "Saída serial",
+    running: "em execução",
+    sketchRunning: "Programa em execução...",
+    diagnostics: "Diagnóstico — por que funciona (ou não)",
+    pixelDiagnostic: "A cena da câmera segue o relógio; as decisões do cv2 usam pixels capturados, não o estado do GPIO.",
+    wroteLines: "{count} linhas gravadas",
+    saveProgress: "Salvar seu progresso",
+    username: "nome de usuário",
+    passwordPlaceholder: "senha (8 caracteres ou mais)",
+    signIn: "Entrar",
+    signUp: "Criar conta",
+    signOut: "Sair",
+    signedInAs: "Conectado como",
+    transcript: "Histórico",
+    signedInProgress: "Conectado como {user} · {done}/{total} aulas concluídas em todos os cursos",
+    signInProgress: "Entre para salvar emblemas e obter certificados · {done}/{total} concluídas",
+    lessonCount: "{done} / {total} aulas",
+    startTrack: "Começar curso",
+    continueTrack: "Continuar",
+    certificate: "Certificado",
+    certificateTitle: "Certificado de conclusão",
+    certPresented: "Certificamos que",
+    certCompletedTrack: "concluiu o curso com sucesso",
+    learner: "Estudante",
+    sponsor: "Patrocinador",
+    curriculumCredit: "Currículo · toptechboy.com",
+    printSavePdf: "🖨 Imprimir / salvar como PDF",
+    close: "Fechar",
+    practiceTerminal: "terminal de prática",
+    typeCommand: "digite: {command}",
+    allStepsDone: "todas as etapas concluídas — explore à vontade",
+    terminalInput: "entrada do terminal",
+    modified: "Modificado",
+    writeOut: "Salvar",
+    exit: "Sair",
+    terminalLessonComplete: "🎉 Aula concluída — todos os comandos foram executados. Você acabou de usar um fluxo de trabalho real de desenvolvimento.",
+    terminalTip:
+      "Dica: digite os comandos você mesmo — a prática cria memória muscular. Use ↑ para recuperar o comando anterior e help para listar os comandos disponíveis.",
+  },
+};
+
+function isLocale(value: string | null): value is Locale {
+  return value !== null && (LOCALES as readonly string[]).includes(value);
+}
+
+function detectLocale(languages: readonly string[]): Locale {
+  for (const language of languages) {
+    const normalized = language.replace("_", "-").toLowerCase();
+    if (normalized.startsWith("pt")) return "pt-BR";
+    if (normalized.startsWith("nl")) return "nl";
+    if (normalized.startsWith("fr")) return "fr";
+    if (normalized.startsWith("de")) return "de";
+    if (normalized.startsWith("en")) return "en";
+  }
+  return "en";
+}
+
+function initialLocale(): Locale {
+  try {
+    const saved = localStorage.getItem("synapsis.locale");
+    if (isLocale(saved)) return saved;
+  } catch (error) {
+    console.warn("Could not read the saved language preference.", error);
+  }
+  return detectLocale(typeof navigator === "undefined" ? [] : navigator.languages);
+}
+
+interface I18nContextValue {
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  t: (key: CopyKey, values?: Record<string, string | number>) => string;
+}
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+export function LocaleProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocale] = useState<Locale>(initialLocale);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    try {
+      localStorage.setItem("synapsis.locale", locale);
+    } catch (error) {
+      console.warn("Could not save the language preference.", error);
+    }
+  }, [locale]);
+
+  const value = useMemo<I18nContextValue>(() => {
+    const t = (key: CopyKey, values: Record<string, string | number> = {}) => {
+      let text = locale === "en" ? english[key] : (translations[locale][key] ?? english[key]);
+      for (const [name, replacement] of Object.entries(values))
+        text = text.replaceAll(`{${name}}`, String(replacement));
+      return text;
+    };
+    return { locale, setLocale, t };
+  }, [locale]);
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n(): I18nContextValue {
+  const context = useContext(I18nContext);
+  if (!context) throw new Error("useI18n must be used inside LocaleProvider");
+  return context;
+}

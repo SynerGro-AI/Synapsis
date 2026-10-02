@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Lesson, Phase, Track, Attribution } from "../api";
 import type { User } from "../auth";
+import { useI18n } from "../i18n";
 
 interface TranscriptProps {
   tracks: Track[];
@@ -35,6 +36,7 @@ export default function Transcript({
   credit,
   onOpenLesson,
 }: TranscriptProps) {
+  const { locale, t } = useI18n();
   const [certTrack, setCertTrack] = useState<Track | null>(null);
 
   const stats: TrackStat[] = tracks.map((track) => {
@@ -67,7 +69,7 @@ export default function Transcript({
 
   const totalDone = stats.reduce((n, s) => n + s.done, 0);
   const totalLessons = stats.reduce((n, s) => n + s.total, 0);
-  const today = new Date().toLocaleDateString(undefined, {
+  const today = new Date().toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -76,15 +78,12 @@ export default function Transcript({
   return (
     <div className="transcript">
       <div className="transcript-head">
-        <h2>🎓 Transcript</h2>
+        <h2>🎓 {t("transcript")}</h2>
         <p className="transcript-sub">
           {user ? (
-            <>
-              Signed in as <strong>{user.username}</strong> · {totalDone}/
-              {totalLessons} lessons complete across all tracks
-            </>
+            t("signedInProgress", { user: user.username, done: totalDone, total: totalLessons })
           ) : (
-            <>Sign in to save badges and earn certificates · {totalDone}/{totalLessons} complete</>
+            t("signInProgress", { done: totalDone, total: totalLessons })
           )}
         </p>
       </div>
@@ -121,7 +120,7 @@ export default function Transcript({
                     <span className="progress-pct">{s.pct}%</span>
                   </div>
                   <div className="track-count">
-                    {s.done} / {s.total} lessons
+                    {t("lessonCount", { done: s.done, total: s.total })}
                   </div>
 
                   <div className="badge-row">
@@ -142,18 +141,18 @@ export default function Transcript({
                         className="track-open"
                         onClick={() => onOpenLesson(s.track.id, s.firstLesson!)}
                       >
-                        {s.done === 0 ? "Start track" : "Continue"}
+                        {s.done === 0 ? t("startTrack") : t("continueTrack")}
                       </button>
                     )}
                     {complete && (
                       <button className="track-cert" onClick={() => setCertTrack(s.track)}>
-                        🏅 Certificate
+                        🏅 {t("certificate")}
                       </button>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="track-soon">Coming soon</div>
+                <div className="track-soon">{t("comingSoon")}</div>
               )}
             </div>
           );
@@ -166,10 +165,10 @@ export default function Transcript({
             <div className="certificate-sheet">
               <div className="cert-border">
                 <div className="cert-brand">SYNAPSIS ACADEMY</div>
-                <div className="cert-title">Certificate of Completion</div>
-                <div className="cert-presented">This certifies that</div>
-                <div className="cert-name">{user?.username ?? "Learner"}</div>
-                <div className="cert-presented">has successfully completed the track</div>
+                <div className="cert-title">{t("certificateTitle")}</div>
+                <div className="cert-presented">{t("certPresented")}</div>
+                <div className="cert-name">{user?.username ?? t("learner")}</div>
+                <div className="cert-presented">{t("certCompletedTrack")}</div>
                 <div className="cert-track" style={{ color: certTrack.accent }}>
                   {certTrack.icon} {certTrack.name}
                 </div>
@@ -177,21 +176,21 @@ export default function Transcript({
                 <div className="cert-foot">
                   <div>
                     <div className="cert-sig">SynerGro.Ai Corp</div>
-                    <div className="cert-sig-label">Sponsor</div>
+                    <div className="cert-sig-label">{t("sponsor")}</div>
                   </div>
                   <div>
                     <div className="cert-sig">{credit.author}</div>
-                    <div className="cert-sig-label">Curriculum · toptechboy.com</div>
+                    <div className="cert-sig-label">{t("curriculumCredit")}</div>
                   </div>
                 </div>
               </div>
             </div>
             <div className="cert-buttons">
               <button className="track-open" onClick={() => window.print()}>
-                🖨 Print / Save as PDF
+                {t("printSavePdf")}
               </button>
               <button className="track-cert" onClick={() => setCertTrack(null)}>
-                Close
+                {t("close")}
               </button>
             </div>
           </div>

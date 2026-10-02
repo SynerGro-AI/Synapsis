@@ -39,11 +39,49 @@ export default function CodeEditor({
       minimap: { enabled: false },
       automaticLayout: true,
       fontSize: 13,
+      ...(language === "python"
+        ? {
+            tabSize: 4,
+            insertSpaces: true,
+            detectIndentation: false,
+            autoIndent: "full" as const,
+            guides: { indentation: true, highlightActiveIndentation: true },
+          }
+        : {}),
     });
 
     const sub = editor.onDidChangeModelContent(() =>
       onChangeRef.current?.(editor.getValue()),
     );
+    const indentSub =
+      language === "python"
+        ? editor.onKeyDown((event) => {
+            if (event.keyCode !== monaco.KeyCode.Enter) return;
+            const model = editor.getModel();
+            const position = editor.getPosition();
+            if (!model || !position) return;
+            const line = model.getLineContent(position.lineNumber);
+            const beforeCursor = line.slice(0, position.column - 1);
+            const afterCursor = line.slice(position.column - 1);
+            if (!beforeCursor.trimEnd().endsWith(":") || afterCursor.trim()) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            const indent = line.match(/^[ \t]*/)?.[0] ?? "";
+            editor.executeEdits("python-auto-indent", [
+              {
+                range: new monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column,
+                ),
+                text: `\n${indent}    `,
+                forceMoveMarkers: true,
+              },
+            ]);
+          })
+        : null;
 
     if (handleRef) {
       handleRef.current = { getValue: () => editor.getValue() };
@@ -52,6 +90,7 @@ export default function CodeEditor({
     return () => {
       if (handleRef) handleRef.current = null;
       sub.dispose();
+      indentSub?.dispose();
       editor.dispose();
     };
   }, [starter, language, handleRef]);

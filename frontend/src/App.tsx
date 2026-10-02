@@ -20,6 +20,7 @@ import {
   type WorldState,
 } from "./circuit/engine";
 import { getProgress, me, saveProgress, type User } from "./auth";
+import { LOCALES, LOCALE_NAMES, useI18n } from "./i18n";
 import {
   CREDIT,
   FALLBACK_DATA,
@@ -35,13 +36,6 @@ const normalize = (s: string) => s.replace(/\s+/g, "");
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
 
 type MobileTab = "canvas" | "editor" | "guide" | "console";
-const MOBILE_TABS: { id: MobileTab; label: string }[] = [
-  { id: "canvas", label: "◆ Circuit" },
-  { id: "editor", label: "‹› Code" },
-  { id: "guide", label: "ℹ Guide" },
-  { id: "console", label: "▤ Console" },
-];
-
 interface SavedLesson {
   completed: boolean;
   sketch: string | null;
@@ -49,6 +43,7 @@ interface SavedLesson {
 }
 
 export default function App() {
+  const { locale, setLocale, t } = useI18n();
   const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [parts, setParts] = useState<PartInfo[]>(FALLBACK_PARTS);
   const [lessonId, setLessonId] = useState(1);
@@ -701,17 +696,31 @@ export default function App() {
           target="_blank"
           rel="noreferrer"
         >
-          Sponsored by <strong>SynerGro.Ai Corp</strong>
+          {t("sponsoredBy")} <strong>SynerGro.Ai Corp</strong>
         </a>
         <span className="credits-text">
-          Lessons based on the Arduino tutorials of{" "}
+          {t("lessonsBasedOn")}{" "}
           <a href={CREDIT.website} target="_blank" rel="noreferrer">
             {CREDIT.author} — toptechboy.com
           </a>
         </span>
         <a className="donate" href={CREDIT.donate} target="_blank" rel="noreferrer">
-          ❤ Support Paul on Patreon
+          {t("supportPaul")}
         </a>
+        <label className="language-picker">
+          <span className="sr-only">{t("language")}</span>
+          <select
+            aria-label={t("language")}
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as (typeof LOCALES)[number])}
+          >
+            {LOCALES.map((supportedLocale) => (
+              <option key={supportedLocale} value={supportedLocale}>
+                {LOCALE_NAMES[supportedLocale]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="app">
@@ -736,7 +745,7 @@ export default function App() {
             {sidebarPhases.length === 0 ? (
               <div className="sidebar-soon">
                 <p>{activeTrackInfo?.blurb}</p>
-                <span className="cs-tag">Lessons coming soon</span>
+                <span className="cs-tag">{t("lessonsComingSoon")}</span>
               </div>
             ) : (
               sidebarPhases.map((phase) => (
@@ -791,7 +800,7 @@ export default function App() {
               </span>
               <h2>{activeTrackInfo?.name}</h2>
               <p>{activeTrackInfo?.blurb}</p>
-              <span className="cs-tag">Coming soon</span>
+              <span className="cs-tag">{t("comingSoon")}</span>
             </div>
           </main>
         ) : lesson.kind === "terminal" ? (
@@ -800,16 +809,16 @@ export default function App() {
               <button
                 className="nav-toggle"
                 onClick={() => setNavOpen(true)}
-                aria-label="Open lessons"
+                aria-label={t("openLessons")}
               >
                 ☰
               </button>
               <h3>
-                Lesson {lesson.id} — {lesson.title}
+                {t("lesson")} {lesson.id} — {lesson.title}
               </h3>
-              {completed && <span className="lesson-done">✓ completed</span>}
+              {completed && <span className="lesson-done">✓ {t("completed")}</span>}
               {offline && (
-                <span className="offline">backend offline — using built-in data</span>
+                <span className="offline">{t("backendOffline")}</span>
               )}
             </header>
             <TerminalCourse
@@ -825,29 +834,34 @@ export default function App() {
             <button
               className="nav-toggle"
               onClick={() => setNavOpen(true)}
-              aria-label="Open lessons"
+              aria-label={t("openLessons")}
             >
               ☰
             </button>
             <h3>
-              Lesson {lesson.id} — {lesson.title}
+              {t("lesson")} {lesson.id} — {lesson.title}
             </h3>
-            {completed && <span className="lesson-done">✓ completed</span>}
+            {completed && <span className="lesson-done">✓ {t("completed")}</span>}
             {offline && (
-              <span className="offline">backend offline — using built-in data</span>
+              <span className="offline">{t("backendOffline")}</span>
             )}
           </header>
 
           <nav className="mobile-tabs">
-            {MOBILE_TABS.map((t) => (
+            {([
+              ["canvas", t("tabCircuit")],
+              ["editor", t("tabCode")],
+              ["guide", t("tabGuide")],
+              ["console", t("tabConsole")],
+            ] as const).map(([tabId, label]) => (
               <button
-                key={t.id}
-                className={mobileTab === t.id ? "active" : ""}
-                aria-pressed={mobileTab === t.id}
-                onClick={() => setMobileTab(t.id)}
+                key={tabId}
+                className={mobileTab === tabId ? "active" : ""}
+                aria-pressed={mobileTab === tabId}
+                onClick={() => setMobileTab(tabId)}
               >
-                {t.label}
-                {t.id === "console" && running && <span className="tab-dot" />}
+                {label}
+                {tabId === "console" && running && <span className="tab-dot" />}
               </button>
             ))}
           </nav>
@@ -856,19 +870,19 @@ export default function App() {
             <div className="canvas">
               {lesson.kind === "vision" ? (
                 <>
-                  <div className="panel-label">Camera — the real pixels your cv2 code sees</div>
+                  <div className="panel-label">{t("cameraLabel")}</div>
                   <VisionCanvas frame={visionFrame} sampleImage={lesson.vision?.sampleImage} />
                   {lesson.vision?.scene === "ball" && (
                     <div className="world-controls vision-controls">
                       <label>
-                        Move red ball
+                        {t("moveRedBall")}
                         <input
                           type="range"
                           min={50}
                           max={175}
                           value={visionBallX}
                           onChange={(event) => setVisionBallX(Number(event.target.value))}
-                          aria-label="Move the red ball horizontally"
+                          aria-label={t("moveRedBall")}
                         />
                         <code>{visionBallX}px</code>
                       </label>
@@ -877,7 +891,7 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <div className="panel-label">Circuit Canvas — click a pin, drag to another pin to wire</div>
+                  <div className="panel-label">{t("circuitCanvasLabel")}</div>
                   <CircuitCanvas
                 key={`${lesson.id}:${restoreCount}`}
                 palette={lesson.circuit.palette as PartType[]}
@@ -902,7 +916,7 @@ export default function App() {
               <div className="world-controls">
                 {hasType("potentiometer") && (
                   <label>
-                    Pot
+                    {t("potentiometer")}
                     <input type="range" min={0} max={1023} value={potValue}
                       onChange={(e) => setPotValue(Number(e.target.value))} />
                     <code>{potValue}</code>
@@ -910,7 +924,7 @@ export default function App() {
                 )}
                 {hasType("photoresistor") && (
                   <label>
-                    Light
+                    {t("light")}
                     <input type="range" min={0} max={100} value={lightPct}
                       onChange={(e) => setLightPct(Number(e.target.value))} />
                     <code>{lightPct}%</code>
@@ -918,7 +932,7 @@ export default function App() {
                 )}
                 {(hasType("ntc") || hasType("dht")) && (
                   <label>
-                    Temp
+                    {t("temperature")}
                     <input type="range" min={-24} max={80} value={tempC}
                       onChange={(e) => setTempC(Number(e.target.value))} />
                     <code>{tempC}°C</code>
@@ -926,7 +940,7 @@ export default function App() {
                 )}
                 {hasType("dht") && (
                   <label>
-                    Humidity
+                    {t("humidity")}
                     <input type="range" min={0} max={100} value={humidityPct}
                       onChange={(e) => setHumidityPct(Number(e.target.value))} />
                     <code>{humidityPct}%</code>
@@ -935,19 +949,19 @@ export default function App() {
                 {hasType("imu") && (
                   <>
                     <label>
-                      Heading
+                      {t("heading")}
                       <input type="range" min={0} max={360} value={heading}
                         onChange={(e) => setHeading(Number(e.target.value))} />
                       <code>{heading}°</code>
                     </label>
                     <label>
-                      Pitch
+                      {t("pitch")}
                       <input type="range" min={-90} max={90} value={pitch}
                         onChange={(e) => setPitch(Number(e.target.value))} />
                       <code>{pitch}°</code>
                     </label>
                     <label>
-                      Roll
+                      {t("roll")}
                       <input type="range" min={-90} max={90} value={roll}
                         onChange={(e) => setRoll(Number(e.target.value))} />
                       <code>{roll}°</code>
@@ -956,17 +970,17 @@ export default function App() {
                 )}
                 {hasType("ultrasonic") && (
                   <label>
-                    Distance
+                    {t("distance")}
                     <input type="range" min={2} max={200} value={distanceCm}
                       onChange={(e) => setDistanceCm(Number(e.target.value))} />
                     <code>{distanceCm}cm</code>
                   </label>
                 )}
                 {hasType("pushbutton") && (
-                  <span className="world-hint">Click & hold the button on the canvas to press it</span>
+                  <span className="world-hint">{t("pushButtonHint")}</span>
                 )}
                 {hasType("irremote") && (
-                  <span className="world-hint">Click a key on the remote to beam its code to the receiver</span>
+                  <span className="world-hint">{t("remoteHint")}</span>
                 )}
               </div>
               <div className="circuit-notes">{lesson.circuit.notes}</div>
@@ -976,13 +990,13 @@ export default function App() {
 
             <div className="guide">
               <div className="panel-label">
-                Component Guide{selected ? ` — ${selected}` : ""}
+                {t("componentGuide")}{selected ? ` — ${selected}` : ""}
               </div>
               <h4>{guide.name}</h4>
               {guide.symbol && <SchematicSymbol src={guide.symbol} />}
-              <h5>What it does</h5>
+              <h5>{t("whatItDoes")}</h5>
               <p className="why">{guide.function}</p>
-              <h5>The science</h5>
+              <h5>{t("science")}</h5>
               <p className="why">{guide.science}</p>
               <dl>
                 {Object.entries(guide.specs).map(([key, value]) => (
@@ -992,12 +1006,12 @@ export default function App() {
                   </div>
                 ))}
                 <div>
-                  <dt>Terminals</dt>
+                  <dt>{t("terminals")}</dt>
                   <dd>{guide.terminals}</dd>
                 </div>
               </dl>
               <p className="note">⚠ {guide.notes}</p>
-              <h5>Objective</h5>
+              <h5>{t("objective")}</h5>
               <p className="why">{lesson.description}</p>
               {lesson.source && <p className="lesson-source">{lesson.source}</p>}
             </div>
@@ -1015,11 +1029,11 @@ export default function App() {
                 </span>
                 {running ? (
                   <button className="run stop" onClick={stopSim}>
-                    ■ Stop
+                    {t("stop")}
                   </button>
                 ) : (
                   <button className="run" onClick={runSketch}>
-                    ▶ Run
+                    {t("run")}
                   </button>
                 )}
               </div>
@@ -1030,8 +1044,13 @@ export default function App() {
                 handleRef={editorRef}
                 onChange={setCode}
               />
+              {lesson.codeTemplate.language === "python" && (
+                <p className="python-indent-note">
+                  {t("pythonIndentation")}
+                </p>
+              )}
               <div className="hints">
-                <div className="hints-title">Type these to build your sketch:</div>
+                <div className="hints-title">{t("hintsTitle")}</div>
                 {lesson.hints.map((hint, i) => (
                   <div className={typedHints[i] ? "hint done" : "hint"} key={hint}>
                     <span className="hint-label">
@@ -1044,7 +1063,7 @@ export default function App() {
               {lesson.kind === "serial" && lesson.arduinoSketch && (
                 <div className="companion-sketch">
                   <div className="panel-label">
-                    Arduino sketch (running) — pre-flashed, read-only
+                    {t("companionSketch")}
                   </div>
                   <pre className="companion-code">{lesson.arduinoSketch}</pre>
                 </div>
@@ -1055,23 +1074,23 @@ export default function App() {
           <footer className="console">
             <div className="console-pane">
               <p className="panel-label">
-                Serial Output{running && <span className="live"> ● running</span>}
+                {t("serialOutput")}{running && <span className="live"> ● {t("running")}</span>}
               </p>
               <pre>
                 {serial.length > 0
                   ? serial.join("\n")
                   : running
-                    ? "Sketch running..."
+                    ? t("sketchRunning")
                     : `${lesson.output.initial}\n${lesson.output.status}`}
               </pre>
             </div>
             <div className="console-pane diagnostics">
-              <p className="panel-label">Diagnostics — why it works (or doesn't)</p>
+              <p className="panel-label">{t("diagnostics")}</p>
               <div className="diag-list">
                 {lesson.kind === "vision" ? (
                   <div className="diag diag-ok">
                     <span className="diag-badge">✓ pixels</span>
-                    The camera scene is clock-driven; cv2 decisions use captured pixel values, not GPIO state.
+                    {t("pixelDiagnostic")}
                   </div>
                 ) : (
                   diagnoses.map((d, i) => (

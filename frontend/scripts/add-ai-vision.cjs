@@ -333,7 +333,7 @@ const allLessons = [
     516,
     "Is the LED On?",
     "A camera does not know what an LED is; it only measures pixel brightness. Convert a fresh frame to grayscale, threshold the image, and count the bright pixels. A nonzero count means the red LED is bright in the pixels you captured; a zero count means it is dark.",
-    "The LED centre is at x=120, y=80. Its on pixels have grayscale luminance above 80; the off LED and background are below that threshold. cv2.threshold returns the cutoff and a new binary mask, and countNonZero counts that mask's actual white pixels.",
+    "The LED centre is at x=120, y=80. Its on pixels have grayscale luminance above 80; the off LED and background are below that threshold. cv2.threshold returns the cutoff and a new binary mask, and countNonZero counts that mask's actual white pixels. Python uses 4 spaces per indent level: press Enter after the colon in `if lit > 0:` and the editor will indent the next line. Put `print('LED is ON')` four spaces inside the if block. Align `else:` with `if lit > 0:`, then indent `print('LED is OFF')` four spaces inside the else block. Tab inserts four spaces.",
     "import cv2\n\nframe = cv2.grabFrame()\ngray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)\n# Turn brightness into a black-and-white mask.\n",
     [
       "ret, bright = cv2.threshold(gray, 80, 255, cv2.THRESH_BINARY)",
