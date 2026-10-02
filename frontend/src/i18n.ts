@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext } from "react";
 
 export const LOCALES = ["en", "nl", "fr", "de", "pt-BR"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -92,7 +92,7 @@ const english = {
     "Tip: type the commands yourself — muscle memory is the point. Use ↑ to recall a previous command, and help to list what this terminal understands.",
 } as const;
 
-type CopyKey = keyof typeof english;
+export type CopyKey = keyof typeof english;
 type Copy = Partial<Record<CopyKey, string>>;
 
 const translations: Record<Exclude<Locale, "en">, Copy> = {
@@ -414,63 +414,24 @@ const translations: Record<Exclude<Locale, "en">, Copy> = {
   },
 };
 
-function isLocale(value: string | null): value is Locale {
-  return value !== null && (LOCALES as readonly string[]).includes(value);
-}
-
-function detectLocale(languages: readonly string[]): Locale {
-  for (const language of languages) {
-    const normalized = language.replace("_", "-").toLowerCase();
-    if (normalized.startsWith("pt")) return "pt-BR";
-    if (normalized.startsWith("nl")) return "nl";
-    if (normalized.startsWith("fr")) return "fr";
-    if (normalized.startsWith("de")) return "de";
-    if (normalized.startsWith("en")) return "en";
-  }
-  return "en";
-}
-
-function initialLocale(): Locale {
-  try {
-    const saved = localStorage.getItem("synapsis.locale");
-    if (isLocale(saved)) return saved;
-  } catch (error) {
-    console.warn("Could not read the saved language preference.", error);
-  }
-  return detectLocale(typeof navigator === "undefined" ? [] : navigator.languages);
-}
-
-interface I18nContextValue {
+export interface I18nContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: CopyKey, values?: Record<string, string | number>) => string;
 }
 
-const I18nContext = createContext<I18nContextValue | null>(null);
+export const I18nContext = createContext<I18nContextValue | null>(null);
 
-export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>(initialLocale);
-
-  useEffect(() => {
-    document.documentElement.lang = locale;
-    try {
-      localStorage.setItem("synapsis.locale", locale);
-    } catch (error) {
-      console.warn("Could not save the language preference.", error);
-    }
-  }, [locale]);
-
-  const value = useMemo<I18nContextValue>(() => {
-    const t = (key: CopyKey, values: Record<string, string | number> = {}) => {
-      let text = locale === "en" ? english[key] : (translations[locale][key] ?? english[key]);
-      for (const [name, replacement] of Object.entries(values))
-        text = text.replaceAll(`{${name}}`, String(replacement));
-      return text;
-    };
-    return { locale, setLocale, t };
-  }, [locale]);
-
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+export function translate(
+  locale: Locale,
+  key: CopyKey,
+  values: Record<string, string | number> = {},
+): string {
+  let text =
+    locale === "en" ? english[key] : (translations[locale][key] ?? english[key]);
+  for (const [name, replacement] of Object.entries(values))
+    text = text.replaceAll(`{${name}}`, String(replacement));
+  return text;
 }
 
 export function useI18n(): I18nContextValue {

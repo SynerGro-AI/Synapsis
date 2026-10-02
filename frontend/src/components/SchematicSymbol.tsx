@@ -18,23 +18,24 @@ function load(src: string): Promise<ParsedSymbol> {
 }
 
 export default function SchematicSymbol({ src }: { src: string }) {
-  const [symbol, setSymbol] = useState<ParsedSymbol | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [result, setResult] = useState<
+    { src: string; symbol: ParsedSymbol } | { src: string; failed: true } | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
-    setSymbol(null);
-    setFailed(false);
     load(src)
-      .then((s) => !cancelled && setSymbol(s))
-      .catch(() => !cancelled && setFailed(true));
+      .then((symbol) => !cancelled && setResult({ src, symbol }))
+      .catch(() => !cancelled && setResult({ src, failed: true }));
     return () => {
       cancelled = true;
     };
   }, [src]);
 
-  if (failed) return null;
-  if (!symbol) return <div className="schematic" />;
+  const currentResult = result?.src === src ? result : null;
+  if (currentResult && "failed" in currentResult) return null;
+  if (!currentResult) return <div className="schematic" />;
+  const { symbol } = currentResult;
 
   return (
     <div className="schematic" title={`KiCad symbol: ${symbol.name}`}>

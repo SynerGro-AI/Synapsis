@@ -2072,9 +2072,6 @@ export function analyzePython(code: string): PySketchInfo {
     for (const s of body) {
       if (s.k === "assign" && s.target.k === "name" && s.value.k === "num" && Number.isInteger(s.value.v))
         consts.set(s.target.name, s.value.v);
-      if (s.k === "import") {
-        if (s.module === "RPi.GPIO") info.mode = info.mode; // touch, no-op
-      }
       if (s.k === "expr") walkExpr(s.e);
       if (s.k === "assign") walkExpr(s.value);
       if (s.k === "augassign") walkExpr(s.value);
