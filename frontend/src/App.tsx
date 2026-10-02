@@ -257,7 +257,21 @@ export default function App() {
   const roadmapPhases = data.phases.filter(
     (p) => p.track === activeTrack && p.status === "coming-soon",
   );
-  const trackLessons = data.lessons.filter((l) => phaseTrack.get(l.phase) === activeTrack);
+  const trackLessons = useMemo(
+    () => data.lessons.filter((l) => phaseTrack.get(l.phase) === activeTrack),
+    [activeTrack, data.lessons, phaseTrack],
+  );
+  const courseLessonNumbers = useMemo(() => {
+    if (!["math", "science", "language_arts"].includes(activeTrack)) {
+      return new Map<number, number>();
+    }
+    return new Map(
+      [...trackLessons]
+        .sort((a, b) => a.id - b.id)
+        .map((trackLesson, index) => [trackLesson.id, index + 1]),
+    );
+  }, [activeTrack, trackLessons]);
+  const displayedLessonNumber = courseLessonNumbers.get(lesson.id) ?? lesson.id;
 
   const selectTrack = (id: string) => {
     setView("workspace");
@@ -901,7 +915,8 @@ export default function App() {
                           <span className="lesson-check">
                             {saved[l.id]?.completed ? "✓" : ""}
                           </span>
-                          {l.id}. {l.translations?.[lessonLocale]?.title ?? l.title}
+                          {courseLessonNumbers.get(l.id) ?? l.id}.{" "}
+                          {l.translations?.[lessonLocale]?.title ?? l.title}
                         </li>
                       ))}
                   </ul>
@@ -964,7 +979,7 @@ export default function App() {
                 ☰
               </button>
               <h3>
-                {t("lesson")} {lesson.id} — {lessonTitle}
+                {t("lesson")} {displayedLessonNumber} — {lessonTitle}
               </h3>
               {completed && <span className="lesson-done">✓ {t("completed")}</span>}
               {offline && (
@@ -996,7 +1011,7 @@ export default function App() {
               ☰
             </button>
             <h3>
-              {t("lesson")} {lesson.id} — {lessonTitle}
+              {t("lesson")} {displayedLessonNumber} — {lessonTitle}
             </h3>
             {completed && <span className="lesson-done">✓ {t("completed")}</span>}
             {offline && (

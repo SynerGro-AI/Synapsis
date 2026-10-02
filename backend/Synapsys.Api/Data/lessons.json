@@ -431,7 +431,7 @@
       "id": "math_k2",
       "track": "math",
       "name": "K–2: Number Sense & Operations",
-      "range": "701-706",
+      "range": "1-6",
       "concepts": [
         "Counting and cardinality",
         "Addition within 20",
@@ -445,7 +445,7 @@
       "id": "math_3_5",
       "track": "math",
       "name": "Grades 3–5: Fractions & Operations",
-      "range": "707-712",
+      "range": "7-12",
       "concepts": [
         "Place value and multi-digit arithmetic",
         "Multiplication and division",
@@ -462,7 +462,7 @@
       "id": "math_6_8",
       "track": "math",
       "name": "Grades 6–8: Ratios, Algebra & Geometry",
-      "range": "713-718",
+      "range": "13-18",
       "concepts": [
         "Ratios and proportional reasoning",
         "Rational numbers",
@@ -480,7 +480,7 @@
       "id": "math_9_12",
       "track": "math",
       "name": "Grades 9–12: Algebra, Functions & Proof",
-      "range": "719-726",
+      "range": "19-26",
       "concepts": [
         "Algebra and equations",
         "Functions and modeling",
@@ -498,7 +498,7 @@
       "id": "math_university",
       "track": "math",
       "name": "University: Advanced Mathematics",
-      "range": "727-734",
+      "range": "27-34",
       "concepts": [
         "Linear algebra",
         "Discrete structures",
@@ -516,7 +516,7 @@
       "id": "language_k2",
       "track": "language_arts",
       "name": "K–2: Early Literacy",
-      "range": "801-806",
+      "range": "1-6",
       "concepts": [
         "Phonological awareness",
         "Decoding and word recognition",
@@ -531,7 +531,7 @@
       "id": "language_3_5",
       "track": "language_arts",
       "name": "Grades 3–5: Reading & Composition",
-      "range": "807-812",
+      "range": "7-12",
       "concepts": [
         "Comprehension and evidence",
         "Text structure",
@@ -549,7 +549,7 @@
       "id": "language_6_8",
       "track": "language_arts",
       "name": "Grades 6–8: Analysis & Argument",
-      "range": "813-818",
+      "range": "13-18",
       "concepts": [
         "Literary analysis",
         "Informational texts",
@@ -567,7 +567,7 @@
       "id": "language_9_12",
       "track": "language_arts",
       "name": "Grades 9–12: Rhetoric & Research",
-      "range": "819-826",
+      "range": "19-26",
       "concepts": [
         "Close reading",
         "Rhetorical analysis",
@@ -585,7 +585,7 @@
       "id": "language_university",
       "track": "language_arts",
       "name": "University: Advanced Reading & Writing",
-      "range": "827-834",
+      "range": "27-34",
       "concepts": [
         "Critical theory and interpretation",
         "Disciplinary research",
@@ -603,7 +603,7 @@
       "id": "science_k2",
       "track": "science",
       "name": "K–2: Observe & Ask",
-      "range": "901-906",
+      "range": "1-6",
       "concepts": [
         "Living things",
         "Weather and sky",
@@ -618,7 +618,7 @@
       "id": "science_3_5",
       "track": "science",
       "name": "Grades 3–5: Patterns & Systems",
-      "range": "907-912",
+      "range": "7-12",
       "concepts": [
         "Life cycles and ecosystems",
         "Matter and mixtures",
@@ -636,7 +636,7 @@
       "id": "science_6_8",
       "track": "science",
       "name": "Grades 6–8: Models & Evidence",
-      "range": "913-918",
+      "range": "13-18",
       "concepts": [
         "Cells and heredity",
         "Chemical and physical change",
@@ -654,7 +654,7 @@
       "id": "science_9_12",
       "track": "science",
       "name": "Grades 9–12: Core Sciences",
-      "range": "919-926",
+      "range": "19-26",
       "concepts": [
         "Biology and genetics",
         "Chemistry and reactions",
@@ -672,7 +672,7 @@
       "id": "science_university",
       "track": "science",
       "name": "University: Scientific Foundations",
-      "range": "927-934",
+      "range": "27-34",
       "concepts": [
         "Experimental methods",
         "Advanced biology",
