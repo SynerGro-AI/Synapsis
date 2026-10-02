@@ -126,6 +126,35 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
 const error = (message: string, status: number, headers: Record<string, string> = {}) =>
   json({ error: message }, status, headers);
 
+function matchesEntityTag(condition: string, etag: string): boolean {
+  const current = etag.replace(/^W\//, "");
+  const candidates = condition.match(/(?:W\/)?"[^"]*"|\*/g) ?? [];
+  return candidates.some((candidate) => candidate === "*" || candidate.replace(/^W\//, "") === current);
+}
+
+async function fetchAsset(request: Request, assets: Fetcher, target = request.url): Promise<Response> {
+  const response = await assets.fetch(
+    target === request.url ? request : new Request(target, request),
+  );
+  if ((request.method !== "GET" && request.method !== "HEAD") || response.status !== 200)
+    return response;
+
+  const ifNoneMatch = request.headers.get("If-None-Match");
+  const etag = response.headers.get("ETag");
+  const tagMatches = ifNoneMatch !== null && etag !== null && matchesEntityTag(ifNoneMatch, etag);
+  const ifModifiedSince = request.headers.get("If-Modified-Since");
+  const lastModified = response.headers.get("Last-Modified");
+  const dateMatches =
+    ifNoneMatch === null &&
+    ifModifiedSince !== null &&
+    lastModified !== null &&
+    Date.parse(ifModifiedSince) >= Date.parse(lastModified);
+  if (!tagMatches && !dateMatches) return response;
+
+  await response.body?.cancel();
+  return new Response(null, { status: 304, headers: response.headers });
+}
+
 function allowedMethods(path: string): string[] | null {
   if (path === "/api/health" || path === "/api/components" || path === "/api/lessons")
     return ["GET", "HEAD"];
@@ -291,7 +320,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    if (!path.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (!path.startsWith("/api/")) return fetchAsset(request, env.ASSETS);
 
     const methods = allowedMethods(path);
     if (!methods) return error("Not found", 404);
@@ -300,9 +329,9 @@ export default {
 
     if (path === "/api/health") return json({ status: "ok" });
     if (path === "/api/lessons")
-      return env.ASSETS.fetch(new Request(new URL("/data/lessons.json", url.origin), request));
+      return fetchAsset(request, env.ASSETS, new URL("/data/lessons.json", url.origin).toString());
     if (path === "/api/components")
-      return env.ASSETS.fetch(new Request(new URL("/data/components.json", url.origin), request));
+      return fetchAsset(request, env.ASSETS, new URL("/data/components.json", url.origin).toString());
 
     // Every route below this point reads or writes D1; make sure the tables exist.
     await ensureSchema(env);

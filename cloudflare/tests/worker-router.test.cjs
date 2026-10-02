@@ -32,10 +32,13 @@ function createEnv() {
     ASSETS: {
       async fetch(request) {
         requests.push(request);
-        const headers = new Headers(request.headers);
-        if (headers.get("If-None-Match") === '"asset-etag"')
-          return new Response(null, { status: 304 });
-        return new Response("{}", { headers: { "Content-Type": "application/json" } });
+        return new Response("{}", {
+          headers: {
+            "Content-Type": "application/json",
+            ETag: '"asset-etag"',
+            "Last-Modified": "Wed, 21 Oct 2015 07:28:00 GMT",
+          },
+        });
       },
     },
     SESSION_SECRET: "test-only",
@@ -59,14 +62,26 @@ test("public GET endpoints reject unsupported methods", async () => {
   }
 });
 
-test("static API assets preserve HEAD and conditional request semantics", async () => {
+test("static assets preserve HEAD and return 304 for matching validators", async () => {
   const head = await send("/api/lessons", "HEAD");
   assert.equal(head.response.status, 200);
   assert.equal(head.env.requests[0].method, "HEAD");
 
-  const conditional = await send("/api/lessons", "GET", { "If-None-Match": '"asset-etag"' });
+  const conditional = await send("/api/lessons", "GET", { "If-None-Match": 'W/"old", W/"asset-etag"' });
   assert.equal(conditional.response.status, 304);
-  assert.equal(conditional.env.requests[0].headers.get("If-None-Match"), '"asset-etag"');
+  assert.equal(conditional.env.requests[0].headers.get("If-None-Match"), 'W/"old", W/"asset-etag"');
+  assert.equal(await conditional.response.text(), "");
+
+  const wildcard = await send("/api/components", "GET", { "If-None-Match": "*" });
+  assert.equal(wildcard.response.status, 304);
+
+  const dateValidator = await send("/api/lessons", "GET", {
+    "If-Modified-Since": "Wed, 21 Oct 2015 07:28:00 GMT",
+  });
+  assert.equal(dateValidator.response.status, 304);
+
+  const regularPage = await send("/", "GET", { "If-None-Match": '"asset-etag"' });
+  assert.equal(regularPage.response.status, 304);
 });
 
 test("known authenticated routes retain authorization while rejecting wrong methods", async () => {
