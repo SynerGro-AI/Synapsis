@@ -94,6 +94,8 @@ export class Shell {
   // Networking / users / devices — consistent state the pi_network commands read.
   private ifaces: NetIface[] = [];
   private users = new Map<string, UserRec>();
+  private variables = new Map<string, string>();
+  private scriptDepth = 0;
   private nextUid = 1001;
   private privileged = false; // set while a `sudo` sub-command runs
   private sessionStack: SessionFrame[] = []; // ssh / su identities to return to
@@ -169,6 +171,20 @@ export class Shell {
       return rest.length ? `~/${rest.join("/")}` : "~";
     }
     return "/" + segs.join("/");
+  }
+
+  private expandVariable(value: string): string {
+    return value.replace(
+      /\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g,
+      (_match, braced: string | undefined, plain: string | undefined) => {
+        const name = braced ?? plain;
+        if (name === "HOME") return "/" + this.home.join("/");
+        if (name === "USER") return this.user;
+        if (name === "SHELL") return "/bin/bash";
+        if (name === "PWD") return "/" + this.cwd.join("/");
+        return name ? (this.variables.get(name) ?? "") : "";
+      },
+    );
   }
 
   /** The `pi@raspberrypi:~$ ` prompt string. */
@@ -367,9 +383,15 @@ export class Shell {
   }
 
   private dispatch(body: string, stdin?: string[], piped = false): RunResult {
-    const argv = tokenize(body);
+    const argv = tokenize(body).map((arg) => this.expandVariable(arg));
     const cmd = argv[0];
     const args = argv.slice(1);
+
+    if (cmd && /^[A-Za-z_][A-Za-z0-9_]*=/.test(cmd)) {
+      const separator = cmd.indexOf("=");
+      this.variables.set(cmd.slice(0, separator), cmd.slice(separator + 1));
+      return { lines: [] };
+    }
 
     switch (cmd) {
       case undefined:
@@ -383,7 +405,7 @@ export class Shell {
             "  pwd  ls  cd  mkdir  touch  cat  echo  rm  tree  nano  clear",
             "  grep  find  wc  head  tail  sort  chmod  sudo  whoami  id  groups",
             "  ifconfig  ip  hostname  ping  ssh  su  adduser  exit  lsblk  df  dd",
-            "  git  node  npm  python  dotnet  code",
+            "  git  node  npm  python  dotnet  code  bash",
             "Pipes (a | b), redirection (> file, >> file) and wildcards (*, ?) work too.",
             "Everything runs in a safe in-memory sandbox.",
           ],
@@ -406,6 +428,16 @@ export class Shell {
         return { lines: this.tree() };
       case "echo":
         return { lines: [args.join(" ")] };
+      case "export": {
+        const assignment = args.find((arg) => /^[A-Za-z_][A-Za-z0-9_]*=/.test(arg));
+        if (!assignment) return { lines: ["export: expected NAME=value"] };
+        const separator = assignment.indexOf("=");
+        this.variables.set(assignment.slice(0, separator), assignment.slice(separator + 1));
+        return { lines: [] };
+      }
+      case "bash":
+      case "sh":
+        return this.runScript(args[0]);
       case "nano":
         return this.nano(args);
       case "grep":
@@ -475,8 +507,45 @@ export class Shell {
       case "code":
         return { lines: args[0] ? [`Opening ${args[0]} in VS Code…`] : ["Opening VS Code…"] };
       default:
+        if (cmd?.startsWith("./")) return this.executeScript(cmd);
         return { lines: [`${cmd}: command not found`] };
     }
+  }
+
+  private runScript(target?: string): RunResult {
+    if (!target) return { lines: ["bash: expected a script file"] };
+    if (this.scriptDepth >= 4)
+      return { lines: ["bash: script nesting limit reached"] };
+    const node = this.nodeAt(this.resolve(target)!);
+    if (!node) return { lines: [`bash: ${target}: No such file or directory`] };
+    if (node.type !== "file") return { lines: [`bash: ${target}: Is a directory`] };
+
+    this.scriptDepth++;
+    try {
+      const output: string[] = [];
+      for (const line of node.content.split("\n").slice(0, 100)) {
+        const command = line.trim();
+        if (!command || command.startsWith("#")) continue;
+        const result = this.run(command);
+        if (result.edit || result.clear) return result;
+        output.push(...result.lines);
+      }
+
+      return { lines: output };
+    } finally {
+      this.scriptDepth--;
+    }
+  }
+
+  private executeScript(target: string): RunResult {
+    const node = this.nodeAt(this.resolve(target)!);
+    if (!node) return { lines: [`bash: ${target}: No such file or directory`] };
+    if (node.type !== "file") return { lines: [`bash: ${target}: Is a directory`] };
+    if (!((node.mode ?? 0o644) & 0o111))
+      return { lines: [`bash: ${target}: Permission denied`] };
+    if (!node.content.startsWith("#!/bin/bash") && !node.content.startsWith("#!/bin/sh"))
+      return { lines: [`bash: ${target}: cannot execute: required interpreter not found`] };
+    return this.runScript(target);
   }
 
   private ls(args: string[], piped = false): RunResult {
