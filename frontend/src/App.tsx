@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import AccountPanel from "./components/AccountPanel";
 import ActivityBar from "./components/ActivityBar";
 import CircuitCanvas from "./components/CircuitCanvas";
-import CodeEditor, { type CodeEditorHandle } from "./components/CodeEditor";
+import type { CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
@@ -34,6 +34,7 @@ import {
 const HINT_LABELS = "ABCDEFGH";
 const normalize = (s: string) => s.replace(/\s+/g, "");
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
+const CodeEditor = lazy(() => import("./components/CodeEditor"));
 
 type MobileTab = "canvas" | "editor" | "guide" | "console";
 interface SavedLesson {
@@ -61,6 +62,7 @@ export default function App() {
 
   // Mobile: which single panel is showing, and whether the lesson drawer is open.
   const [mobileTab, setMobileTab] = useState<MobileTab>("canvas");
+  const [editorActivated, setEditorActivated] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
 
   const [running, setRunning] = useState(false);
@@ -947,7 +949,10 @@ export default function App() {
                 key={tabId}
                 className={mobileTab === tabId ? "active" : ""}
                 aria-pressed={mobileTab === tabId}
-                onClick={() => setMobileTab(tabId)}
+                onClick={() => {
+                  if (tabId === "editor") setEditorActivated(true);
+                  setMobileTab(tabId);
+                }}
               >
                 {label}
                 {tabId === "console" && running && <span className="tab-dot" />}
@@ -1157,13 +1162,32 @@ export default function App() {
                   </button>
                 )}
               </div>
-              <CodeEditor
-                key={`${lesson.id}:${restoreCount}`}
-                starter={starter}
-                language={lesson.codeTemplate.language}
-                handleRef={editorRef}
-                onChange={setCode}
-              />
+              {editorActivated ? (
+                <Suspense
+                  fallback={
+                    <div className="editor-load-placeholder" role="status">
+                      Loading code editor…
+                    </div>
+                  }
+                >
+                  <CodeEditor
+                    key={`${lesson.id}:${restoreCount}`}
+                    starter={starter}
+                    language={lesson.codeTemplate.language}
+                    handleRef={editorRef}
+                    onChange={setCode}
+                  />
+                </Suspense>
+              ) : (
+                <button
+                  className="editor-load-placeholder"
+                  onClick={() => setEditorActivated(true)}
+                  aria-label="Load code editor"
+                >
+                  <strong>Click to start coding</strong>
+                  <span>The code editor loads when you are ready.</span>
+                </button>
+              )}
               {lesson.codeTemplate.language === "python" && (
                 <p className="python-indent-note">
                   {t("pythonIndentation")}

@@ -1,9 +1,13 @@
 import { useEffect, useRef, type RefObject } from "react";
-import * as monaco from "monaco-editor";
+import * as monaco from "monaco-editor/editor/editor.api.js";
 import editorWorker from "monaco-editor/editor/editor.worker.js?worker";
+import "monaco-editor/languages/definitions/cpp/register.js";
+import "monaco-editor/languages/definitions/powershell/register.js";
+import "monaco-editor/languages/definitions/python/register.js";
+import "monaco-editor/languages/definitions/shell/register.js";
 
 // Vite needs to be told how to spawn Monaco's web worker.
-self.MonacoEnvironment = {
+(globalThis as typeof globalThis & { MonacoEnvironment?: monaco.Environment }).MonacoEnvironment = {
   getWorker: () => new editorWorker(),
 };
 
@@ -37,7 +41,7 @@ export default function CodeEditor({
 
     const editor = monaco.editor.create(containerRef.current, {
       value: starter,
-      language,
+      language: language === "bash" ? "shell" : language,
       theme: "vs-dark",
       minimap: { enabled: false },
       automaticLayout: true,

@@ -995,6 +995,25 @@
   overflow: hidden;
 }
 
+.editor-load-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  border: 0;
+  background: #1e1e1e;
+  color: #ddd;
+  cursor: pointer;
+}
+
+.editor-load-placeholder span {
+  color: #999;
+  font-size: 12px;
+}
+
 .console {
   background: #111;
   padding: 0 0 10px 0;
