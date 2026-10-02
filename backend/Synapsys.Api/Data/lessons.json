@@ -162,12 +162,12 @@
       "track": "devsetup",
       "name": "Toolchain",
       "range": "117-122",
-      "status": "coming-soon",
       "concepts": [
-        "Compilers",
-        "Debuggers",
-        "Editors & extensions",
-        "Build tasks"
+        "C# project compilation and diagnostics",
+        "Print-based debugging",
+        "JavaScript syntax checking",
+        "Editor extensions in an isolated workspace",
+        "Repeatable npm build tasks"
       ]
     },
     {
@@ -2209,6 +2209,356 @@
           {
             "cmd": "cat package-lock.json",
             "why": "Review the lockfile that controlled the clean install."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 117,
+      "phase": "toolchain",
+      "title": "Compile a Console Program",
+      "description": "The .NET SDK scaffolds a C# project, compiles its source, and runs the compiled program. This sandbox compiler deliberately supports a small, documented subset of C#; it writes a virtual build artifact and never starts a host compiler.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Create a C# console project, compile its source in the sandbox, inspect the generated artifact, then run the program.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "dotnet --version",
+            "why": "Check which .NET SDK the sandbox models."
+          },
+          {
+            "cmd": "dotnet new console -n greeting",
+            "why": "Create a project file and C# starter program in the virtual filesystem."
+          },
+          {
+            "cmd": "cd greeting",
+            "why": "Move into the new project's directory."
+          },
+          {
+            "cmd": "dotnet build",
+            "why": "Compile the supported C# statements and create a virtual app.dll artifact."
+          },
+          {
+            "cmd": "ls bin/Debug/net8.0",
+            "why": "Confirm the successful build produced app.dll."
+          },
+          {
+            "cmd": "dotnet run",
+            "why": "Execute the output derived from the compiled program."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 118,
+      "phase": "toolchain",
+      "title": "Fix a Compiler Error",
+      "description": "Compiler diagnostics identify a source file and line to help you find a mistake. The seeded C# program is missing a semicolon. Read the diagnostic, open Program.cs in the sandbox editor, add the semicolon, save with Ctrl+O, exit with Ctrl+X, and rebuild.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "The starter has one intentional syntax error. Use the compiler's line number, edit the file in the sandbox nano editor, and rebuild after saving.",
+        "seed": {
+          "Program.cs": {
+            "type": "file",
+            "content": "using System;\nConsole.WriteLine(\"Fixed and built\")\n"
+          },
+          "toolchain.csproj": {
+            "type": "file",
+            "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n</Project>"
+          }
+        },
+        "steps": [
+          {
+            "cmd": "cat Program.cs",
+            "why": "Read the source and locate the statement that needs its terminator."
+          },
+          {
+            "cmd": "dotnet build",
+            "why": "Read the compiler's source line and CS1002 diagnostic."
+          },
+          {
+            "cmd": "nano Program.cs",
+            "why": "Open the in-memory source in the editor; add the missing semicolon, save with Ctrl+O, and exit with Ctrl+X."
+          },
+          {
+            "cmd": "dotnet build",
+            "why": "Recompile the saved file and confirm the syntax error is gone."
+          },
+          {
+            "cmd": "dotnet run",
+            "why": "Run the corrected program."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 119,
+      "phase": "toolchain",
+      "title": "Debug with Print Statements",
+      "description": "A quick debugging technique is to print intermediate values and compare them with what you expect. The sandbox runs a deliberately small JavaScript subset: variable declarations, numeric arithmetic, and console.log. Inspect the source, run it, and use its trace output to find the faulty calculation.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Run the seeded script and compare the expected total with the value printed by the calculation.",
+        "seed": {
+          "total.js": {
+            "type": "file",
+            "content": "const price = 3;\nconst quantity = 5;\nconst total = price + quantity;\nconsole.log(\"expected:\", 15);\nconsole.log(\"actual:\", total);\n"
+          }
+        },
+        "steps": [
+          {
+            "cmd": "cat total.js",
+            "why": "Inspect the inputs, calculation, and diagnostic print statements."
+          },
+          {
+            "cmd": "node --check total.js",
+            "why": "Ask Node's sandbox syntax checker to validate the supported JavaScript syntax."
+          },
+          {
+            "cmd": "node total.js",
+            "why": "Execute the supported statements and inspect the actual printed values."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 120,
+      "phase": "toolchain",
+      "title": "Add an Editor Extension",
+      "description": "Editor extensions add language tools, but this practice terminal must not download code or change your device. The code command uses a curated sandbox catalog and records extension metadata only in the virtual filesystem. List the result to verify the state change.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Install the supported C# editor extension into the virtual profile and inspect the installed extension list.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "code --version",
+            "why": "Check the version of the sandbox's editor-command model."
+          },
+          {
+            "cmd": "code --list-extensions",
+            "why": "List extensions currently recorded in the virtual profile."
+          },
+          {
+            "cmd": "code --install-extension ms-dotnettools.csdevkit",
+            "why": "Install the curated C# extension metadata in the sandbox filesystem."
+          },
+          {
+            "cmd": "code --list-extensions",
+            "why": "Verify the extension ID was added to the isolated profile."
+          },
+          {
+            "cmd": "cat ~/.vscode/extensions/ms-dotnettools.csdevkit-1.0.0/package.json",
+            "why": "Inspect the virtual extension manifest the command created."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 121,
+      "phase": "toolchain",
+      "title": "Create a Repeatable Build Task",
+      "description": "npm run executes a named script from package.json through the sandbox command interpreter. Here the build script runs dotnet build, so the same repeatable action can be called manually or wired to an editor's build-task configuration. It does not execute host commands.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Inspect the seeded package script and run it. The script invokes the virtual .NET compiler to create a build artifact.",
+        "seed": {
+          "package.json": {
+            "type": "file",
+            "content": "{\n  \"name\": \"task-demo\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"build\": \"dotnet build\"\n  }\n}"
+          },
+          "Program.cs": {
+            "type": "file",
+            "content": "using System;\nConsole.WriteLine(\"Build task complete\");\n"
+          },
+          "task-demo.csproj": {
+            "type": "file",
+            "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n</Project>"
+          }
+        },
+        "steps": [
+          {
+            "cmd": "cat package.json",
+            "why": "Read the named build task and the command it runs."
+          },
+          {
+            "cmd": "npm run",
+            "why": "List the scripts available in this project."
+          },
+          {
+            "cmd": "npm run build",
+            "why": "Run the build script through the sandbox command interpreter."
+          },
+          {
+            "cmd": "ls bin/Debug/net8.0",
+            "why": "Verify the task created the build artifact."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 122,
+      "phase": "toolchain",
+      "title": "Run the Project Build Workflow",
+      "description": "A small project workflow can combine a syntax check, a named build task, and execution. Each command reads or updates the sandbox's virtual files. Supported syntax is intentionally limited: Node checks this lesson's simple JavaScript, while dotnet compiles only the small C# subset described in the earlier lesson.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Check the script's syntax, run the project build task, inspect the build output, then run the compiled C# program.",
+        "seed": {
+          "package.json": {
+            "type": "file",
+            "content": "{\n  \"name\": \"workflow-demo\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"build\": \"dotnet build\"\n  }\n}"
+          },
+          "Program.cs": {
+            "type": "file",
+            "content": "using System;\nint answer = 6 * 7;\nConsole.WriteLine(answer);\n"
+          },
+          "workflow-demo.csproj": {
+            "type": "file",
+            "content": "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n</Project>"
+          },
+          "verify.js": {
+            "type": "file",
+            "content": "const ready = 1 + 1;\nconsole.log(\"helper ready:\", ready);\n"
+          }
+        },
+        "steps": [
+          {
+            "cmd": "node --check verify.js",
+            "why": "Check the project's JavaScript helper before building."
+          },
+          {
+            "cmd": "npm run build",
+            "why": "Compile the C# console program using the project's repeatable script."
+          },
+          {
+            "cmd": "ls bin/Debug/net8.0",
+            "why": "Confirm the project produced its virtual executable artifact."
+          },
+          {
+            "cmd": "dotnet run",
+            "why": "Run the compiled program and inspect its output."
           }
         ]
       },

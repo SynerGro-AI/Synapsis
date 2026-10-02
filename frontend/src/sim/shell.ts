@@ -101,6 +101,7 @@ export class Shell {
   private users = new Map<string, UserRec>();
   private variables = new Map<string, string>();
   private scriptDepth = 0;
+  private npmScriptDepth = 0;
   private nextUid = 1001;
   private privileged = false; // set while a `sudo` sub-command runs
   private sessionStack: SessionFrame[] = []; // ssh / su identities to return to
@@ -108,6 +109,7 @@ export class Shell {
   private aptIndexUpdated = false;
   private aptPackages = new Set<string>();
   private wingetPackages = new Set<string>();
+  private editorExtensions = new Set<string>();
   private pipPackages = new Map<string, Map<string, PackageInfo>>();
   private activeVenv: string | null = null;
 
@@ -130,6 +132,12 @@ export class Shell {
   private static readonly WINGET_PACKAGES: Record<string, PackageInfo> = {
     "Git.Git": { version: "2.45.1", description: "Git version control system" },
     "Microsoft.VisualStudioCode": { version: "1.89.1", description: "Code editing. Redefined." },
+  };
+
+  private static readonly EDITOR_EXTENSIONS: Record<string, PackageInfo> = {
+    "ms-dotnettools.csdevkit": { version: "1.0.0", description: "C# development tools" },
+    "ms-vscode.cpptools": { version: "1.20.5", description: "C/C++ IntelliSense, debugging, and code browsing" },
+    "ms-python.python": { version: "2024.8.1", description: "Python language support" },
   };
 
   /** Numeric group ids for the standard Raspberry Pi groups (for `id`). */
@@ -443,7 +451,7 @@ export class Shell {
             "  ifconfig  ip  hostname  ping  ssh  su  adduser  exit  lsblk  df  dd",
             "  git  node  npm  python  dotnet  code  bash",
             "  pip  apt-get  apt-cache  dpkg  winget",
-              "Pipes (a | b), redirection (> file, >> file) and wildcards (*, ?) work too.",
+            "Pipes (a | b), redirection (> file, >> file) and wildcards (*, ?) work too.",
             "Everything runs in a safe in-memory sandbox.",
           ],
         };
@@ -567,7 +575,7 @@ export class Shell {
       case "dotnet":
         return this.dotnet(args);
       case "code":
-        return { lines: args[0] ? [`Opening ${args[0]} in VS Code…`] : ["Opening VS Code…"] };
+        return this.codeEditor(args);
       default:
         if (cmd?.startsWith("./")) return this.executeScript(cmd);
         return { lines: [`${cmd}: command not found`] };
@@ -1011,14 +1019,132 @@ export class Shell {
 
   private node(args: string[]): RunResult {
     if (args[0] === "-v" || args[0] === "--version") return { lines: ["v20.11.1"] };
+    if (args[0] === "--check") {
+      const target = args[1];
+      if (!target) return { lines: ["node: --check requires a file path"] };
+      const source = this.nodeAt(this.resolve(target)!);
+      if (!source || source.type !== "file")
+        return { lines: [`node: cannot find module '${target}'`] };
+      const error = this.checkJavaScript(source.content);
+      return error ? { lines: [`${target}:${error.line}`, `${error.message}`] } : { lines: [] };
+    }
     if (args[0]) {
       const node = this.nodeAt(this.resolve(args[0])!);
       if (!node || node.type !== "file")
         return { lines: [`node: cannot find module '${args[0]}'`] };
-      const m = node.content.match(/console\.log\((["'`])([\s\S]*?)\1\)/);
-      return { lines: [m ? m[2] : ""] };
+      const syntaxError = this.checkJavaScript(node.content);
+      if (syntaxError)
+        return { lines: [`${args[0]}:${syntaxError.line}`, syntaxError.message] };
+      return { lines: this.runJavaScriptSubset(node.content) };
     }
     return { lines: ["Welcome to Node.js v20.11.1.", 'Type ".help" for more information.'] };
+  }
+
+  private checkJavaScript(source: string): { line: number; message: string } | null {
+    const stack: { char: string; line: number }[] = [];
+    let quote: string | null = null;
+    let escaped = false;
+    let line = 1;
+    for (const char of source) {
+      if (char === "\n") line++;
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === quote) quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'" || char === "`") quote = char;
+      else if (char === "(" || char === "{" || char === "[") stack.push({ char, line });
+      else if (char === ")" || char === "}" || char === "]") {
+        const open = stack.pop();
+        const expected = char === ")" ? "(" : char === "}" ? "{" : "[";
+        if (!open || open.char !== expected)
+          return { line, message: `SyntaxError: Unexpected token '${char}'` };
+      }
+    }
+    if (quote) return { line, message: "SyntaxError: Invalid or unexpected token (unterminated string)" };
+    if (stack.length) return { line: stack[stack.length - 1].line, message: `SyntaxError: missing closing '${stack[stack.length - 1].char === "(" ? ")" : stack[stack.length - 1].char === "{" ? "}" : "]"}'` };
+    const lines = source.split(/\r?\n/);
+    const malformed = lines.findIndex((text) => /console\.log\(/.test(text) && !/console\.log\([\s\S]*\);?$/.test(text));
+    return malformed >= 0
+      ? { line: malformed + 1, message: "SyntaxError: missing ')' after argument list" }
+      : null;
+  }
+
+  private runJavaScriptSubset(source: string): string[] {
+    const variables = new Map<string, string>();
+    const output: string[] = [];
+    for (const rawLine of source.split(/\r?\n/)) {
+      const line = rawLine.trim().replace(/;$/, "");
+      if (!line || line.startsWith("//")) continue;
+      const declaration = /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(.+)$/.exec(line);
+      if (declaration) {
+        const [, name, expression] = declaration;
+        const value = this.evaluateSimpleExpression(expression, variables);
+        if (value === null) return [`SyntaxError: unsupported expression '${expression}'`];
+        variables.set(name, value);
+        continue;
+      }
+      const log = /^console\.log\((.*)\)$/.exec(line);
+      if (log) {
+        const parts = log[1].split(",").map((part) => part.trim());
+        const values: string[] = [];
+        for (const part of parts) {
+          const value = this.evaluateSimpleExpression(part, variables);
+          if (value === null) return [`ReferenceError: unsupported value '${part}'`];
+          values.push(value);
+        }
+        output.push(values.join(" "));
+        continue;
+      }
+      return [`SyntaxError: unsupported statement '${line}'`];
+    }
+    return output;
+  }
+
+  private evaluateSimpleExpression(expression: string, variables: Map<string, string>): string | null {
+    const text = expression.trim();
+    const quoted = /^(["'`])([\s\S]*)\1$/.exec(text);
+    if (quoted) return quoted[2];
+    if (/^-?\d+(?:\.\d+)?$/.test(text)) return text;
+    if (variables.has(text)) return variables.get(text)!;
+    const arithmetic = /^([A-Za-z_$][\w$]*|-?\d+(?:\.\d+)?)\s*([+\-*/])\s*([A-Za-z_$][\w$]*|-?\d+(?:\.\d+)?)$/.exec(text);
+    if (arithmetic) {
+      const leftText = variables.get(arithmetic[1]) ?? arithmetic[1];
+      const rightText = variables.get(arithmetic[3]) ?? arithmetic[3];
+      if (!/^-?\d+(?:\.\d+)?$/.test(leftText) || !/^-?\d+(?:\.\d+)?$/.test(rightText))
+        return null;
+      const left = Number(leftText);
+      const right = Number(rightText);
+      if (arithmetic[2] === "/" && right === 0) return "Infinity";
+      const value = arithmetic[2] === "+" ? left + right
+        : arithmetic[2] === "-" ? left - right
+          : arithmetic[2] === "*" ? left * right
+            : left / right;
+      return String(value);
+    }
+    return null;
+  }
+
+  private codeEditor(args: string[]): RunResult {
+    if (args[0] === "--version") return { lines: ["1.89.1", "Sandbox VS Code command-line model"] };
+    if (args[0] === "--list-extensions") return { lines: [...this.editorExtensions].sort() };
+    if (args[0] === "--install-extension") {
+      const id = args[1]?.toLowerCase();
+      if (!id) return { lines: ["code: --install-extension requires an extension ID"] };
+      const extension = Shell.EDITOR_EXTENSIONS[id];
+      if (!extension) return { lines: [`code: extension '${id}' is not in the sandbox catalog`] };
+      this.editorExtensions.add(id);
+      const install = this.ensureDir(["home", this.user, ".vscode", "extensions", `${id}-${extension.version}`]);
+      install.children["package.json"] = file(JSON.stringify({
+        publisher: id.split(".")[0],
+        name: id.split(".").slice(1).join("."),
+        version: extension.version,
+        description: extension.description,
+      }, null, 2));
+      return { lines: [`Installing extensions...`, `Extension '${id}' v${extension.version} installed in the virtual filesystem.`] };
+    }
+    return { lines: ["code: supported options are --version, --list-extensions, and --install-extension <id>"] };
   }
 
   private npm(args: string[]): RunResult {
@@ -1037,6 +1163,32 @@ export class Shell {
         license: "ISC",
       }, null, 2));
       return { lines: [`Wrote to /${this.cwd.join("/")}/package.json`] };
+    }
+
+    if (args[0] === "run") {
+      const manifestNode = this.nodeAt([...this.cwd, "package.json"]);
+      if (!manifestNode || manifestNode.type !== "file")
+        return { lines: ["npm error: this folder has no package.json"] };
+      let manifest: { scripts?: Record<string, string> };
+      try {
+        manifest = JSON.parse(manifestNode.content);
+      } catch {
+        return { lines: ["npm error: package.json contains invalid JSON"] };
+      }
+      if (!args[1]) {
+        const names = Object.keys(manifest.scripts ?? {});
+        return { lines: names.length ? ["Scripts available:", ...names.map((name) => `  ${name}`)] : ["No scripts available."] };
+      }
+      const script = manifest.scripts?.[args[1]];
+      if (!script) return { lines: [`npm error: Missing script: "${args[1]}"`] };
+      if (this.npmScriptDepth >= 4)
+        return { lines: ["npm error: script nesting limit reached"] };
+      this.npmScriptDepth++;
+      try {
+        return this.run(script);
+      } finally {
+        this.npmScriptDepth--;
+      }
     }
 
     if (args[0] === "ls" || args[0] === "list") {
@@ -1383,22 +1535,90 @@ export class Shell {
     }
 
     if (args[0] === "build") {
-      const node = this.nodeAt(this.cwd) as FsDir;
-      const hasProj = node.type === "dir" && Object.keys(node.children).some((n) => n.endsWith(".csproj"));
-      if (!hasProj) return { lines: ["MSBUILD : error MSB1003: Specify a project or solution file."] };
-      return { lines: ["Determining projects to restore...", "Build succeeded.", "    0 Warning(s)", "    0 Error(s)"] };
+      return this.buildDotnetProject();
     }
 
     if (args[0] === "run") {
-      const node = this.nodeAt(this.cwd) as FsDir;
-      const program = node.type === "dir" ? node.children["Program.cs"] : null;
+      const program = this.nodeAt([...this.cwd, "Program.cs"]);
       if (!program || program.type !== "file")
         return { lines: ["Couldn't find a project to run. Ensure a project exists in the current directory."] };
-      const m = program.content.match(/WriteLine\((["'`])([\s\S]*?)\1\)/);
-      return { lines: [m ? m[2] : ""] };
+      const build = this.buildDotnetProject();
+      if (build.lines.some((line) => line.includes("Build FAILED") || line.includes("MSBUILD : error")))
+        return { lines: [...build.lines, "The build failed. Fix the build errors and run again."] };
+      const assembly = this.nodeAt([...this.cwd, "bin", "Debug", "net8.0", "app.dll"]);
+      if (!assembly || assembly.type !== "file")
+        return { lines: ["dotnet: build output was not produced"] };
+      try {
+        const result = JSON.parse(assembly.content) as { output: string[] };
+        return { lines: result.output.length ? result.output : [""] };
+      } catch {
+        return { lines: ["dotnet: invalid sandbox build artifact"] };
+      }
     }
 
     return { lines: [`Unknown dotnet command: ${args.join(" ")}`] };
+  }
+
+  private buildDotnetProject(): RunResult {
+    const project = this.nodeAt(this.cwd);
+    if (!project || project.type !== "dir" || !Object.keys(project.children).some((name) => name.endsWith(".csproj")))
+      return { lines: ["MSBUILD : error MSB1003: Specify a project or solution file."] };
+    const source = this.nodeAt([...this.cwd, "Program.cs"]);
+    if (!source || source.type !== "file")
+      return { lines: ["Build FAILED.", "error CS2001: Source file 'Program.cs' could not be found.", "    0 Warning(s)", "    1 Error(s)"] };
+    const output: string[] = [];
+    const variables = new Map<string, string>();
+    const sourceLines = source.content.split(/\r?\n/);
+    for (let index = 0; index < sourceLines.length; index++) {
+      const statement = sourceLines[index].trim();
+      if (!statement || statement.startsWith("//") || statement === "using System;") continue;
+      if (!statement.endsWith(";"))
+        return { lines: ["Build FAILED.", `Program.cs(${index + 1},${sourceLines[index].length + 1}): error CS1002: ; expected`, "    0 Warning(s)", "    1 Error(s)"] };
+      const write = /^Console\.WriteLine\((.*)\);$/.exec(statement);
+      if (write) {
+        const literal = /^"([^"]*)"$/.exec(write[1]);
+        if (literal) {
+          output.push(literal[1]);
+          continue;
+        }
+        if (variables.has(write[1])) {
+          output.push(variables.get(write[1])!);
+          continue;
+        }
+        return { lines: ["Build FAILED.", `Program.cs(${index + 1},1): error CS0103: The name '${write[1]}' does not exist in the current context`, "    0 Warning(s)", "    1 Error(s)"] };
+      }
+      const declaration = /^int\s+([A-Za-z_]\w*)\s*=\s*(-?\d+)\s*([+\-*/])\s*(-?\d+);$/.exec(statement);
+      if (declaration) {
+        const [, name, left, operator, right] = declaration;
+        const a = Number(left);
+        const b = Number(right);
+        const value = operator === "+" ? a + b
+          : operator === "-" ? a - b
+            : operator === "*" ? a * b
+              : b === 0 ? NaN : a / b;
+        if (!Number.isFinite(value))
+          return { lines: ["Build FAILED.", `Program.cs(${index + 1},1): error CS0020: division by zero in sandbox compiler`, "    0 Warning(s)", "    1 Error(s)"] };
+        variables.set(name, String(value));
+        continue;
+      }
+      const numberDeclaration = /^int\s+([A-Za-z_]\w*)\s*=\s*(-?\d+);$/.exec(statement);
+      if (numberDeclaration) {
+        variables.set(numberDeclaration[1], numberDeclaration[2]);
+        continue;
+      }
+      const missingParen = /^Console\.WriteLine\(/.test(statement) && !/\);$/.test(statement);
+      return {
+        lines: [
+          "Build FAILED.",
+          `Program.cs(${index + 1},1): error ${missingParen ? "CS1026: ) expected" : "CS0103: unsupported statement in sandbox C# compiler"}`,
+          "    0 Warning(s)",
+          "    1 Error(s)",
+        ],
+      };
+    }
+    const bin = this.ensureDir([...this.cwd, "bin", "Debug", "net8.0"]);
+    bin.children["app.dll"] = file(JSON.stringify({ output }));
+    return { lines: ["Determining projects to restore...", "Restore complete.", "Build succeeded.", "    0 Warning(s)", "    0 Error(s)"] };
   }
 
   // ---- system / networking / users / devices ---------------------------
