@@ -227,6 +227,9 @@ export default function App() {
   const sidebarPhases = data.phases.filter(
     (p) => p.track === activeTrack && data.lessons.some((l) => l.phase === p.id),
   );
+  const roadmapPhases = data.phases.filter(
+    (p) => p.track === activeTrack && p.status === "coming-soon",
+  );
   const trackLessons = data.lessons.filter((l) => phaseTrack.get(l.phase) === activeTrack);
 
   const selectTrack = (id: string) => {
@@ -363,6 +366,35 @@ export default function App() {
     runtimeRef.current = rt;
     setSerial([]);
     setRunning(true);
+
+    if (lesson.kind === "math") {
+      const sim = new PythonSim();
+      engineRef.current = sim;
+      const noop = () => undefined;
+      const io: PyGpioIO = {
+        setmode: noop,
+        setup: noop,
+        output: noop,
+        input: () => false,
+        pwmStart: noop,
+        pwmChangeDuty: noop,
+        pwmChangeFreq: noop,
+        pwmStop: noop,
+        cleanup: noop,
+        print: (line) => {
+          setRanClean(true);
+          setSerial((s) => [...s.slice(-30), line]);
+        },
+        serialWrite: () => 0,
+        serialAvailable: () => 0,
+        serialReadByte: () => -1,
+        onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
+      };
+      sim.run(sketch, io).finally(() => {
+        if (engineRef.current === sim) setRunning(false);
+      });
+      return;
+    }
 
     if (lesson.kind === "python") {
       const sim = new PythonSim();
@@ -632,7 +664,7 @@ export default function App() {
   // ---- Live diagnostics: circuit + code, explained bottom-right ----
   const diagnoses = useMemo(
     () =>
-      lesson.kind === "vision"
+      lesson.kind === "vision" || lesson.kind === "math"
         ? []
         : lesson.kind === "python"
         ? validatePython(circuit, analyzePython(code), lesson.circuit.required as PartType[])
@@ -801,6 +833,26 @@ export default function App() {
                 </div>
               ))
             )}
+            {roadmapPhases.length > 0 && (
+              <section className="sidebar-roadmap" aria-label="Coming-soon curriculum phases">
+                <h3>Coming next</h3>
+                {roadmapPhases.map((phase) => (
+                  <article key={phase.id}>
+                    <strong>{phase.name}</strong>
+                    <span>{phase.range}</span>
+                    <p>{phase.concepts.join(" · ")}</p>
+                    {phase.prerequisites?.length ? (
+                      <small>
+                        Prerequisite:{" "}
+                        {phase.prerequisites
+                          .map((id) => data.phases.find((item) => item.id === id)?.name ?? id)
+                          .join(", ")}
+                      </small>
+                    ) : null}
+                  </article>
+                ))}
+              </section>
+            )}
           </div>
           <AccountPanel user={user} onAuth={applyProgress} />
         </aside>
@@ -886,7 +938,7 @@ export default function App() {
 
           <nav className="mobile-tabs">
             {([
-              ["canvas", t("tabCircuit")],
+              ["canvas", lesson.kind === "math" ? "Workspace" : t("tabCircuit")],
               ["editor", t("tabCode")],
               ["guide", t("tabGuide")],
               ["console", t("tabConsole")],
@@ -905,7 +957,19 @@ export default function App() {
 
           <section className="content">
             <div className="canvas">
-              {lesson.kind === "vision" ? (
+              {lesson.kind === "math" ? (
+                <>
+                  <div className="panel-label">Math workspace</div>
+                  <div className="math-workspace">
+                    <span aria-hidden="true">∑</span>
+                    <h4>Try it, run it, see the result.</h4>
+                    <p>
+                      Change the numbers in your Python program, then choose Run.
+                      The answer appears in Program Output.
+                    </p>
+                  </div>
+                </>
+              ) : lesson.kind === "vision" ? (
                 <>
                   <div className="panel-label">{t("cameraLabel")}</div>
                   <VisionCanvas frame={visionFrame} sampleImage={lesson.vision?.sampleImage} />
@@ -1026,38 +1090,57 @@ export default function App() {
             </div>
 
             <div className="guide">
-              <div className="panel-label">
-                {t("componentGuide")}{selected ? ` — ${selected}` : ""}
-              </div>
-              <h4>{guide.name}</h4>
-              {guide.symbol && <SchematicSymbol src={guide.symbol} />}
-              <h5>{t("whatItDoes")}</h5>
-              <p className="why">{guide.function}</p>
-              <h5>{t("science")}</h5>
-              <p className="why">{guide.science}</p>
-              <dl>
-                {Object.entries(guide.specs).map(([key, value]) => (
-                  <div key={key}>
-                    <dt>{key.replace(/([A-Z])/g, " $1")}</dt>
-                    <dd>{value}</dd>
+              {lesson.kind === "math" ? (
+                <>
+                  <div className="panel-label">Math Guide</div>
+                  <h4>Explore with code</h4>
+                  <p className="why">
+                    Edit the values shown in the starter program, add the
+                    calculation from the hints, and run it to check the
+                    result. The sandbox evaluates the arithmetic you write.
+                  </p>
+                  <h5>{t("objective")}</h5>
+                  <p className="why">{lessonDescription}</p>
+                  {lesson.source && <p className="lesson-source">{lesson.source}</p>}
+                </>
+              ) : (
+                <>
+                  <div className="panel-label">
+                    {t("componentGuide")}{selected ? ` — ${selected}` : ""}
                   </div>
-                ))}
-                <div>
-                  <dt>{t("terminals")}</dt>
-                  <dd>{guide.terminals}</dd>
-                </div>
-              </dl>
-              <p className="note">⚠ {guide.notes}</p>
-              <h5>{t("objective")}</h5>
-              <p className="why">{lessonDescription}</p>
-              {lesson.source && <p className="lesson-source">{lesson.source}</p>}
+                  <h4>{guide.name}</h4>
+                  {guide.symbol && <SchematicSymbol src={guide.symbol} />}
+                  <h5>{t("whatItDoes")}</h5>
+                  <p className="why">{guide.function}</p>
+                  <h5>{t("science")}</h5>
+                  <p className="why">{guide.science}</p>
+                  <dl>
+                    {Object.entries(guide.specs).map(([key, value]) => (
+                      <div key={key}>
+                        <dt>{key.replace(/([A-Z])/g, " $1")}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                    <div>
+                      <dt>{t("terminals")}</dt>
+                      <dd>{guide.terminals}</dd>
+                    </div>
+                  </dl>
+                  <p className="note">⚠ {guide.notes}</p>
+                  <h5>{t("objective")}</h5>
+                  <p className="why">{lessonDescription}</p>
+                  {lesson.source && <p className="lesson-source">{lesson.source}</p>}
+                </>
+              )}
             </div>
 
             <div className="editor">
               <div className="panel-label editor-bar">
                 <span>
-                  {lesson.kind === "python"
-                    ? "Code IDE — Python (RPi.GPIO)"
+                  {lesson.kind === "math"
+                    ? "Code IDE — Math with Python"
+                    : lesson.kind === "python"
+                      ? "Code IDE — Python (RPi.GPIO)"
                     : lesson.kind === "serial"
                       ? "Code IDE — Python (pyserial)"
                       : lesson.kind === "vision"
@@ -1111,7 +1194,8 @@ export default function App() {
           <footer className="console">
             <div className="console-pane">
               <p className="panel-label">
-                {t("serialOutput")}{running && <span className="live"> ● {t("running")}</span>}
+                {lesson.kind === "math" ? "Program Output" : t("serialOutput")}
+                {running && <span className="live"> ● {t("running")}</span>}
               </p>
               <pre>
                 {serial.length > 0
@@ -1124,7 +1208,7 @@ export default function App() {
             <div className="console-pane diagnostics">
               <p className="panel-label">{t("diagnostics")}</p>
               <div className="diag-list">
-                {lesson.kind === "vision" ? (
+                {lesson.kind === "math" ? null : lesson.kind === "vision" ? (
                   <div className="diag diag-ok">
                     <span className="diag-badge">✓ pixels</span>
                     {t("pixelDiagnostic")}

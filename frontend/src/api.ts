@@ -14,6 +14,8 @@ export interface Phase {
   name: string;
   range: string;
   concepts: string[];
+  status?: "coming-soon";
+  prerequisites?: string[];
 }
 
 /** One typed command the learner is guided to enter, with the "why" behind it. */
@@ -38,8 +40,9 @@ export interface Lesson {
   source?: string;
   /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO;
    *  "serial" = a Python program bridging over a serial port to a running Arduino sketch;
-   *  "vision" = a Python (OpenCV/cv2) program that reads real image pixels. */
-  kind?: "arduino" | "terminal" | "python" | "serial" | "vision";
+   *  "vision" = a Python (OpenCV/cv2) program that reads real image pixels;
+   *  "math" = Python arithmetic in a circuit-free workspace. */
+  kind?: "arduino" | "terminal" | "python" | "serial" | "vision" | "math";
   /** For "serial" lessons: the fixed companion Arduino sketch (shown read-only,
    *  "pre-flashed" and run in the background while the learner types Python). */
   arduinoSketch?: string;

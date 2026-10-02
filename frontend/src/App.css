@@ -848,6 +848,71 @@
   overflow: hidden;
 }
 
+.math-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  text-align: center;
+  color: #ddd;
+}
+
+.math-workspace > span {
+  color: #e8a33d;
+  font-size: 48px;
+}
+
+.math-workspace h4 {
+  margin: 12px 0 6px;
+}
+
+.math-workspace p {
+  max-width: 340px;
+  color: #aaa;
+  line-height: 1.6;
+}
+
+.sidebar-roadmap {
+  margin: 16px 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+.sidebar-roadmap h3 {
+  margin: 0 0 10px;
+  color: #aaa;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.sidebar-roadmap article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid #2d2d2d;
+  font-size: 12px;
+}
+
+.sidebar-roadmap article > span,
+.sidebar-roadmap small {
+  color: #888;
+}
+
+.sidebar-roadmap p {
+  grid-column: 1 / -1;
+  margin: 2px 0;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.sidebar-roadmap small {
+  grid-column: 1 / -1;
+}
+
 /* Vision lessons paint real pixels here instead of the circuit. */
 .vision-view {
   flex: 1;

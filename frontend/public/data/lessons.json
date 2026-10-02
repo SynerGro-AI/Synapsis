@@ -60,6 +60,34 @@
       "icon": "🖥",
       "blurb": "Open the black box. How a CPU runs your instructions one by one, how a GPU does thousands at once, and what an NPU adds for AI.",
       "accent": "#8a9bb5"
+    },
+    {
+      "id": "math",
+      "name": "Mathematics",
+      "icon": "∑",
+      "blurb": "A standards-neutral progression from K-2 number sense to university mathematics, explored by writing code and checking real results.",
+      "accent": "#e8a33d"
+    },
+    {
+      "id": "language_arts",
+      "name": "Language Arts",
+      "icon": "📚",
+      "blurb": "A standards-neutral progression from early reading and writing to university-level interpretation, argument, and research.",
+      "accent": "#d88bc7"
+    },
+    {
+      "id": "science",
+      "name": "Science",
+      "icon": "🔬",
+      "blurb": "A standards-neutral progression from observing the natural world to explaining it with evidence, models, and advanced study.",
+      "accent": "#61c6a3"
+    },
+    {
+      "id": "calculus",
+      "name": "Calculus",
+      "icon": "∫",
+      "blurb": "A standards-neutral progression from precalculus foundations through differential, integral, and multivariable calculus.",
+      "accent": "#80a9ff"
     }
   ],
   "phases": [
@@ -397,6 +425,356 @@
         "Matrix multiply",
         "Quantization",
         "Why AI needs new silicon"
+      ]
+    },
+    {
+      "id": "math_k2",
+      "track": "math",
+      "name": "K–2: Number Sense & Operations",
+      "range": "701-706",
+      "concepts": [
+        "Counting and cardinality",
+        "Addition within 20",
+        "Subtraction within 20",
+        "Tens and ones",
+        "Equal groups",
+        "Length and comparison"
+      ]
+    },
+    {
+      "id": "math_3_5",
+      "track": "math",
+      "name": "Grades 3–5: Fractions & Operations",
+      "range": "707-712",
+      "concepts": [
+        "Place value and multi-digit arithmetic",
+        "Multiplication and division",
+        "Fractions and decimals",
+        "Measurement",
+        "Geometry",
+        "Data and graphs"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "math_k2"
+      ]
+    },
+    {
+      "id": "math_6_8",
+      "track": "math",
+      "name": "Grades 6–8: Ratios, Algebra & Geometry",
+      "range": "713-718",
+      "concepts": [
+        "Ratios and proportional reasoning",
+        "Rational numbers",
+        "Expressions and equations",
+        "Linear relationships",
+        "Geometry and transformations",
+        "Statistics and probability"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "math_3_5"
+      ]
+    },
+    {
+      "id": "math_9_12",
+      "track": "math",
+      "name": "Grades 9–12: Algebra, Functions & Proof",
+      "range": "719-726",
+      "concepts": [
+        "Algebra and equations",
+        "Functions and modeling",
+        "Geometry and proof",
+        "Trigonometry",
+        "Probability and statistics",
+        "Discrete mathematics"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "math_6_8"
+      ]
+    },
+    {
+      "id": "math_university",
+      "track": "math",
+      "name": "University: Advanced Mathematics",
+      "range": "727-734",
+      "concepts": [
+        "Linear algebra",
+        "Discrete structures",
+        "Real analysis foundations",
+        "Probability and statistics",
+        "Optimization",
+        "Mathematical modeling"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "math_9_12"
+      ]
+    },
+    {
+      "id": "language_k2",
+      "track": "language_arts",
+      "name": "K–2: Early Literacy",
+      "range": "801-806",
+      "concepts": [
+        "Phonological awareness",
+        "Decoding and word recognition",
+        "Reading fluency",
+        "Vocabulary",
+        "Sentence construction",
+        "Narrative writing"
+      ],
+      "status": "coming-soon"
+    },
+    {
+      "id": "language_3_5",
+      "track": "language_arts",
+      "name": "Grades 3–5: Reading & Composition",
+      "range": "807-812",
+      "concepts": [
+        "Comprehension and evidence",
+        "Text structure",
+        "Vocabulary and morphology",
+        "Paragraphs and essays",
+        "Grammar and revision",
+        "Speaking and listening"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "language_k2"
+      ]
+    },
+    {
+      "id": "language_6_8",
+      "track": "language_arts",
+      "name": "Grades 6–8: Analysis & Argument",
+      "range": "813-818",
+      "concepts": [
+        "Literary analysis",
+        "Informational texts",
+        "Claims and evidence",
+        "Research and citation",
+        "Style and revision",
+        "Discussion and presentation"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "language_3_5"
+      ]
+    },
+    {
+      "id": "language_9_12",
+      "track": "language_arts",
+      "name": "Grades 9–12: Rhetoric & Research",
+      "range": "819-826",
+      "concepts": [
+        "Close reading",
+        "Rhetorical analysis",
+        "Evidence-based argument",
+        "Research methods",
+        "Creative and technical writing",
+        "Media literacy"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "language_6_8"
+      ]
+    },
+    {
+      "id": "language_university",
+      "track": "language_arts",
+      "name": "University: Advanced Reading & Writing",
+      "range": "827-834",
+      "concepts": [
+        "Critical theory and interpretation",
+        "Disciplinary research",
+        "Academic argument",
+        "Source evaluation",
+        "Advanced rhetoric",
+        "Scholarly communication"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "language_9_12"
+      ]
+    },
+    {
+      "id": "science_k2",
+      "track": "science",
+      "name": "K–2: Observe & Ask",
+      "range": "901-906",
+      "concepts": [
+        "Living things",
+        "Weather and sky",
+        "Materials and properties",
+        "Motion and forces",
+        "Simple observations",
+        "Ask and test questions"
+      ],
+      "status": "coming-soon"
+    },
+    {
+      "id": "science_3_5",
+      "track": "science",
+      "name": "Grades 3–5: Patterns & Systems",
+      "range": "907-912",
+      "concepts": [
+        "Life cycles and ecosystems",
+        "Matter and mixtures",
+        "Energy and waves",
+        "Earth systems",
+        "Engineering design",
+        "Measurements and data"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "science_k2"
+      ]
+    },
+    {
+      "id": "science_6_8",
+      "track": "science",
+      "name": "Grades 6–8: Models & Evidence",
+      "range": "913-918",
+      "concepts": [
+        "Cells and heredity",
+        "Chemical and physical change",
+        "Forces and energy",
+        "Earth and space systems",
+        "Experimental design",
+        "Data-based models"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "science_3_5"
+      ]
+    },
+    {
+      "id": "science_9_12",
+      "track": "science",
+      "name": "Grades 9–12: Core Sciences",
+      "range": "919-926",
+      "concepts": [
+        "Biology and genetics",
+        "Chemistry and reactions",
+        "Physics and mechanics",
+        "Earth and environmental science",
+        "Scientific investigation",
+        "Quantitative modeling"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "science_6_8"
+      ]
+    },
+    {
+      "id": "science_university",
+      "track": "science",
+      "name": "University: Scientific Foundations",
+      "range": "927-934",
+      "concepts": [
+        "Experimental methods",
+        "Advanced biology",
+        "Advanced chemistry",
+        "Classical and modern physics",
+        "Earth and climate systems",
+        "Scientific computing"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "science_9_12"
+      ]
+    },
+    {
+      "id": "calculus_precalc",
+      "track": "calculus",
+      "name": "Precalculus Foundations",
+      "range": "1001-1006",
+      "concepts": [
+        "Functions and inverses",
+        "Polynomial and rational functions",
+        "Exponential and logarithmic functions",
+        "Trigonometry",
+        "Sequences and limits intuition",
+        "Analytic geometry"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "math_9_12"
+      ]
+    },
+    {
+      "id": "calculus_differential",
+      "track": "calculus",
+      "name": "Differential Calculus",
+      "range": "1007-1012",
+      "concepts": [
+        "Limits and continuity",
+        "Derivative definition",
+        "Differentiation rules",
+        "Chain rule",
+        "Related rates and optimization",
+        "Derivative applications"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "calculus_precalc"
+      ]
+    },
+    {
+      "id": "calculus_integral",
+      "track": "calculus",
+      "name": "Integral Calculus",
+      "range": "1013-1018",
+      "concepts": [
+        "Antiderivatives",
+        "Definite integrals",
+        "Fundamental Theorem of Calculus",
+        "Integration techniques",
+        "Area and accumulation",
+        "Differential equations foundations"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "calculus_differential"
+      ]
+    },
+    {
+      "id": "calculus_multivariable",
+      "track": "calculus",
+      "name": "Multivariable Calculus",
+      "range": "1019-1024",
+      "concepts": [
+        "Vectors and 3D geometry",
+        "Partial derivatives",
+        "Multiple integrals",
+        "Vector fields",
+        "Line and surface integrals",
+        "Green, Stokes, and divergence theorems"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "calculus_integral"
+      ]
+    },
+    {
+      "id": "calculus_applications",
+      "track": "calculus",
+      "name": "Calculus in Models & Applications",
+      "range": "1025-1030",
+      "concepts": [
+        "Numerical approximation",
+        "Differential equation models",
+        "Optimization in context",
+        "Physics applications",
+        "Probability applications",
+        "Computational exploration"
+      ],
+      "status": "coming-soon",
+      "prerequisites": [
+        "calculus_integral"
       ]
     }
   ],
@@ -6611,6 +6989,158 @@
       "output": {
         "initial": "Camera: waiting",
         "status": "Run the complete pixel-based response loop..."
+      }
+    },
+    {
+      "id": 701,
+      "phase": "math_k2",
+      "title": "Count the Collection",
+      "description": "A number tells how many objects are in a collection. Change the object count, add the print statement, and run the program to check the result.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "objects = 8\n# Add a print statement to show how many objects there are.\n"
+      },
+      "hints": [
+        "print(objects)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 702,
+      "phase": "math_k2",
+      "title": "Add to Find the Total",
+      "description": "Addition combines two amounts. Change the amounts, add a print statement that adds them, then run the code to see the total.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "first_group = 8\nmore_objects = 5\n# Add a print statement to find the total.\n"
+      },
+      "hints": [
+        "print(first_group + more_objects)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 703,
+      "phase": "math_k2",
+      "title": "Subtract to Compare",
+      "description": "Subtraction can show how many more one group has than another. Change the amounts and print the difference.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "red_counters = 14\nblue_counters = 6\n# Print how many more red counters there are.\n"
+      },
+      "hints": [
+        "print(red_counters - blue_counters)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 704,
+      "phase": "math_k2",
+      "title": "Build a Number with Tens and Ones",
+      "description": "A two-digit number is made of tens and ones. Use whole-number division and remainder to split the number 34, then try another number.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "number = 34\n# Find the number of tens and ones, then print both.\n"
+      },
+      "hints": [
+        "tens = number // 10",
+        "ones = number % 10",
+        "print(tens, ones)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 705,
+      "phase": "math_k2",
+      "title": "Make Equal Groups",
+      "description": "Equal groups can be counted by multiplication. Change the number of groups or objects in each group, then print the total.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "groups = 3\nobjects_in_each_group = 4\n# Print the total number of objects.\n"
+      },
+      "hints": [
+        "print(groups * objects_in_each_group)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 706,
+      "phase": "math_k2",
+      "title": "Compare Two Lengths",
+      "description": "Measurements use units so lengths can be compared fairly. Both ribbons are measured in centimetres; print how much longer the first ribbon is.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
+      "kind": "math",
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "python",
+        "starter": "first_ribbon_cm = 12\nsecond_ribbon_cm = 7\n# Print the difference in centimetres.\n"
+      },
+      "hints": [
+        "print(first_ribbon_cm - second_ribbon_cm)"
+      ],
+      "output": {
+        "initial": "Run your math program to see the result.",
+        "status": "Waiting for your Python..."
       }
     }
   ]
