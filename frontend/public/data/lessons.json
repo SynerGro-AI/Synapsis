@@ -150,13 +150,11 @@
       "track": "devsetup",
       "name": "Package Managers",
       "range": "111-116",
-      "status": "coming-soon",
       "concepts": [
-        "pip",
-        "npm",
+        "npm dependencies and lockfiles",
+        "pip and virtual environments",
         "apt-get",
-        "winget",
-        "Virtual environments"
+        "winget"
       ]
     },
     {
@@ -1849,6 +1847,368 @@
           {
             "cmd": "wc -l report.txt",
             "why": "Count the lines in the generated report."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 111,
+      "phase": "packages",
+      "title": "Add a JavaScript Dependency",
+      "description": "npm records project dependencies in package.json and writes a lockfile so the selected version can be reproduced. This isolated sandbox has a small, explicit package registry; installation updates only the virtual project and never downloads code onto your device.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Create a project manifest, install the known dayjs package, and inspect the files npm actually wrote in the virtual project.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "npm init -y",
+            "why": "Create a valid package.json manifest with safe defaults."
+          },
+          {
+            "cmd": "npm install dayjs",
+            "why": "Resolve dayjs from the sandbox registry and save it as a project dependency."
+          },
+          {
+            "cmd": "npm ls",
+            "why": "Read the installed package metadata and compare it with the declared dependency."
+          },
+          {
+            "cmd": "cat package.json",
+            "why": "Inspect the manifest npm updated."
+          },
+          {
+            "cmd": "cat package-lock.json",
+            "why": "Inspect the exact version captured for repeatable installs."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 112,
+      "phase": "packages",
+      "title": "Isolate Python Packages",
+      "description": "A virtual environment gives a Python project its own package location. Create and activate one before installing the sandbox's colorama package; the package metadata and files are written inside .venv, not to the host computer or the sandbox's global Python environment.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Create a project-local virtual environment, activate it, and install a package into that isolated environment.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "python --version",
+            "why": "Check the sandbox Python interpreter version."
+          },
+          {
+            "cmd": "python -m venv .venv",
+            "why": "Create an isolated environment inside the virtual filesystem."
+          },
+          {
+            "cmd": "source .venv/bin/activate",
+            "why": "Select that environment for subsequent pip operations."
+          },
+          {
+            "cmd": "pip install colorama==0.4.6",
+            "why": "Install the exact version from the curated sandbox package registry."
+          },
+          {
+            "cmd": "pip show colorama",
+            "why": "Read metadata for the package installed in the active environment."
+          },
+          {
+            "cmd": "pip list",
+            "why": "List packages installed in this environment."
+          },
+          {
+            "cmd": "deactivate",
+            "why": "Return to the global sandbox Python environment."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 113,
+      "phase": "packages",
+      "title": "Install a Linux System Tool",
+      "description": "apt-get manages system packages on Debian-based Linux. Update its package index before installing, use sudo for system changes, and verify the installed package with dpkg. The sandbox uses a small local catalog and never contacts or modifies a real machine.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Refresh the isolated package index, install tree, verify its state, then remove it again.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "sudo apt-get update",
+            "why": "Refresh the sandbox package index before resolving package names."
+          },
+          {
+            "cmd": "apt-cache policy tree",
+            "why": "Inspect the candidate version available in the updated index."
+          },
+          {
+            "cmd": "sudo apt-get install -y tree",
+            "why": "Install the curated tree package into the virtual system state."
+          },
+          {
+            "cmd": "dpkg -l tree",
+            "why": "Verify dpkg reports tree as installed."
+          },
+          {
+            "cmd": "sudo apt-get remove -y tree",
+            "why": "Remove tree from the sandbox system state."
+          },
+          {
+            "cmd": "dpkg -l tree",
+            "why": "Confirm the package is no longer installed."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 114,
+      "phase": "packages",
+      "title": "Install an App with winget",
+      "description": "Windows Package Manager uses winget to search for and install apps by package ID. This PowerShell practice terminal has a small sandbox catalog: commands update only its virtual installed-app list and do not install software on your device.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "powershell",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Use PowerShell to locate winget, search by an exact package ID, install Git, and inspect the sandbox's installed-app list.",
+        "seed": {},
+        "steps": [
+          {
+            "cmd": "Get-Command winget",
+            "why": "Confirm winget is available in this PowerShell environment."
+          },
+          {
+            "cmd": "winget search Git.Git",
+            "why": "Find Git by its unique package identifier in the sandbox catalog."
+          },
+          {
+            "cmd": "winget install --id Git.Git --exact",
+            "why": "Install the selected package into virtual Windows state."
+          },
+          {
+            "cmd": "winget list",
+            "why": "Verify Git appears in the installed-app list."
+          },
+          {
+            "cmd": "$PSVersionTable",
+            "why": "Inspect the PowerShell runtime information for this shell."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "powershell",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 115,
+      "phase": "packages",
+      "title": "Install from requirements.txt",
+      "description": "A requirements file records exact Python package versions for a project. Activate a fresh virtual environment and use pip install -r to reproduce the listed environment. pip freeze reports the installed versions so they can be compared with the file.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "The seeded requirements.txt lists one exact package version. Create an environment and install only what that file declares.",
+        "seed": {
+          "requirements.txt": {
+            "type": "file",
+            "content": "# Project dependencies\npytest==8.1.1"
+          }
+        },
+        "steps": [
+          {
+            "cmd": "cat requirements.txt",
+            "why": "Read the exact package versions requested by this project."
+          },
+          {
+            "cmd": "python -m venv .venv",
+            "why": "Create a clean isolated environment for the requirements."
+          },
+          {
+            "cmd": "source .venv/bin/activate",
+            "why": "Direct pip to the newly created environment."
+          },
+          {
+            "cmd": "pip install -r requirements.txt",
+            "why": "Install each supported requirement from the sandbox registry."
+          },
+          {
+            "cmd": "pip freeze",
+            "why": "Print the installed package versions in requirements-file format."
+          },
+          {
+            "cmd": "deactivate",
+            "why": "Leave the project environment."
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "bash",
+        "starter": ""
+      },
+      "hints": [],
+      "output": {
+        "initial": "",
+        "status": ""
+      }
+    },
+    {
+      "id": 116,
+      "phase": "packages",
+      "title": "Reproduce an npm Install",
+      "description": "npm ci installs the versions recorded in package-lock.json and replaces node_modules, making it useful in clean builds. The starter project intentionally contains an older installed package; compare it before and after npm ci to see the lockfile drive the result.",
+      "source": "Paul McWhorter, Command Line and Linux learning resources — toptechboy.com; support at patreon.com/PaulMcWhorter",
+      "kind": "terminal",
+      "terminal": {
+        "shell": "bash",
+        "user": "learner",
+        "host": "synapsis",
+        "cwd": "~/projects",
+        "intro": "Inspect the stale installed package, run npm ci from the seeded manifest and lockfile, then verify the exact installed version.",
+        "seed": {
+          "package.json": {
+            "type": "file",
+            "content": "{\n  \"name\": \"date-report\",\n  \"version\": \"1.0.0\",\n  \"dependencies\": {\n    \"dayjs\": \"^1.11.11\"\n  }\n}"
+          },
+          "package-lock.json": {
+            "type": "file",
+            "content": "{\n  \"name\": \"date-report\",\n  \"version\": \"1.0.0\",\n  \"lockfileVersion\": 3,\n  \"requires\": true,\n  \"packages\": {\n    \"\": {\n      \"name\": \"date-report\",\n      \"version\": \"1.0.0\"\n    },\n    \"node_modules/dayjs\": {\n      \"version\": \"1.11.11\",\n      \"resolved\": \"https://registry.npmjs.org/dayjs/-/dayjs-1.11.11.tgz\",\n      \"integrity\": \"sha512-sandbox-registry-checksum\"\n    }\n  }\n}"
+          },
+          "node_modules": {
+            "type": "dir",
+            "children": {
+              "dayjs": {
+                "type": "dir",
+                "children": {
+                  "package.json": {
+                    "type": "file",
+                    "content": "{\"name\":\"dayjs\",\"version\":\"1.0.0\"}"
+                  },
+                  "index.js": {
+                    "type": "file",
+                    "content": "// stale starter package"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "steps": [
+          {
+            "cmd": "cat node_modules/dayjs/package.json",
+            "why": "Inspect the stale version already present in node_modules."
+          },
+          {
+            "cmd": "npm ci",
+            "why": "Replace node_modules using the exact dayjs version in package-lock.json."
+          },
+          {
+            "cmd": "npm ls",
+            "why": "Verify the installed version now matches the project dependency."
+          },
+          {
+            "cmd": "cat package-lock.json",
+            "why": "Review the lockfile that controlled the clean install."
           }
         ]
       },

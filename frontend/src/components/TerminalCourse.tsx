@@ -37,6 +37,7 @@ export default function TerminalCourse({
       new Shell(lesson.terminal?.cwd ?? "~/projects", {
         user: lesson.terminal?.user,
         host: lesson.terminal?.host,
+        shell: lesson.terminal?.shell,
         seed: lesson.terminal?.seed as Record<string, FsNode> | undefined,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps

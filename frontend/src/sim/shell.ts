@@ -1,4 +1,4 @@
-// A small but real POSIX-ish shell over an in-memory filesystem.
+// Small Bash and PowerShell lesson terminals over an in-memory filesystem.
 // It teaches the command line without ever touching the learner's machine:
 // every command genuinely mutates a virtual filesystem and prints realistic
 // output — the same "type it, watch it happen" loop as the Arduino track.
@@ -63,6 +63,11 @@ interface SessionFrame {
   kind: "ssh" | "su";
 }
 
+interface PackageInfo {
+  version: string;
+  description: string;
+}
+
 const dir = (children: Record<string, FsNode> = {}): FsDir => ({ type: "dir", children });
 const file = (content = ""): FsFile => ({ type: "file", content });
 
@@ -99,6 +104,33 @@ export class Shell {
   private nextUid = 1001;
   private privileged = false; // set while a `sudo` sub-command runs
   private sessionStack: SessionFrame[] = []; // ssh / su identities to return to
+  private shellType: "bash" | "powershell";
+  private aptIndexUpdated = false;
+  private aptPackages = new Set<string>();
+  private wingetPackages = new Set<string>();
+  private pipPackages = new Map<string, Map<string, PackageInfo>>();
+  private activeVenv: string | null = null;
+
+  private static readonly APT_PACKAGES: Record<string, PackageInfo> = {
+    curl: { version: "8.5.0-2", description: "command line tool for transferring data" },
+    git: { version: "1:2.43.0-1", description: "fast, scalable, distributed revision control system" },
+    tree: { version: "2.1.1-2", description: "display directories as trees" },
+    python3: { version: "3.12.3-0", description: "interactive high-level object-oriented language" },
+  };
+
+  private static readonly PIP_PACKAGES: Record<string, PackageInfo> = {
+    colorama: { version: "0.4.6", description: "Cross-platform colored terminal text." },
+    pytest: { version: "8.1.1", description: "pytest: simple powerful testing with Python." },
+  };
+
+  private static readonly NPM_PACKAGES: Record<string, PackageInfo> = {
+    dayjs: { version: "1.11.11", description: "2KB immutable date-time library alternative to Moment.js" },
+  };
+
+  private static readonly WINGET_PACKAGES: Record<string, PackageInfo> = {
+    "Git.Git": { version: "2.45.1", description: "Git version control system" },
+    "Microsoft.VisualStudioCode": { version: "1.89.1", description: "Code editing. Redefined." },
+  };
 
   /** Numeric group ids for the standard Raspberry Pi groups (for `id`). */
   private static GID: Record<string, number> = {
@@ -109,10 +141,11 @@ export class Shell {
 
   constructor(
     startCwd = "~/projects",
-    opts: { user?: string; host?: string; seed?: Record<string, FsNode> } = {},
+    opts: { user?: string; host?: string; seed?: Record<string, FsNode>; shell?: string } = {},
   ) {
     this.user = opts.user ?? "you";
     this.host = opts.host ?? "synapsys";
+    this.shellType = opts.shell?.toLowerCase().startsWith("powershell") ? "powershell" : "bash";
     this.home = ["home", this.user];
     this.root = dir({ home: dir({ [this.user]: dir() }) });
     this.seedSystem(); // /etc, network interfaces and users — all consistent
@@ -189,6 +222,8 @@ export class Shell {
 
   /** The `pi@raspberrypi:~$ ` prompt string. */
   prompt(): string {
+    if (this.shellType === "powershell")
+      return `PS C:\\Users\\${this.user}\\projects>`;
     return `${this.user}@${this.host}:${this.display(this.cwd)}$`;
   }
 
@@ -352,6 +387,7 @@ export class Shell {
   run(line: string): RunResult {
     const trimmed = line.trim();
     if (!trimmed) return { lines: [] };
+    if (this.shellType === "powershell") return this.runPowerShell(trimmed);
 
     const segments = this.splitPipes(trimmed);
     if (!segments.length) return { lines: [] };
@@ -406,7 +442,8 @@ export class Shell {
             "  grep  find  wc  head  tail  sort  chmod  sudo  whoami  id  groups",
             "  ifconfig  ip  hostname  ping  ssh  su  adduser  exit  lsblk  df  dd",
             "  git  node  npm  python  dotnet  code  bash",
-            "Pipes (a | b), redirection (> file, >> file) and wildcards (*, ?) work too.",
+            "  pip  apt-get  apt-cache  dpkg  winget",
+              "Pipes (a | b), redirection (> file, >> file) and wildcards (*, ?) work too.",
             "Everything runs in a safe in-memory sandbox.",
           ],
         };
@@ -438,6 +475,21 @@ export class Shell {
       case "bash":
       case "sh":
         return this.runScript(args[0]);
+      case "source":
+      case ".": {
+        const target = args[0];
+        if (!target) return { lines: [`${cmd}: filename argument required`] };
+        const envPath = target.replace(/\/bin\/activate$/, "");
+        const config = this.nodeAt(this.resolve(`${envPath}/pyvenv.cfg`)!);
+        if (!config || config.type !== "file")
+          return { lines: [`${cmd}: ${target}: No such file or directory`] };
+        this.activeVenv = envPath;
+        return { lines: [] };
+      }
+      case "deactivate":
+        if (!this.activeVenv) return { lines: ["deactivate: no virtual environment is active"] };
+        this.activeVenv = null;
+        return { lines: [] };
       case "nano":
         return this.nano(args);
       case "grep":
@@ -502,6 +554,16 @@ export class Shell {
       case "python":
       case "python3":
         return this.python(args);
+      case "pip":
+        return this.pip(args);
+      case "apt-get":
+        return this.aptGet(args);
+      case "apt-cache":
+        return this.aptCache(args);
+      case "dpkg":
+        return this.dpkg(args);
+      case "winget":
+        return this.winget(args);
       case "dotnet":
         return this.dotnet(args);
       case "code":
@@ -963,17 +1025,70 @@ export class Shell {
     if (args[0] === "-v" || args[0] === "--version") return { lines: ["10.2.4"] };
     if (args[0] === "init") {
       const node = this.nodeAt(this.cwd) as FsDir;
-      const name = this.cwd[this.cwd.length - 1] ?? "project";
-      node.children["package.json"] = file(
-        `{\n  "name": "${name}",\n  "version": "1.0.0",\n  "main": "index.js",\n  "scripts": {\n    "test": "echo \\"Error: no test specified\\" && exit 1"\n  }\n}`,
-      );
-      return { lines: [`Wrote to /${this.cwd.join("/")}/package.json`, "", "created package.json"] };
+      const name = (this.cwd[this.cwd.length - 1] ?? "project").replace(/[^a-zA-Z0-9._-]/g, "-");
+      node.children["package.json"] = file(JSON.stringify({
+        name,
+        version: "1.0.0",
+        description: "",
+        main: "index.js",
+        scripts: {},
+        keywords: [],
+        author: "",
+        license: "ISC",
+      }, null, 2));
+      return { lines: [`Wrote to /${this.cwd.join("/")}/package.json`] };
     }
-    return { lines: [`Unknown npm command: ${args.join(" ")}`] };
+
+    if (args[0] === "ls" || args[0] === "list") {
+      const manifest = this.nodeAt([...this.cwd, "package.json"]);
+      if (!manifest || manifest.type !== "file")
+        return { lines: ["npm error: this folder has no package.json"] };
+      let data: { name?: string; version?: string; dependencies?: Record<string, string> };
+      try {
+        data = JSON.parse(manifest.content);
+      } catch {
+        return { lines: ["npm error: package.json contains invalid JSON"] };
+      }
+      const dependencies = data.dependencies ?? {};
+      const lines = [`${data.name ?? "project"}@${data.version ?? "1.0.0"} /${this.cwd.join("/")}`];
+      for (const [name, requested] of Object.entries(dependencies)) {
+        const installed = this.nodeAt([...this.cwd, "node_modules", name, "package.json"]);
+        if (!installed || installed.type !== "file")
+          return { lines: [...lines, `└── UNMET DEPENDENCY ${name}@${requested}`] };
+        try {
+          const info = JSON.parse(installed.content) as { version?: string };
+          lines.push(`└── ${name}@${info.version ?? "unknown"}`);
+        } catch {
+          return { lines: [...lines, `└── INVALID PACKAGE ${name}`] };
+        }
+      }
+      return { lines };
+    }
+
+    if (args[0] === "install" || args[0] === "i" || args[0] === "ci") {
+      return this.npmInstall(args);
+    }
+    return { lines: [`npm: unsupported command '${args.join(" ")}'`] };
   }
 
   private python(args: string[]): RunResult {
     if (args[0] === "--version" || args[0] === "-V") return { lines: ["Python 3.12.1"] };
+    if (args[0] === "-m" && args[1] === "venv") {
+      const target = args[2];
+      if (!target) return { lines: ["usage: python -m venv <directory>"] };
+      const path = this.resolve(target);
+      if (!path) return { lines: [`Error: invalid virtual environment path '${target}'`] };
+      const existing = this.nodeAt(path);
+      if (existing?.type === "file")
+        return { lines: [`Error: '${target}' exists and is not a directory`] };
+      const env = this.ensureDir(path);
+      env.children["pyvenv.cfg"] = file("home = /usr/local/bin\ninclude-system-site-packages = false\nversion = 3.12.1");
+      const bin = this.ensureDir([...path, "bin"]);
+      bin.children["python"] = file("# sandbox Python 3.12.1 virtual environment executable");
+      bin.children["pip"] = file("# sandbox pip launcher");
+      bin.children["activate"] = file("# source this file to activate the sandbox virtual environment");
+      return { lines: [`created virtual environment ${target}`, `activate it with: source ${target}/bin/activate`] };
+    }
     if (args[0]) {
       const node = this.nodeAt(this.resolve(args[0])!);
       if (!node || node.type !== "file")
@@ -982,6 +1097,268 @@ export class Shell {
       return { lines: [m ? m[2] : ""] };
     }
     return { lines: ["Python 3.12.1 (main) — type exit() to quit"] };
+  }
+
+  private npmInstall(args: string[]): RunResult {
+    const node = this.nodeAt([...this.cwd, "package.json"]);
+    if (!node || node.type !== "file")
+      return { lines: ["npm error: this folder has no package.json; run 'npm init -y' first"] };
+    let manifest: {
+      name?: string;
+      version?: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    try {
+      manifest = JSON.parse(node.content);
+    } catch {
+      return { lines: ["npm error: package.json contains invalid JSON"] };
+    }
+    const ci = args[0] === "ci";
+    let lock: { packages?: Record<string, { version?: string }> } | undefined;
+    if (ci) {
+      const lockNode = this.nodeAt([...this.cwd, "package-lock.json"]);
+      if (!lockNode || lockNode.type !== "file")
+        return { lines: ["npm ci can only install with an existing package-lock.json"] };
+      try {
+        lock = JSON.parse(lockNode.content);
+      } catch {
+        return { lines: ["npm error: package-lock.json contains invalid JSON"] };
+      }
+      if (!lock?.packages || !lock.packages[""])
+        return { lines: ["npm error: package-lock.json is missing its root package entry"] };
+    }
+    const isDev = args.includes("--save-dev") || args.includes("-D");
+    const dependencies = { ...(manifest.dependencies ?? {}) };
+    const devDependencies = { ...(manifest.devDependencies ?? {}) };
+    const requested = ci
+      ? []
+      : args.slice(1).filter((arg) => !arg.startsWith("-") && arg !== "install" && arg !== "i");
+    for (const spec of requested) {
+      const [name, version] = spec.split("@");
+      const info = name ? Shell.NPM_PACKAGES[name] : undefined;
+      if (!name || !info)
+        return { lines: [`npm error: package '${spec}' is not in the sandbox registry`] };
+      if (version && version !== info.version && version !== `^${info.version}` && version !== `~${info.version}`)
+        return { lines: [`npm error: sandbox registry has ${name}@${info.version}, not ${version}`] };
+      (isDev ? devDependencies : dependencies)[name] = `^${info.version}`;
+    }
+    const declared = { ...dependencies, ...devDependencies };
+    const names = Object.keys(declared);
+    const packages: Record<string, string> = {};
+    for (const name of names) {
+      const known = Shell.NPM_PACKAGES[name];
+      if (!known)
+        return { lines: [`npm error: package '${name}' is not in the sandbox registry`] };
+      const lockVersion = lock?.packages?.[`node_modules/${name}`]?.version;
+      const installVersion = ci ? lockVersion : known.version;
+      if (!installVersion || installVersion !== known.version)
+        return { lines: [`npm error: lockfile version for ${name} does not match the sandbox registry`] };
+      if (ci && declared[name] !== installVersion
+        && declared[name] !== `^${installVersion}` && declared[name] !== `~${installVersion}`)
+        return { lines: [`npm error: package.json and package-lock.json are out of sync for ${name}`] };
+      packages[name] = installVersion;
+    }
+    manifest.dependencies = dependencies;
+    manifest.devDependencies = devDependencies;
+    const project = this.nodeAt(this.cwd) as FsDir;
+    if (ci) {
+      const locked = Object.keys(lock?.packages ?? {})
+        .filter((path) => path.startsWith("node_modules/"))
+        .map((path) => path.slice("node_modules/".length));
+      if (locked.length !== Object.keys(declared).length
+        || locked.some((name) => !declared[name] || !lock?.packages?.[`node_modules/${name}`]?.version))
+        return { lines: ["npm error: package.json and package-lock.json are out of sync"] };
+      project.children["node_modules"] = dir();
+    }
+    project.children["package.json"] = file(JSON.stringify(manifest, null, 2));
+    for (const [name, version] of Object.entries(packages)) {
+      const packageDir = this.ensureDir([...this.cwd, "node_modules", name]);
+      packageDir.children["package.json"] = file(JSON.stringify({
+        name,
+        version,
+        description: Shell.NPM_PACKAGES[name].description,
+        main: "index.js",
+      }, null, 2));
+      packageDir.children["index.js"] = file(`// ${name} ${version} package installed in the virtual filesystem`);
+    }
+    if (!ci) {
+      const lockPackages = Object.fromEntries(
+        Object.entries(packages).map(([name, version]) => [`node_modules/${name}`, {
+          version,
+          resolved: `https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`,
+          integrity: "sha512-sandbox-registry-checksum",
+        }]),
+      );
+      project.children["package-lock.json"] = file(JSON.stringify({
+        name: manifest.name ?? this.cwd[this.cwd.length - 1] ?? "project",
+        version: manifest.version ?? "1.0.0",
+        lockfileVersion: 3,
+        requires: true,
+        packages: {
+          "": { name: manifest.name ?? "project", version: manifest.version ?? "1.0.0" },
+          ...lockPackages,
+        },
+      }, null, 2));
+    }
+    return { lines: [`added ${Object.keys(packages).length} package${Object.keys(packages).length === 1 ? "" : "s"}`, ...(ci ? [] : ["created package-lock.json"])] };
+  }
+
+  private pip(args: string[]): RunResult {
+    if (args[0] === "--version") return { lines: ["pip 24.0 from sandbox (python 3.12)"] };
+    const environment = this.activeVenv ?? "__global__";
+    const packages = this.pipPackages.get(environment) ?? new Map<string, PackageInfo>();
+    if (args[0] === "install") {
+      let specs = args.slice(1).filter((arg) => !arg.startsWith("-"));
+      const requirementsAt = args.indexOf("-r");
+      if (requirementsAt >= 0) {
+        const reqPath = args[requirementsAt + 1];
+        if (!reqPath) return { lines: ["ERROR: -r requires a requirements file"] };
+        const reqFile = this.nodeAt(this.resolve(reqPath)!);
+        if (!reqFile || reqFile.type !== "file")
+          return { lines: [`ERROR: Could not open requirements file: ${reqPath}`] };
+        specs = reqFile.content.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
+      }
+      if (!specs.length) return { lines: ["ERROR: provide a package name or -r requirements.txt"] };
+      const additions: [string, PackageInfo][] = [];
+      for (const spec of specs) {
+        const match = /^([A-Za-z0-9_.-]+)(?:==([A-Za-z0-9_.+-]+))?$/.exec(spec);
+        if (!match) return { lines: [`ERROR: invalid requirement '${spec}'`] };
+        const name = match[1].toLowerCase().replace(/[-_.]+/g, "-");
+        const info = Shell.PIP_PACKAGES[name];
+        if (!info) return { lines: [`ERROR: no matching distribution found for ${name}`] };
+        if (match[2] && match[2] !== info.version)
+          return { lines: [`ERROR: sandbox registry has ${name}==${info.version}, not ${match[2]}`] };
+        additions.push([name, info]);
+      }
+      for (const [name, info] of additions) {
+        packages.set(name, info);
+        const installPath = this.activeVenv
+          ? [...this.resolve(this.activeVenv)!, "lib", "python3.12", "site-packages"]
+          : [...this.cwd, "site-packages"];
+        const packageDir = this.ensureDir([...installPath, name]);
+        packageDir.children["__init__.py"] = file(`# ${name} ${info.version} installed in the sandbox`);
+        const distInfo = this.ensureDir([...installPath, `${name}-${info.version}.dist-info`]);
+        distInfo.children["METADATA"] = file(`Name: ${name}\nVersion: ${info.version}\nSummary: ${info.description}`);
+      }
+      this.pipPackages.set(environment, packages);
+      return { lines: additions.map(([name, info]) => `Successfully installed ${name}-${info.version}`) };
+    }
+    if (args[0] === "list") {
+      const lines = ["Package    Version"];
+      for (const [name, info] of packages) lines.push(`${name.padEnd(10)} ${info.version}`);
+      return { lines };
+    }
+    if (args[0] === "show" && args[1]) {
+      const name = args[1].toLowerCase().replace(/[-_.]+/g, "-");
+      const info = packages.get(name);
+      return info
+        ? { lines: [`Name: ${name}`, `Version: ${info.version}`, `Summary: ${info.description}`, `Location: ${this.activeVenv ?? this.display(this.cwd)}/lib/python3.12/site-packages`] }
+        : { lines: [`WARNING: Package(s) not found: ${args[1]}`] };
+    }
+    if (args[0] === "freeze") {
+      return { lines: [...packages].map(([name, info]) => `${name}==${info.version}`) };
+    }
+    return { lines: [`pip: unsupported command '${args.join(" ")}'`] };
+  }
+
+  private aptGet(args: string[]): RunResult {
+    const action = args[0];
+    if (action === "update") {
+      this.aptIndexUpdated = true;
+      return { lines: ["Hit:1 sandbox://packages stable InRelease", "Reading package lists... Done"] };
+    }
+    if (action !== "install" && action !== "remove")
+      return { lines: [`apt-get: unsupported command '${args.join(" ")}'`] };
+    const names = args.slice(1).filter((arg) => !arg.startsWith("-"));
+    if (!names.length) return { lines: [`apt-get ${action}: provide a package name`] };
+    if (!this.privileged) return { lines: [`E: Permission denied; run 'sudo apt-get ${action} ...'`] };
+    if (action === "install" && !this.aptIndexUpdated)
+      return { lines: ["E: Package index is not current; run 'sudo apt-get update' first"] };
+    for (const name of names) {
+      if (!Shell.APT_PACKAGES[name]) return { lines: [`E: Unable to locate package ${name}`] };
+    }
+    for (const name of names) {
+      if (action === "install") this.aptPackages.add(name);
+      else this.aptPackages.delete(name);
+    }
+    if (action === "install")
+      return { lines: names.flatMap((name) => [`Setting up ${name} (${Shell.APT_PACKAGES[name].version}) ...`]).concat(["Processing triggers for man-db ..."]) };
+    return { lines: names.map((name) => `Removing ${name} ...`) };
+  }
+
+  private aptCache(args: string[]): RunResult {
+    if (args[0] !== "policy" || !args[1]) return { lines: ["usage: apt-cache policy <package>"] };
+    const info = Shell.APT_PACKAGES[args[1]];
+    if (!info) return { lines: [`N: Unable to locate package ${args[1]}`] };
+    return { lines: [`${args[1]}:`, `  Installed: ${this.aptPackages.has(args[1]) ? info.version : "(none)"}`, `  Candidate: ${info.version}`, "  Version table:", ` *** ${info.version} 500`, "        500 sandbox://packages stable/main amd64 Packages"] };
+  }
+
+  private dpkg(args: string[]): RunResult {
+    if (args[0] !== "-l" && args[0] !== "--list")
+      return { lines: [`dpkg: unsupported option '${args.join(" ")}'`] };
+    const name = args[1];
+    const installed = [...this.aptPackages].filter((pkg) => !name || pkg === name);
+    if (name && !installed.length) return { lines: [`No packages found matching ${name}.`] };
+    return {
+      lines: [
+        "Desired=Unknown/Install/Remove/Purge/Hold",
+        "| Status=Not/Inst/Conf-files/Unpacked/half-conf/half-inst/trig-aWait/Trig-pend",
+        "||/ Name           Version       Architecture Description",
+        ...installed.map((pkg) => `ii  ${pkg.padEnd(14)} ${Shell.APT_PACKAGES[pkg].version.padEnd(13)} amd64        ${Shell.APT_PACKAGES[pkg].description}`),
+      ],
+    };
+  }
+
+  private winget(args: string[]): RunResult {
+    const action = args[0];
+    if (action === "search") {
+      const query = args.slice(1).find((arg) => !arg.startsWith("-"))?.toLowerCase() ?? "";
+      const matches = Object.entries(Shell.WINGET_PACKAGES).filter(([id, info]) =>
+        `${id} ${info.description}`.toLowerCase().includes(query),
+      );
+      if (!matches.length) return { lines: [`No package found matching input criteria.`] };
+      return { lines: ["Name                 Id                         Version", ...matches.map(([id, info]) => `${info.description.slice(0, 20).padEnd(20)} ${id.padEnd(26)} ${info.version}`)] };
+    }
+    if (action === "install") {
+      const idAt = args.indexOf("--id");
+      const id = idAt >= 0 ? args[idAt + 1] : args.slice(1).find((arg) => !arg.startsWith("-"));
+      if (!id) return { lines: ["winget install: provide a package ID with --id"] };
+      const info = Shell.WINGET_PACKAGES[id];
+      if (!info) return { lines: [`No package found matching input criteria: ${id}`] };
+      this.wingetPackages.add(id);
+      return { lines: [`Found ${id} [${id}] Version ${info.version}`, "Starting package install...", "Successfully installed"] };
+    }
+    if (action === "list") {
+      const lines = ["Name                 Id                         Version"];
+      for (const id of this.wingetPackages) {
+        const info = Shell.WINGET_PACKAGES[id];
+        lines.push(`${info.description.slice(0, 20).padEnd(20)} ${id.padEnd(26)} ${info.version}`);
+      }
+      return lines.length === 1 ? { lines: ["No installed package found."] } : { lines };
+    }
+    return { lines: [`winget: unsupported command '${args.join(" ")}'`] };
+  }
+
+  private runPowerShell(line: string): RunResult {
+    const argv = tokenize(line);
+    const command = argv[0]?.toLowerCase();
+    const args = argv.slice(1);
+    if (command === "$psversiontable")
+      return { lines: ["Name                           Value", "----                           -----", "PSVersion                      7.4.2", "PSEdition                      Core", "Platform                       Win32NT"] };
+    if (command === "get-command" && args[0]?.toLowerCase() === "winget")
+      return { lines: ["CommandType     Name                                               Version    Source", "-----------     ----                                               -------    ------", "Application     winget.exe                                         1.8.1911   C:\\Program Files\\WindowsApps\\Microsoft.DesktopAppInstaller"] };
+    if (command === "get-location")
+      return { lines: ["Path", "----", `C:\\Users\\${this.user}\\projects`] };
+    if (command === "get-childitem" || command === "dir" || command === "ls") {
+      const entries = Object.entries((this.nodeAt(this.cwd) as FsDir).children);
+      return { lines: ["Mode   Name", "----   ----", ...entries.map(([name, node]) => `${node.type === "dir" ? "d----" : "-a---"}  ${name}`)] };
+    }
+    if (command === "write-output" || command === "echo" || command === "write-host")
+      return { lines: [args.join(" ")] };
+    if (command === "get-content" && args[0]) return this.cat(args, undefined);
+    if (command === "winget") return this.winget(args);
+    return { lines: [`${argv[0]} : The term '${argv[0]}' is not recognized as a name of a cmdlet, function, script file, or executable program.`] };
   }
 
   private dotnet(args: string[]): RunResult {
