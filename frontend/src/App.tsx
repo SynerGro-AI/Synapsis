@@ -233,6 +233,18 @@ export default function App() {
     lessonLocale !== "en" &&
     (!lessonTranslation?.title || !lessonTranslation?.description);
   const displayLesson = { ...lesson, title: lessonTitle, description: lessonDescription };
+  const mathCodeSnippet =
+    lesson.kind === "math"
+      ? [
+          lesson.codeTemplate.starter
+            .split("\n")
+            .filter((line) => line.trim() && !line.trim().startsWith("#"))
+            .join("\n"),
+          lesson.hints.join("\n"),
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
   const starter = saved[lesson.id]?.sketch ?? lesson.codeTemplate.starter;
 
   // ---- Track organisation: phases belong to tracks; progress rolls up by track ----
@@ -1187,9 +1199,17 @@ export default function App() {
                   </p>
                   <h5>Try this problem</h5>
                   <p className="math-problem">{lesson.math?.problem ?? lessonDescription}</p>
+                  <h5>Python code to type</h5>
                   <p className="why">
-                    Work out the blanks and type your answer. “Check with Python” runs your
-                    program; its printed result appears in Program Output and on the graph.
+                    Type this example into the editor, then enter your answer. Check with Python
+                    runs your code and compares its printed result with your answer.
+                  </p>
+                  <pre className="math-code-snippet">
+                    <code>{mathCodeSnippet}</code>
+                  </pre>
+                  <p className="why">
+                    Multiple blanks should be answered in order, separated by commas. Your
+                    program output also appears in Program Output and on the graph.
                   </p>
                   <form
                     className="math-answer-form"

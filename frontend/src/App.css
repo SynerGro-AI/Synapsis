@@ -950,6 +950,18 @@
   line-height: 1.6;
 }
 
+.guide .math-code-snippet {
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border: 1px solid #3d4652;
+  border-radius: 6px;
+  background: #111820;
+  color: #c8e6c9;
+  font: 12px/1.6 "Cascadia Code", Consolas, monospace;
+  white-space: pre;
+}
+
 .math-answer-form {
   display: flex;
   flex-direction: column;
