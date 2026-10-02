@@ -13,6 +13,9 @@ export const LOCALE_NAMES: Record<Locale, string> = {
 
 const english = {
   language: "Language",
+  lessonLanguage: "Lesson language",
+  lessonLanguageFallback:
+    "Reviewed lesson text in {language} is not available yet; showing English.",
   sponsoredBy: "Sponsored by",
   lessonsBasedOn: "Lessons based on the Arduino tutorials of",
   supportPaul: "❤ Support Paul on Patreon",
@@ -98,6 +101,9 @@ type Copy = Partial<Record<CopyKey, string>>;
 const translations: Record<Exclude<Locale, "en">, Copy> = {
   nl: {
     language: "Taal",
+    lessonLanguage: "Les-taal",
+    lessonLanguageFallback:
+      "Beoordeelde lestekst in het {language} is nog niet beschikbaar; Engels wordt getoond.",
     sponsoredBy: "Gesponsord door",
     lessonsBasedOn: "Lessen gebaseerd op de Arduino-tutorials van",
     supportPaul: "❤ Steun Paul op Patreon",
@@ -177,6 +183,9 @@ const translations: Record<Exclude<Locale, "en">, Copy> = {
   },
   fr: {
     language: "Langue",
+    lessonLanguage: "Langue des leçons",
+    lessonLanguageFallback:
+      "Les textes de cours vérifiés en {language} ne sont pas encore disponibles ; affichage en anglais.",
     sponsoredBy: "Sponsorisé par",
     lessonsBasedOn: "Leçons basées sur les tutoriels Arduino de",
     supportPaul: "❤ Soutenir Paul sur Patreon",
@@ -256,6 +265,9 @@ const translations: Record<Exclude<Locale, "en">, Copy> = {
   },
   de: {
     language: "Sprache",
+    lessonLanguage: "Unterrichtssprache",
+    lessonLanguageFallback:
+      "Geprüfte Lektionstexte auf {language} sind noch nicht verfügbar; Englisch wird angezeigt.",
     sponsoredBy: "Gesponsert von",
     lessonsBasedOn: "Lektionen nach den Arduino-Tutorials von",
     supportPaul: "❤ Paul auf Patreon unterstützen",
@@ -335,6 +347,9 @@ const translations: Record<Exclude<Locale, "en">, Copy> = {
   },
   "pt-BR": {
     language: "Idioma",
+    lessonLanguage: "Idioma das aulas",
+    lessonLanguageFallback:
+      "O conteúdo revisado das aulas em {language} ainda não está disponível; exibindo em inglês.",
     sponsoredBy: "Patrocinado por",
     lessonsBasedOn: "Aulas baseadas nos tutoriais de Arduino de",
     supportPaul: "❤ Apoie Paul no Patreon",
@@ -417,6 +432,8 @@ const translations: Record<Exclude<Locale, "en">, Copy> = {
 export interface I18nContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
+  lessonLocale: Locale;
+  setLessonLocale: (locale: Locale) => void;
   t: (key: CopyKey, values?: Record<string, string | number>) => string;
 }
 

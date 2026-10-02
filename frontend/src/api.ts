@@ -1,3 +1,5 @@
+import type { Locale } from "./i18n";
+
 export interface Track {
   id: string;
   name: string;
@@ -30,6 +32,9 @@ export interface Lesson {
   phase: string;
   title: string;
   description: string;
+  translations?: Partial<
+    Record<Locale, Partial<Pick<Lesson, "title" | "description">>>
+  >;
   source?: string;
   /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO;
    *  "serial" = a Python program bridging over a serial port to a running Arduino sketch;

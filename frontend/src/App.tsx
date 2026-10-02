@@ -43,7 +43,7 @@ interface SavedLesson {
 }
 
 export default function App() {
-  const { locale, setLocale, t } = useI18n();
+  const { locale, setLocale, lessonLocale, setLessonLocale, t } = useI18n();
   const [data, setData] = useState<LessonData>(FALLBACK_DATA);
   const [parts, setParts] = useState<PartInfo[]>(FALLBACK_PARTS);
   const [lessonId, setLessonId] = useState(1);
@@ -199,6 +199,13 @@ export default function App() {
   }, [applyProgress]);
 
   const lesson = data.lessons.find((l) => l.id === lessonId) ?? data.lessons[0];
+  const lessonTranslation = lesson.translations?.[lessonLocale];
+  const lessonTitle = lessonTranslation?.title ?? lesson.title;
+  const lessonDescription = lessonTranslation?.description ?? lesson.description;
+  const hasUntranslatedLessonText =
+    lessonLocale !== "en" &&
+    (!lessonTranslation?.title || !lessonTranslation?.description);
+  const displayLesson = { ...lesson, title: lessonTitle, description: lessonDescription };
   const starter = saved[lesson.id]?.sketch ?? lesson.codeTemplate.starter;
 
   // ---- Track organisation: phases belong to tracks; progress rolls up by track ----
@@ -708,11 +715,27 @@ export default function App() {
           {t("supportPaul")}
         </a>
         <label className="language-picker">
-          <span className="sr-only">{t("language")}</span>
+          <span className="language-picker-label">{t("language")}</span>
           <select
             aria-label={t("language")}
             value={locale}
             onChange={(event) => setLocale(event.target.value as (typeof LOCALES)[number])}
+          >
+            {LOCALES.map((supportedLocale) => (
+              <option key={supportedLocale} value={supportedLocale}>
+                {LOCALE_NAMES[supportedLocale]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="language-picker lesson-language-picker">
+          <span className="language-picker-label">{t("lessonLanguage")}</span>
+          <select
+            aria-label={t("lessonLanguage")}
+            value={lessonLocale}
+            onChange={(event) =>
+              setLessonLocale(event.target.value as (typeof LOCALES)[number])
+            }
           >
             {LOCALES.map((supportedLocale) => (
               <option key={supportedLocale} value={supportedLocale}>
@@ -771,7 +794,7 @@ export default function App() {
                           <span className="lesson-check">
                             {saved[l.id]?.completed ? "✓" : ""}
                           </span>
-                          {l.id}. {l.title}
+                          {l.id}. {l.translations?.[lessonLocale]?.title ?? l.title}
                         </li>
                       ))}
                   </ul>
@@ -814,15 +837,22 @@ export default function App() {
                 ☰
               </button>
               <h3>
-                {t("lesson")} {lesson.id} — {lesson.title}
+                {t("lesson")} {lesson.id} — {lessonTitle}
               </h3>
               {completed && <span className="lesson-done">✓ {t("completed")}</span>}
               {offline && (
                 <span className="offline">{t("backendOffline")}</span>
               )}
             </header>
+            {hasUntranslatedLessonText && (
+              <div className="lesson-language-fallback" role="status">
+                {t("lessonLanguageFallback", {
+                  language: LOCALE_NAMES[lessonLocale],
+                })}
+              </div>
+            )}
             <TerminalCourse
-              lesson={lesson}
+              lesson={displayLesson}
               completed={completed}
               onComplete={completeTerminalLesson}
               restoreKey={`${lesson.id}:${restoreCount}`}
@@ -839,13 +869,20 @@ export default function App() {
               ☰
             </button>
             <h3>
-              {t("lesson")} {lesson.id} — {lesson.title}
+              {t("lesson")} {lesson.id} — {lessonTitle}
             </h3>
             {completed && <span className="lesson-done">✓ {t("completed")}</span>}
             {offline && (
               <span className="offline">{t("backendOffline")}</span>
             )}
           </header>
+          {hasUntranslatedLessonText && (
+            <div className="lesson-language-fallback" role="status">
+              {t("lessonLanguageFallback", {
+                language: LOCALE_NAMES[lessonLocale],
+              })}
+            </div>
+          )}
 
           <nav className="mobile-tabs">
             {([
@@ -1012,7 +1049,7 @@ export default function App() {
               </dl>
               <p className="note">⚠ {guide.notes}</p>
               <h5>{t("objective")}</h5>
-              <p className="why">{lesson.description}</p>
+              <p className="why">{lessonDescription}</p>
               {lesson.source && <p className="lesson-source">{lesson.source}</p>}
             </div>
 

@@ -35,6 +35,15 @@ function initialLocale(): Locale {
 
 export default function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
+  const [lessonLocale, setLessonLocale] = useState<Locale>(() => {
+    try {
+      const saved = localStorage.getItem("synapsis.lesson-locale");
+      if (isLocale(saved)) return saved;
+    } catch (error) {
+      console.warn("Could not read the saved lesson language preference.", error);
+    }
+    return initialLocale();
+  });
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -45,11 +54,19 @@ export default function LocaleProvider({ children }: { children: ReactNode }) {
     }
   }, [locale]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("synapsis.lesson-locale", lessonLocale);
+    } catch (error) {
+      console.warn("Could not save the lesson language preference.", error);
+    }
+  }, [lessonLocale]);
+
   const value = useMemo<I18nContextValue>(() => {
     const t: I18nContextValue["t"] = (key, values) =>
       translate(locale, key, values);
-    return { locale, setLocale, t };
-  }, [locale]);
+    return { locale, setLocale, lessonLocale, setLessonLocale, t };
+  }, [locale, lessonLocale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
