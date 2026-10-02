@@ -150,9 +150,79 @@ const lessons = [
     starter: "first_ribbon_cm = 12\nsecond_ribbon_cm = 7\n# Print the difference in centimetres.\n",
     hints: ["print(first_ribbon_cm - second_ribbon_cm)"],
   },
+  {
+    id: 707,
+    phase: "math_3_5",
+    title: "Hundreds, Tens, and Ones",
+    description: "A three-digit number can be split into place values. Use whole-number division and remainders to find the hundreds, tens, and ones in 347.",
+    starter: "number = 347\n# Find and print the hundreds, tens, and ones digits.\n",
+    hints: [
+      "hundreds = number // 100",
+      "tens = (number // 10) % 10",
+      "ones = number % 10",
+      "print(hundreds, tens, ones)",
+    ],
+  },
+  {
+    id: 708,
+    phase: "math_3_5",
+    title: "Multiply, Divide, and Check",
+    description: "Multiplication finds the total in equal groups. Division shares that total, and a remainder tells whether anything is left over.",
+    starter: "boxes = 6\ncrayons_in_each_box = 8\n# Find the total, then share it equally among the boxes.\n",
+    hints: [
+      "total = boxes * crayons_in_each_box",
+      "per_box = total // boxes",
+      "left_over = total % boxes",
+      "print(total, per_box, left_over)",
+    ],
+  },
+  {
+    id: 709,
+    phase: "math_3_5",
+    title: "Make an Equivalent Fraction",
+    description: "Multiplying a fraction's numerator and denominator by the same number makes an equivalent fraction. Try doubling three-fourths.",
+    starter: "numerator = 3\ndenominator = 4\nscale = 2\n# Scale both parts and print the new numerator and denominator.\n",
+    hints: [
+      "new_numerator = numerator * scale",
+      "new_denominator = denominator * scale",
+      "print(new_numerator, new_denominator)",
+    ],
+  },
+  {
+    id: 710,
+    phase: "math_3_5",
+    title: "Convert Metres to Centimetres",
+    description: "One metre is 100 centimetres. Convert a length by multiplying the number of metres by 100.",
+    starter: "length_m = 2\n# Convert the length to centimetres and print it.\n",
+    hints: ["length_cm = length_m * 100", "print(length_cm)"],
+  },
+  {
+    id: 711,
+    phase: "math_3_5",
+    title: "Find a Rectangle's Area and Perimeter",
+    description: "Area counts square units inside a rectangle. Perimeter measures the distance around its edge.",
+    starter: "length = 8\nwidth = 5\n# Calculate and print area and perimeter.\n",
+    hints: [
+      "area = length * width",
+      "perimeter = 2 * (length + width)",
+      "print(area, perimeter)",
+    ],
+  },
+  {
+    id: 712,
+    phase: "math_3_5",
+    title: "Find the Mean in a Data Set",
+    description: "The mean is the total of the values divided by how many values there are. Find the average visitors across four days.",
+    starter: "monday = 5\ntuesday = 8\nwednesday = 6\nthursday = 7\n# Find and print the mean number of visitors.\n",
+    hints: [
+      "total = monday + tuesday + wednesday + thursday",
+      "mean = total / 4",
+      "print(mean)",
+    ],
+  },
 ].map(({ id, title, description, starter, hints }) => ({
   id,
-  phase: "math_k2",
+  phase: id <= 706 ? "math_k2" : "math_3_5",
   title,
   description,
   source: credit,
@@ -171,7 +241,10 @@ for (const track of tracks) {
 }
 data.phases = data.phases.filter((item) => !phases.some((candidate) => candidate.id === item.id));
 data.phases.push(...phases);
-data.lessons = data.lessons.filter((item) => item.id < 701 || item.id > 706);
+const math35Phase = data.phases.find((item) => item.id === "math_3_5");
+if (!math35Phase) throw new Error("Missing Math Grades 3-5 phase");
+delete math35Phase.status;
+data.lessons = data.lessons.filter((item) => item.id < 701 || item.id > 712);
 data.lessons.push(...lessons);
 data.phases.sort((a, b) => {
   const trackOrder = data.tracks.findIndex((track) => track.id === a.track) -
@@ -187,4 +260,4 @@ for (const item of lessons) {
 const serialized = JSON.stringify(data, null, 2) + "\n";
 fs.writeFileSync(filePath, serialized);
 fs.writeFileSync(path.join(BE, "lessons.json"), serialized);
-console.log("Published K-University curriculum blueprint and Math K-2 lessons 701-706.");
+console.log("Published K-University curriculum blueprint and Math K-5 lessons 701-712.");
