@@ -8,6 +8,7 @@ import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
+import MathGraph from "./components/MathGraph";
 import { ArduinoSim, analyzeSketch, type SimIO } from "./sim/arduino";
 import { PythonSim, analyzePython, type PyGpioIO } from "./sim/python";
 import { makeBallScene, makeLedBlinkFrame } from "./sim/cv";
@@ -33,6 +34,15 @@ import {
 
 const HINT_LABELS = "ABCDEFGH";
 const normalize = (s: string) => s.replace(/\s+/g, "");
+const numericOutput = (line: string) =>
+  line
+    .trim()
+    .split(/[\s,]+/)
+    .flatMap((token) => {
+      if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(token)) return [];
+      const value = Number(token);
+      return Number.isFinite(value) ? [value] : [];
+    });
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
 const CodeEditor = lazy(() => import("./components/CodeEditor"));
 
@@ -68,6 +78,7 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [ranClean, setRanClean] = useState(false);
   const [serial, setSerial] = useState<string[]>([]);
+  const [mathValues, setMathValues] = useState<number[]>([]);
   const [ledLevels, setLedLevels] = useState<Map<string, number>>(new Map());
   const [currentWires, setCurrentWires] = useState<Map<number, boolean>>(new Map());
   const [rgbLevels, setRgbLevels] = useState<Map<string, { r: number; g: number; b: number }>>(new Map());
@@ -297,6 +308,7 @@ export default function App() {
   useEffect(() => {
     stopSim();
     setSerial([]);
+    setMathValues([]);
     setRanClean(false);
     setSelected(null);
     setCode(starter);
@@ -367,11 +379,14 @@ export default function App() {
     const rt = new CircuitRuntime(circuit, worldRef.current);
     runtimeRef.current = rt;
     setSerial([]);
+    if (lesson.kind === "math") setMathValues([]);
     setRunning(true);
 
     if (lesson.kind === "math") {
       const sim = new PythonSim();
       engineRef.current = sim;
+      let failed = false;
+      setSerial(["$ python lesson.py"]);
       const noop = () => undefined;
       const io: PyGpioIO = {
         setmode: noop,
@@ -386,14 +401,24 @@ export default function App() {
         print: (line) => {
           setRanClean(true);
           setSerial((s) => [...s.slice(-30), line]);
+          const values = numericOutput(line);
+          if (values.length) {
+            setMathValues((current) => [...current, ...values].slice(-20));
+          }
         },
         serialWrite: () => 0,
         serialAvailable: () => 0,
         serialReadByte: () => -1,
-        onError: (message) => setSerial((s) => [...s, `⚠ ${message}`]),
+        onError: (message) => {
+          failed = true;
+          setSerial((s) => [...s, `⚠ ${message}`]);
+        },
       };
       sim.run(sketch, io).finally(() => {
-        if (engineRef.current === sim) setRunning(false);
+        if (engineRef.current === sim) {
+          setRunning(false);
+          setSerial((s) => [...s, `[process exited with status ${failed ? 1 : 0}]`]);
+        }
       });
       return;
     }
@@ -966,12 +991,7 @@ export default function App() {
                 <>
                   <div className="panel-label">Math workspace</div>
                   <div className="math-workspace">
-                    <span aria-hidden="true">∑</span>
-                    <h4>Try it, run it, see the result.</h4>
-                    <p>
-                      Change the numbers in your Python program, then choose Run.
-                      The answer appears in Program Output.
-                    </p>
+                    <MathGraph values={mathValues} />
                   </div>
                 </>
               ) : lesson.kind === "vision" ? (
