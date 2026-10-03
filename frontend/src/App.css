@@ -1398,6 +1398,23 @@
   color: #9ba9b8;
 }
 
+.react-insert-code,
+.react-verbose-output button,
+.react-correction-popover button {
+  padding: 5px 8px;
+  border: 1px solid #425164;
+  border-radius: 5px;
+  background: #263343;
+  color: #d9f5ff;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.react-insert-code {
+  margin-top: 7px;
+}
+
 .react-guide-content .react-guide-next {
   margin: 0;
   padding: 9px;
@@ -1451,6 +1468,73 @@
   min-height: 380px;
   border: 0;
   background: #f7f8fc;
+}
+
+.react-verbose-output {
+  flex: 0 0 auto;
+  max-height: 180px;
+  overflow: auto;
+  border-top: 1px solid #343f4c;
+  color: #c5d1de;
+  font-size: 12px;
+}
+
+.react-verbose-output summary {
+  position: sticky;
+  top: 0;
+  padding: 9px 12px;
+  background: #202630;
+  color: #d9f5ff;
+  cursor: pointer;
+}
+
+.react-verbose-output > div {
+  padding: 9px 12px;
+}
+
+.react-verbose-output p {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.react-verbose-output ul {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-left: 20px;
+}
+
+.react-verbose-output li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.react-verbose-output small {
+  color: #9ba9b8;
+}
+
+.react-correction-popover {
+  position: fixed;
+  z-index: 20;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  width: min(360px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #bf8b38;
+  border-radius: 8px;
+  background: #29241c;
+  color: #f1dfbd;
+  box-shadow: 0 6px 24px #0008;
+  font-size: 12px;
+}
+
+.react-correction-popover button {
+  align-self: flex-start;
 }
 
 .react-hint {
@@ -1525,17 +1609,26 @@
   }
 
   .react-course-panels {
+    flex: 0 0 auto;
+    min-height: 0;
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
   }
 
   .react-guide-panel {
     grid-column: auto;
+    min-height: 260px;
     max-height: none;
   }
 
   .react-code-panel,
   .react-preview-panel {
     min-height: 400px;
+  }
+
+  .react-correction-popover {
+    right: 8px;
+    bottom: 8px;
   }
 }
 

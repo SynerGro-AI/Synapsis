@@ -789,12 +789,54 @@
       "name": "React Foundations",
       "range": "1-6",
       "concepts": [
-        "Components and rendered output",
-        "JSX and semantic structure",
-        "Props and reusable UI",
+        "Components",
+        "JSX",
+        "Props",
         "State and events",
-        "Rendering collections",
-        "Forms and a small app"
+        "Lists",
+        "Forms"
+      ]
+    },
+    {
+      "id": "react_production_ui",
+      "track": "react",
+      "name": "Production UI Patterns",
+      "range": "7-12",
+      "concepts": [
+        "Component composition",
+        "Design systems",
+        "Responsive layouts",
+        "Search",
+        "Validated forms",
+        "Accessible data tables"
+      ]
+    },
+    {
+      "id": "react_enterprise_apps",
+      "track": "react",
+      "name": "Enterprise Application Patterns",
+      "range": "13-18",
+      "concepts": [
+        "Derived dashboards",
+        "Filtering and sorting",
+        "Approval workflows",
+        "Role-aware interfaces",
+        "Loading and error states",
+        "Empty states"
+      ]
+    },
+    {
+      "id": "react_quality_capstone",
+      "track": "react",
+      "name": "Quality and Corporate Capstone",
+      "range": "19-24",
+      "concepts": [
+        "Reusable components",
+        "Accessible announcements",
+        "Efficient rendering",
+        "Pagination",
+        "Audit activity",
+        "Service operations console"
       ]
     }
   ],
@@ -7867,6 +7909,680 @@
       "hints": [
         "Keep the input connected to title with value and onChange.",
         "Try Green Trails, then submit the form."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 807,
+      "phase": "react_production_ui",
+      "title": "Compose a Reusable Metric Card",
+      "description": "Production interfaces are assembled from small components with clear props. Build one metric card once, then give each instance its own label and value.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Open cases",
+        "codeSteps": [
+          {
+            "instruction": "Inside MetricCard, render both props as readable text.",
+            "explanation": "A component gets its inputs from props, so one implementation can present many different metrics.",
+            "code": "<h2>{label}</h2>\n<p>{value}</p>"
+          },
+          {
+            "instruction": "Render the card from App with an operations metric.",
+            "explanation": "The JSX component tag passes named values into the reusable card.",
+            "code": "<MetricCard label=\"Open cases\" value={12} />"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function MetricCard({ label, value }) {\n  return (\n    <article>\n      {/* Show the label and value. */}\n    </article>\n  );\n}\n\nfunction App() {\n  return (\n    <main>\n      <h1>Operations</h1>\n      {/* Render a reusable metric card. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Display label and value inside MetricCard.",
+        "Render MetricCard with label=\"Open cases\" and value={12}."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 808,
+      "phase": "react_production_ui",
+      "title": "Apply a Consistent Design System",
+      "description": "A small set of named design tokens keeps spacing, color, and typography consistent. Start with JavaScript style values that every component can reuse.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Service desk",
+        "codeSteps": [
+          {
+            "instruction": "Add a panel that uses the shared spacing, ink, and accent tokens.",
+            "explanation": "Inline styles in React use a JavaScript object and camelCase property names.",
+            "code": "<section style={{ padding: tokens.space, color: tokens.ink, borderTop: `4px solid ${tokens.accent}` }}>\n  <h1>Service desk</h1>\n</section>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const tokens = {\n    space: 16,\n    ink: \"#172033\",\n    accent: \"#176b87\",\n  };\n\n  return (\n    <main>\n      {/* Use the tokens in a styled service-desk panel. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Use tokens.accent and tokens.space rather than repeating raw values.",
+        "Give the panel a heading named Service desk."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 809,
+      "phase": "react_production_ui",
+      "title": "Build a Responsive Card Layout",
+      "description": "Interfaces must adapt to narrow and wide screens. Flex wrapping lets a row of cards move onto additional lines when the viewport is small.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Queue health",
+        "codeSteps": [
+          {
+            "instruction": "Create a flex container that wraps its child cards.",
+            "explanation": "flexWrap allows the cards to continue on another row instead of overflowing a phone screen.",
+            "code": "<section style={{ display: \"flex\", flexWrap: \"wrap\", gap: 12 }}>\n  <article style={cardStyle}><h2>Queue health</h2><p>Stable</p></article>\n  <article style={cardStyle}><h2>Response time</h2><p>4 hours</p></article>\n</section>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const cardStyle = {\n    flex: \"1 1 180px\",\n    padding: 16,\n    border: \"1px solid #8793a2\",\n  };\n\n  return (\n    <main>\n      {/* Create a wrapping group of operations cards. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Set flexWrap to wrap on the group.",
+        "Add cards with flexible minimum widths."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 810,
+      "phase": "react_production_ui",
+      "title": "Search an Employee Directory",
+      "description": "A controlled search field keeps the query in React state. Derive visible results from the source records rather than maintaining a second, potentially stale copy.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Aster Systems",
+        "codeSteps": [
+          {
+            "instruction": "Add a labeled search field controlled by query.",
+            "explanation": "The input value is always the current React state; onChange updates that state as the learner types.",
+            "code": "<label>Search partners <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>"
+          },
+          {
+            "instruction": "Render only names that include the query, ignoring letter case.",
+            "explanation": "Filtering is derived from the original list on each render, so there is no duplicate result state to synchronize.",
+            "code": "{people.filter((person) => person.toLowerCase().includes(query.toLowerCase())).map((person) => <p key={person}>{person}</p>)}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const people = [\"Aster Systems\", \"Beacon Works\", \"Cedar Group\"];\n  const [query, setQuery] = React.useState(\"\");\n\n  return (\n    <main>\n      <h1>Partner directory</h1>\n      {/* Add a search field and matching results. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Connect the input value and onChange to query.",
+        "Filter people with a case-insensitive match."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 811,
+      "phase": "react_production_ui",
+      "title": "Validate a Request Form",
+      "description": "Business forms should use native input constraints and provide clear confirmation only after a valid submission. Client-side validation improves usability; a server must still validate submitted data.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Request received",
+        "codeSteps": [
+          {
+            "instruction": "Add a submit button so the form handler can run.",
+            "explanation": "The required email field and email type use browser validation before submission.",
+            "code": "<button type=\"submit\">Send request</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [email, setEmail] = React.useState(\"\");\n  const [sent, setSent] = React.useState(false);\n\n  function submitRequest(event) {\n    event.preventDefault();\n    setSent(true);\n  }\n\n  return (\n    <main>\n      <h1>Access request</h1>\n      <form onSubmit={submitRequest}>\n        <label>\n          Work email\n          <input type=\"email\" required value={email} onChange={(event) => setEmail(event.target.value)} />\n        </label>\n        {/* Add a submit button. */}\n      </form>\n      {sent && <p role=\"status\">Request received</p>}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Add an explicit submit button inside the form.",
+        "Enter a valid email in the preview and submit."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 812,
+      "phase": "react_production_ui",
+      "title": "Present Records in an Accessible Table",
+      "description": "Use a real table when people need to compare records by row and column. Column headers and scoped header cells make relationships understandable to screen readers.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Aster Systems",
+        "codeSteps": [
+          {
+            "instruction": "Create a table with scoped column headers, then render each account row.",
+            "explanation": "Semantic table structure helps users navigate relationships between account names and plans.",
+            "code": "<table>\n  <thead><tr><th scope=\"col\">Account</th><th scope=\"col\">Plan</th></tr></thead>\n  <tbody>{accounts.map((account) => <tr key={account.id}><th scope=\"row\">{account.name}</th><td>{account.plan}</td></tr>)}</tbody>\n</table>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const accounts = [\n    { id: 1, name: \"Aster Systems\", plan: \"Enterprise\" },\n    { id: 2, name: \"Beacon Works\", plan: \"Business\" },\n  ];\n\n  return (\n    <main>\n      <h1>Account register</h1>\n      {/* Build a semantic table from accounts. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Use thead and tbody with column headings.",
+        "Map each account into a row with a stable key."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 813,
+      "phase": "react_enterprise_apps",
+      "title": "Calculate Dashboard Metrics from Data",
+      "description": "Operational dashboards should derive totals from records, not hard-code numbers that drift away from the underlying data. Array filters produce counts that update when the data changes.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Open: 2",
+        "codeSteps": [
+          {
+            "instruction": "Derive the open total from cases and display it as a metric.",
+            "explanation": "Filtering source data makes the displayed number auditable and keeps the UI tied to the records.",
+            "code": "const openCount = cases.filter((item) => item.status === \"Open\").length;\n<p>Open: {openCount}</p>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const cases = [\n    { id: 1, status: \"Open\" },\n    { id: 2, status: \"Open\" },\n    { id: 3, status: \"Resolved\" },\n  ];\n\n  return (\n    <main>\n      <h1>Case overview</h1>\n      {/* Calculate and display the open-case count. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Count records whose status is Open.",
+        "Render the count in a labeled metric."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 814,
+      "phase": "react_enterprise_apps",
+      "title": "Filter a Service Queue",
+      "description": "Give operators a simple status filter and derive matching records from the current selection. Keep the filter labeled so its purpose is clear to all users.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Case 104",
+        "codeSteps": [
+          {
+            "instruction": "Add an accessible status selector and list the matching case IDs.",
+            "explanation": "The All option leaves the queue unchanged; other options narrow the displayed records.",
+            "code": "<label>Status <select value={status} onChange={(event) => setStatus(event.target.value)}><option>All</option><option>Open</option><option>Resolved</option></select></label>\n{cases.filter((item) => status === \"All\" || item.status === status).map((item) => <p key={item.id}>Case {item.id} — {item.status}</p>)}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const cases = [\n    { id: 104, status: \"Open\" },\n    { id: 105, status: \"Resolved\" },\n  ];\n  const [status, setStatus] = React.useState(\"All\");\n\n  return (\n    <main>\n      <h1>Service queue</h1>\n      {/* Add a status selector and filtered cases. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Make the selector controlled by status.",
+        "Show all cases or only cases with the selected status."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 815,
+      "phase": "react_enterprise_apps",
+      "title": "Sort Records by Priority",
+      "description": "Sorting should produce a new ordered array without mutating the original data. A sort control lets an operator change the view while preserving the canonical records.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Critical",
+        "codeSteps": [
+          {
+            "instruction": "Add a named button and render the ordered case priorities.",
+            "explanation": "The copied array protects the original case data from in-place sorting.",
+            "code": "<button type=\"button\" onClick={() => setCriticalFirst(!criticalFirst)}>Change priority order</button>\n{ordered.map((item) => <p key={item.id}>Case {item.id}: {item.priority}</p>)}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const cases = [\n    { id: 201, priority: \"Normal\" },\n    { id: 202, priority: \"Critical\" },\n  ];\n  const [criticalFirst, setCriticalFirst] = React.useState(true);\n  const ordered = [...cases].sort((a, b) =>\n    criticalFirst ? a.priority.localeCompare(b.priority) : b.priority.localeCompare(a.priority)\n  );\n\n  return (\n    <main>\n      <h1>Priority queue</h1>\n      {/* Add a sort toggle and render ordered cases. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Add a button that changes criticalFirst.",
+        "Render ordered rows and do not sort cases directly."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 816,
+      "phase": "react_enterprise_apps",
+      "title": "Model an Approval Workflow",
+      "description": "Represent a workflow with explicit states and allow only the intended transition. Real authorization must be enforced by a trusted server; a client-side status is only a user-interface demonstration.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Status: Pending",
+        "codeSteps": [
+          {
+            "instruction": "Render an action that transitions a draft into review.",
+            "explanation": "A conditional action reflects the current workflow state; a server still owns the authoritative approval.",
+            "code": "{status === \"Draft\" && <button type=\"button\" onClick={() => setStatus(\"Pending\")}>Submit for review</button>}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [status, setStatus] = React.useState(\"Draft\");\n\n  return (\n    <main>\n      <h1>Purchase approval</h1>\n      <p>Status: {status}</p>\n      {/* Add a submit-for-review action while the request is a draft. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Show a submit button only while status is Draft.",
+        "Change the status to Pending when it is pressed."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 817,
+      "phase": "react_enterprise_apps",
+      "title": "Build a Role-Aware Interface",
+      "description": "Different roles may need different navigation or controls. This lesson changes what the UI displays; hiding a button is not authorization and must never replace server-side access checks.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Admin tools",
+        "codeSteps": [
+          {
+            "instruction": "Render the admin-only UI when the selected demo role is Administrator.",
+            "explanation": "This is presentation logic only; the API must independently verify identity and permissions.",
+            "code": "{role === \"Administrator\" && <p>Admin tools</p>}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [role, setRole] = React.useState(\"Viewer\");\n\n  return (\n    <main>\n      <h1>Workspace</h1>\n      <label>\n        Demo role\n        <select value={role} onChange={(event) => setRole(event.target.value)}>\n          <option>Viewer</option>\n          <option>Administrator</option>\n        </select>\n      </label>\n      {/* Show a demo-only admin link for the Administrator role. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Conditionally show the admin link for Administrator.",
+        "Choose Administrator in the preview to reveal it."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 818,
+      "phase": "react_enterprise_apps",
+      "title": "Handle Loading and Retry States",
+      "description": "Enterprise screens should communicate loading and failure instead of showing an unexplained blank area. Model each state explicitly and give users a clear retry action.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Report ready",
+        "codeSteps": [
+          {
+            "instruction": "Add a retry action that switches the message to a ready state.",
+            "explanation": "A production client should distinguish loading, success, and failure while handling actual server responses.",
+            "code": "<button type=\"button\" onClick={() => setStatus(\"Report ready\")}>Retry sample</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [status, setStatus] = React.useState(\"Loading report…\");\n\n  return (\n    <main>\n      <h1>Quarterly report</h1>\n      <p role=\"status\" aria-live=\"polite\">{status}</p>\n      {/* Add a retry button that loads the sample report. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Add a button to update status to Report ready.",
+        "The sample is local; no network request is made."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 819,
+      "phase": "react_quality_capstone",
+      "title": "Design a Helpful Empty State",
+      "description": "A search with no matches should explain what happened and offer a next step. Empty states reduce confusion and help people recover from filters that are too narrow.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "No matching records",
+        "codeSteps": [
+          {
+            "instruction": "Render matching accounts or a clear empty-state message.",
+            "explanation": "Conditional rendering makes both the populated and empty outcomes explicit.",
+            "code": "{matches.length ? matches.map((record) => <p key={record}>{record}</p>) : <p>No matching records</p>}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [query, setQuery] = React.useState(\"unknown\");\n  const records = [\"Aster Systems\", \"Beacon Works\"];\n  const matches = records.filter((record) =>\n    record.toLowerCase().includes(query.toLowerCase())\n  );\n\n  return (\n    <main>\n      <h1>Account search</h1>\n      <label>Search <input value={query} onChange={(event) => setQuery(event.target.value)} /></label>\n      {/* Show results or a useful empty state. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Render matches when present.",
+        "Otherwise explain that no records match."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 820,
+      "phase": "react_quality_capstone",
+      "title": "Extract a Shared Page Header",
+      "description": "A consistent header is a useful component boundary: it receives a title and description as props, making the same page chrome reusable across corporate screens.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Operations overview",
+        "codeSteps": [
+          {
+            "instruction": "Use semantic heading and paragraph elements for the component props.",
+            "explanation": "A focused component API makes page structure reusable and easier to review.",
+            "code": "<h1>{title}</h1>\n<p>{description}</p>"
+          },
+          {
+            "instruction": "Render PageHeader with an operations title and a short description.",
+            "explanation": "Each page can reuse the header while supplying its own content.",
+            "code": "<PageHeader title=\"Operations overview\" description=\"Daily service activity\" />"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function PageHeader({ title, description }) {\n  return (\n    <header>\n      {/* Render the title and description. */}\n    </header>\n  );\n}\n\nfunction App() {\n  return (\n    <main>\n      {/* Reuse PageHeader with operations content. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Render both header props.",
+        "Pass title=\"Operations overview\" from App."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 821,
+      "phase": "react_quality_capstone",
+      "title": "Announce Updates to Assistive Technology",
+      "description": "When an action changes important content, an aria-live status region can announce the update to screen-reader users. Keep the announcement concise and tied to the actual state.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "3 records loaded",
+        "codeSteps": [
+          {
+            "instruction": "Add a button that loads the sample and updates the live status.",
+            "explanation": "React state updates the visible message and polite live-region announcement together.",
+            "code": "<button type=\"button\" onClick={() => setMessage(\"3 records loaded\")}>Load sample report</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [message, setMessage] = React.useState(\"No report loaded\");\n\n  return (\n    <main>\n      <h1>Report center</h1>\n      <p role=\"status\" aria-live=\"polite\">{message}</p>\n      {/* Add a load action that announces the result. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Use a button to update the message.",
+        "The status region is already labeled for live announcements."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 822,
+      "phase": "react_quality_capstone",
+      "title": "Paginate a Long Record List",
+      "description": "Pagination keeps a large table manageable by showing a window of records at a time. The current page is state; derive the visible slice from the original list.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Page 2",
+        "codeSteps": [
+          {
+            "instruction": "Render visible records and a button to open the next page.",
+            "explanation": "The disabled condition prevents moving past the last page.",
+            "code": "{visible.map((record) => <p key={record}>{record}</p>)}\n<button type=\"button\" disabled={(page + 1) * pageSize >= records.length} onClick={() => setPage(page + 1)}>Next page</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const records = [\"Case 101\", \"Case 102\", \"Case 103\", \"Case 104\"];\n  const [page, setPage] = React.useState(0);\n  const pageSize = 2;\n  const visible = records.slice(page * pageSize, page * pageSize + pageSize);\n\n  return (\n    <main>\n      <h1>Case register</h1>\n      <p>Page {page + 1}</p>\n      {/* Render the current page and a next-page button. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Map visible records into keyed paragraphs.",
+        "Advance the page when Next is selected."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 823,
+      "phase": "react_quality_capstone",
+      "title": "Record an Activity Audit Trail",
+      "description": "An activity feed makes recent actions visible to operators. Append a new immutable entry to state so earlier events remain in the displayed history.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Maya approved case #104",
+        "codeSteps": [
+          {
+            "instruction": "Add an action that appends the approval event, then render the feed.",
+            "explanation": "The functional state update uses the latest event list and preserves existing entries.",
+            "code": "<button type=\"button\" onClick={() => setEvents((previous) => [...previous, \"Maya approved case #104\"])}>Approve case #104</button>\n<ul>{events.map((event) => <li key={event}>{event}</li>)}</ul>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [events, setEvents] = React.useState([\"Sam opened case #103\"]);\n\n  return (\n    <main>\n      <h1>Recent activity</h1>\n      {/* Add an approval event and render the activity feed. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Append a new item using the previous state.",
+        "Render events with stable keys."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 824,
+      "phase": "react_quality_capstone",
+      "title": "Capstone: Service Operations Console",
+      "description": "Bring the course together in a small, data-driven operations console: a clear page heading, derived queue metrics, an accessible status filter, and a record table. The preview uses local sample data; APIs, authentication, authorization, and persistence belong on a trusted backend.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Resolved: 3",
+        "codeSteps": [
+          {
+            "instruction": "Add a clear page heading and short operational description.",
+            "explanation": "A single h1 names the application screen and helps users orient themselves.",
+            "code": "<header><h1>Service Operations</h1><p>Requests needing attention</p></header>"
+          },
+          {
+            "instruction": "Show the two counts already derived from the request records.",
+            "explanation": "The summaries are calculated from the same data shown in the table.",
+            "code": "<section aria-label=\"Queue summary\"><p>Open: {openCount}</p><p>Resolved: {resolvedCount}</p></section>"
+          },
+          {
+            "instruction": "Render the filtered requests as keyed semantic table rows.",
+            "explanation": "The filter is real component state, and the table preserves clear row-to-column relationships.",
+            "code": "{visibleRequests.map((request) => <tr key={request.id}><th scope=\"row\">#{request.id}</th><td>{request.owner}</td><td>{request.status}</td></tr>)}"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const requests = [\n    { id: 104, owner: \"Maya Chen\", status: \"Open\" },\n    { id: 105, owner: \"Ari Singh\", status: \"Resolved\" },\n    { id: 106, owner: \"Noah Park\", status: \"Resolved\" },\n    { id: 107, owner: \"Lina Ortiz\", status: \"Resolved\" },\n  ];\n  const [filter, setFilter] = React.useState(\"All\");\n  const openCount = requests.filter((request) => request.status === \"Open\").length;\n  const resolvedCount = requests.filter((request) => request.status === \"Resolved\").length;\n  const visibleRequests = requests.filter((request) =>\n    filter === \"All\" || request.status === filter\n  );\n\n  return (\n    <main>\n      {/* Add the operations heading. */}\n      {/* Add the derived queue metrics. */}\n      <label>Status filter\n        <select value={filter} onChange={(event) => setFilter(event.target.value)}>\n          <option>All</option><option>Open</option><option>Resolved</option>\n        </select>\n      </label>\n      <table>\n        <thead><tr><th scope=\"col\">Request</th><th scope=\"col\">Owner</th><th scope=\"col\">Status</th></tr></thead>\n        <tbody>\n          {/* Render the filtered requests as accessible rows. */}\n        </tbody>\n      </table>\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Use a heading that identifies the service operations console.",
+        "Display openCount and resolvedCount as summary metrics.",
+        "Map visibleRequests into table rows using request.id as the key."
       ],
       "output": {
         "initial": "Run your React app to see the preview.",
