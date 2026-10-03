@@ -147,6 +147,7 @@
       "track": "arduino",
       "name": "Expert",
       "range": "29+",
+      "status": "coming-soon",
       "concepts": [
         "Wire gauge physics",
         "Signal calibration",
