@@ -390,8 +390,8 @@
   overflow: auto;
   background: #252525;
   touch-action: none;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Zoomable stage: parts + wire layer live here and scale from the top-left
@@ -408,6 +408,7 @@
 .wokwi-canvas svg,
 .wokwi-canvas img {
   -webkit-user-drag: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
