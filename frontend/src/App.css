@@ -1398,9 +1398,7 @@
   color: #9ba9b8;
 }
 
-.react-insert-code,
-.react-verbose-output button,
-.react-correction-popover button {
+.react-verbose-output button {
   padding: 5px 8px;
   border: 1px solid #425164;
   border-radius: 5px;
@@ -1409,10 +1407,6 @@
   font: inherit;
   font-size: 11px;
   cursor: pointer;
-}
-
-.react-insert-code {
-  margin-top: 7px;
 }
 
 .react-guide-content .react-guide-next {
@@ -1472,7 +1466,7 @@
 
 .react-verbose-output {
   flex: 0 0 auto;
-  max-height: 180px;
+  max-height: 320px;
   overflow: auto;
   border-top: 1px solid #343f4c;
   color: #c5d1de;
@@ -1515,26 +1509,17 @@
   color: #9ba9b8;
 }
 
-.react-correction-popover {
-  position: fixed;
-  z-index: 20;
-  right: 20px;
-  bottom: 20px;
-  display: flex;
-  width: min(360px, calc(100vw - 32px));
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid #bf8b38;
-  border-radius: 8px;
-  background: #29241c;
-  color: #f1dfbd;
-  box-shadow: 0 6px 24px #0008;
+.react-suggested-script {
+  margin: 8px 0;
+  padding: 10px;
+  overflow-x: auto;
+  border: 1px solid #3d4652;
+  border-radius: 6px;
+  background: #11161c;
+  color: #e8c98a;
   font-size: 12px;
-}
-
-.react-correction-popover button {
-  align-self: flex-start;
+  line-height: 1.5;
+  white-space: pre;
 }
 
 .react-hint {
@@ -1626,9 +1611,8 @@
     min-height: 400px;
   }
 
-  .react-correction-popover {
-    right: 8px;
-    bottom: 8px;
+  .react-verbose-output {
+    max-height: min(45vh, 360px);
   }
 }
 

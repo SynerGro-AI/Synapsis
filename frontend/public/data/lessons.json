@@ -8152,9 +8152,14 @@
         "expectedText": "Open: 2",
         "codeSteps": [
           {
-            "instruction": "Derive the open total from cases and display it as a metric.",
+            "instruction": "Derive the open total from the case records.",
             "explanation": "Filtering source data makes the displayed number auditable and keeps the UI tied to the records.",
-            "code": "const openCount = cases.filter((item) => item.status === \"Open\").length;\n<p>Open: {openCount}</p>"
+            "code": "const openCount = cases.filter((item) => item.status === \"Open\").length;"
+          },
+          {
+            "instruction": "Display the calculated total as a labeled metric.",
+            "explanation": "The displayed number is calculated from the same records that the dashboard summarizes.",
+            "code": "<p>Open: {openCount}</p>"
           }
         ]
       },
@@ -8166,7 +8171,7 @@
       },
       "codeTemplate": {
         "language": "javascript",
-        "starter": "function App() {\n  const cases = [\n    { id: 1, status: \"Open\" },\n    { id: 2, status: \"Open\" },\n    { id: 3, status: \"Resolved\" },\n  ];\n\n  return (\n    <main>\n      <h1>Case overview</h1>\n      {/* Calculate and display the open-case count. */}\n    </main>\n  );\n}\n"
+        "starter": "function App() {\n  const cases = [\n    { id: 1, status: \"Open\" },\n    { id: 2, status: \"Open\" },\n    { id: 3, status: \"Resolved\" },\n  ];\n  // TODO: derive the open-case total from cases.\n\n  return (\n    <main>\n      <h1>Case overview</h1>\n      {/* TODO: display the open-case total. */}\n    </main>\n  );\n}\n"
       },
       "hints": [
         "Count records whose status is Open.",

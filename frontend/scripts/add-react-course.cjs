@@ -414,18 +414,20 @@ function App() {
     { id: 2, status: "Open" },
     { id: 3, status: "Resolved" },
   ];
+  // TODO: derive the open-case total from cases.
 
   return (
     <main>
       <h1>Case overview</h1>
-      {/* Calculate and display the open-case count. */}
+      {/* TODO: display the open-case total. */}
     </main>
   );
 }
 `,
     ["Count records whose status is Open.", "Render the count in a labeled metric."],
     [
-      { instruction: "Derive the open total from cases and display it as a metric.", explanation: "Filtering source data makes the displayed number auditable and keeps the UI tied to the records.", code: 'const openCount = cases.filter((item) => item.status === "Open").length;\n<p>Open: {openCount}</p>' },
+      { instruction: "Derive the open total from the case records.", explanation: "Filtering source data makes the displayed number auditable and keeps the UI tied to the records.", code: 'const openCount = cases.filter((item) => item.status === "Open").length;' },
+      { instruction: "Display the calculated total as a labeled metric.", explanation: "The displayed number is calculated from the same records that the dashboard summarizes.", code: "<p>Open: {openCount}</p>" },
     ],
   ),
   lesson(

@@ -15,7 +15,6 @@ import "monaco-editor/languages/definitions/shell/register.js";
 export interface CodeEditorHandle {
   /** Current sketch text, exactly as the learner typed it. */
   getValue(): string;
-  insertText(text: string): void;
 }
 
 interface CodeEditorProps {
@@ -99,25 +98,7 @@ export default function CodeEditor({
         : null;
 
     if (handleRef) {
-      handleRef.current = {
-        getValue: () => editor.getValue(),
-        insertText: (text) => {
-          const model = editor.getModel();
-          if (!model) return;
-          const fullRange = model.getFullModelRange();
-          const position = fullRange.getEndPosition();
-          const range =
-            editor.getSelection() ??
-            new monaco.Range(
-              position.lineNumber,
-              position.column,
-              position.lineNumber,
-              position.column,
-            );
-          editor.executeEdits("synapsis-insert-code", [{ range, text }]);
-          editor.focus();
-        },
-      };
+      handleRef.current = { getValue: () => editor.getValue() };
     }
 
     const completions = reactCompletions

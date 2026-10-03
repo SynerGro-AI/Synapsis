@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { Lesson } from "../api";
-import type { CodeEditorHandle } from "./CodeEditor";
 
 const CodeEditor = lazy(() => import("./CodeEditor"));
 
@@ -19,15 +18,9 @@ interface PreviewMessage {
   message?: string;
 }
 
-interface ReactCorrection {
-  title: string;
-  code: string;
-}
-
 interface ReactDiagnosis {
   code: string;
   meaning: string;
-  corrections: ReactCorrection[];
 }
 
 function explainReactError(message: string): ReactDiagnosis {
@@ -35,7 +28,6 @@ function explainReactError(message: string): ReactDiagnosis {
     return {
       code: "JSX-STRUCTURE-01",
       meaning: "A component must return one top-level JSX element. Wrap sibling elements in a main or fragment.",
-      corrections: [{ title: "Wrap the page in main", code: "<main>\n  \n</main>" }],
     };
   }
   if (/not defined|ReferenceError/i.test(message)) {
@@ -45,44 +37,71 @@ function explainReactError(message: string): ReactDiagnosis {
       meaning: name
         ? `${name} is used before it is declared, or its spelling/capitalization does not match.`
         : "A name used by the app was not declared in the component.",
-      corrections: name
-        ? [{ title: `Declare ${name} before using it`, code: `const ${name} = "";` }]
-        : [],
     };
   }
   if (/objects are not valid as a react child/i.test(message)) {
     return {
       code: "JSX-RENDER-01",
       meaning: "JSX cannot display a whole object. Render one of its text or number properties instead.",
-      corrections: [{ title: "Render a record's name", code: "{record.name}" }],
     };
   }
   if (/invalid hook call/i.test(message)) {
     return {
       code: "REACT-HOOK-01",
       meaning: "React hooks must be called at the top level of a function component, not inside a condition or event handler.",
-      corrections: [{ title: "Call state at the component top level", code: "const [value, setValue] = React.useState(\"\");" }],
     };
   }
   if (/unexpected token|unterminated|expected .*\\}|syntaxerror/i.test(message)) {
     return {
       code: "JSX-SYNTAX-01",
       meaning: "The compiler could not parse this code. Check matching JSX tags, braces, parentheses, and quotation marks near the reported position.",
-      corrections: [{ title: "Close a JSX element", code: "</main>" }],
     };
   }
   if (/is not a function|cannot read propert|cannot read properties|typeerror/i.test(message)) {
     return {
       code: "JS-RUNTIME-02",
       meaning: "The app tried an operation on a value that is missing or has a different type. Check the value and its property names.",
-      corrections: [],
     };
   }
   return {
     code: "REACT-PREVIEW-01",
     meaning: "The preview reported an error. Read the message, then check the referenced line and the values used there.",
-    corrections: [],
   };
+}
+
+function buildLessonExample(
+  starter: string,
+  steps: NonNullable<Lesson["react"]>["codeSteps"],
+): string {
+  let script = starter;
+  let insertionOffset: number | null = null;
+  let indentation = "";
+
+  for (const step of steps) {
+    const placeholder = /\{\/\*[\s\S]*?\*\/\}|\/\/\s*TODO:[^\r\n]*/.exec(script);
+    if (placeholder?.index !== undefined) {
+      insertionOffset = placeholder.index;
+      const lineStart = script.lastIndexOf("\n", insertionOffset - 1) + 1;
+      indentation = script.slice(lineStart, insertionOffset).match(/^\s*/)?.[0] ?? "";
+      script =
+        script.slice(0, insertionOffset) +
+        step.code +
+        script.slice(insertionOffset + placeholder[0].length);
+      insertionOffset += step.code.length;
+      continue;
+    }
+
+    if (insertionOffset !== null) {
+      const addition = `\n${indentation}${step.code}`;
+      script =
+        script.slice(0, insertionOffset) +
+        addition +
+        script.slice(insertionOffset);
+      insertionOffset += addition.length;
+    }
+  }
+
+  return script.trimEnd();
 }
 
 function isPreviewMessage(data: unknown): data is PreviewMessage {
@@ -115,9 +134,15 @@ export default function ReactCourse({
   const [diagnosis, setDiagnosis] = useState<ReactDiagnosis | null>(null);
   const [compiling, setCompiling] = useState(false);
   const frameRef = useRef<HTMLIFrameElement>(null);
-  const editorRef = useRef<CodeEditorHandle | null>(null);
   const expectedText = lesson.react?.expectedText ?? "";
   const passed = Boolean(expectedText && previewText.includes(expectedText));
+  const suggestedScript = useMemo(
+    () => buildLessonExample(
+      lesson.codeTemplate.starter,
+      lesson.react?.codeSteps ?? [],
+    ),
+    [lesson.codeTemplate.starter, lesson.react?.codeSteps],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -267,13 +292,6 @@ export default function ReactCourse({
                   <p>{step.instruction}</p>
                   <pre><code>{step.code}</code></pre>
                   <small>{step.explanation}</small>
-                  <button
-                    type="button"
-                    className="react-insert-code"
-                    onClick={() => editorRef.current?.insertText(step.code)}
-                  >
-                    Insert at cursor
-                  </button>
                 </li>
               ))}
             </ol>
@@ -294,7 +312,6 @@ export default function ReactCourse({
               <CodeEditor
                 starter={lesson.codeTemplate.starter}
                 language="javascript"
-                handleRef={editorRef}
                 reactCompletions
                 onChange={setCode}
               />
@@ -332,21 +349,9 @@ export default function ReactCourse({
                   <strong>{diagnosis.code}</strong>
                   <p>{compileError || previewError}</p>
                   <p>{diagnosis.meaning}</p>
-                  {diagnosis.corrections.length > 0 && (
-                    <ul>
-                      {diagnosis.corrections.map((correction) => (
-                        <li key={correction.title}>
-                          <span>{correction.title}</span>
-                          <button
-                            type="button"
-                            onClick={() => editorRef.current?.insertText(correction.code)}
-                          >
-                            Insert correction
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <h5>Try typing this complete working example</h5>
+                  <p>Use this as a guide and type it into App.jsx yourself. It will not be inserted automatically.</p>
+                  <pre className="react-suggested-script"><code>{suggestedScript}</code></pre>
                   <small>These are Synapsis teaching labels, not native JavaScript error codes.</small>
                 </>
               ) : (
@@ -357,18 +362,6 @@ export default function ReactCourse({
               )}
             </div>
           </details>
-          {diagnosis && diagnosis.corrections.length > 0 && (
-            <div className="react-correction-popover" role="alert">
-              <strong>Quick correction available</strong>
-              <span>{diagnosis.meaning}</span>
-              <button
-                type="button"
-                onClick={() => editorRef.current?.insertText(diagnosis.corrections[0].code)}
-              >
-                Insert suggested fix
-              </button>
-            </div>
-          )}
           {compileError && <p className="react-error" role="alert">{compileError}</p>}
           {previewError && <p className="react-error" role="alert">{previewError}</p>}
           {passed && <p className="react-success" role="status">Your rendered app meets this lesson’s goal.</p>}
