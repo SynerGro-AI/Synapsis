@@ -57,6 +57,8 @@ export interface Lesson {
   math?: {
     theory: string;
     problem: string;
+    answer?: number[];
+    choices?: { label: string; values: number[] }[];
     visual?: {
       kind:
         | "count"

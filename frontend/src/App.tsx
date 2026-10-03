@@ -55,7 +55,12 @@ const parseMathAnswer = (answer: string) => {
   const values = tokens.map(Number);
   return values.every(Number.isFinite) ? values : null;
 };
-type MathAnswerFeedback = "correct" | "incorrect" | "invalid" | "no-result";
+type MathAnswerFeedback =
+  | "correct"
+  | "incorrect"
+  | "invalid"
+  | "no-result"
+  | "configuration-error";
 const EMPTY_CIRCUIT: CircuitState = { parts: [], wires: [] };
 const CodeEditor = lazy(() => import("./components/CodeEditor"));
 
@@ -92,7 +97,9 @@ export default function App() {
   const [ranClean, setRanClean] = useState(false);
   const [serial, setSerial] = useState<string[]>([]);
   const [mathValues, setMathValues] = useState<number[]>([]);
+  const [mathRunId, setMathRunId] = useState(0);
   const [mathAnswer, setMathAnswer] = useState("");
+  const [selectedMathChoice, setSelectedMathChoice] = useState<number | null>(null);
   const [mathAnswerFeedback, setMathAnswerFeedback] = useState<MathAnswerFeedback | null>(null);
   const [ledLevels, setLedLevels] = useState<Map<string, number>>(new Map());
   const [currentWires, setCurrentWires] = useState<Map<number, boolean>>(new Map());
@@ -227,6 +234,7 @@ export default function App() {
   }, [applyProgress]);
 
   const lesson = data.lessons.find((l) => l.id === lessonId) ?? data.lessons[0];
+  const isGuidedMath = lesson.kind === "math" && lesson.phase === "math_k2";
   const lessonTranslation = lesson.translations?.[lessonLocale];
   const lessonTitle = lessonTranslation?.title ?? lesson.title;
   const lessonDescription = lessonTranslation?.description ?? lesson.description;
@@ -234,6 +242,9 @@ export default function App() {
     lessonLocale !== "en" &&
     (!lessonTranslation?.title || !lessonTranslation?.description);
   const displayLesson = { ...lesson, title: lessonTitle, description: lessonDescription };
+  useEffect(() => {
+    if (isGuidedMath && mobileTab === "editor") setMobileTab("canvas");
+  }, [isGuidedMath, mobileTab]);
   const mathCodeSnippet =
     lesson.kind === "math"
       ? [
@@ -350,7 +361,9 @@ export default function App() {
     stopSim();
     setSerial([]);
     setMathValues([]);
+    setMathRunId(0);
     setMathAnswer("");
+    setSelectedMathChoice(null);
     setMathAnswerFeedback(null);
     setRanClean(false);
     setSelected(null);
@@ -424,6 +437,7 @@ export default function App() {
     setSerial([]);
     if (lesson.kind === "math") {
       setMathValues([]);
+      setMathRunId((runId) => runId + 1);
       setMathAnswerFeedback(null);
     }
     setRunning(true);
@@ -762,11 +776,30 @@ export default function App() {
   const allTyped = lesson.hints.length > 0 && typedHints.every(Boolean);
   const lessonPassed =
     lesson.kind === "math"
-      ? ranClean && mathAnswerFeedback === "correct"
+      ? mathAnswerFeedback === "correct" && (isGuidedMath || ranClean)
       : allTyped && ranClean && circuitOk;
   const completed = Boolean(saved[lesson.id]?.completed) || lessonPassed;
 
   const checkMathAnswer = () => {
+    if (isGuidedMath) {
+      const choice = lesson.math?.choices?.[selectedMathChoice ?? -1];
+      const answer = lesson.math?.answer;
+      if (!choice) {
+        setMathAnswerFeedback("invalid");
+        return;
+      }
+      if (!answer) {
+        setMathAnswerFeedback("configuration-error");
+        return;
+      }
+      const correct =
+        choice.values.length === answer.length &&
+        choice.values.every((value, index) => value === answer[index]);
+      setMathRunId((runId) => runId + 1);
+      setMathAnswerFeedback(correct ? "correct" : "incorrect");
+      setMathValues(correct ? choice.values : []);
+      return;
+    }
     const submitted = parseMathAnswer(mathAnswer);
     if (!submitted) {
       setMathAnswerFeedback("invalid");
@@ -1042,9 +1075,9 @@ export default function App() {
           <nav className="mobile-tabs">
             {([
               ["canvas", lesson.kind === "math" ? "Workspace" : t("tabCircuit")],
-              ["editor", t("tabCode")],
+              ...(!isGuidedMath ? [["editor", t("tabCode")] as const] : []),
               ["guide", t("tabGuide")],
-              ["console", t("tabConsole")],
+              ["console", isGuidedMath ? "Activity" : t("tabConsole")],
             ] as const).map(([tabId, label]) => (
               <button
                 key={tabId}
@@ -1061,14 +1094,37 @@ export default function App() {
             ))}
           </nav>
 
-          <section className="content">
+          <section className={`content${isGuidedMath ? " guided-math-content" : ""}`}>
             <div className="canvas">
               {lesson.kind === "math" ? (
                 <>
-                  <div className="panel-label">Math workspace</div>
-                  <div className="math-workspace">
-                    <MathGraph values={mathValues} />
+                  <div className="panel-label">
+                    {isGuidedMath ? "Math activity" : "Math workspace"}
                   </div>
+                  {isGuidedMath ? (
+                    <div className="kindergarten-math-board">
+                      <p className={`math-problem${mathRunId ? " math-problem-result" : ""}`}>
+                        {lesson.math?.problem ?? lessonDescription}
+                      </p>
+                      {mathValues.length ? (
+                        <MathVisualModel
+                          key={`${lesson.id}:${mathRunId}`}
+                          visual={lesson.math?.visual}
+                          values={mathValues}
+                          resultLabel="Your answer"
+                        />
+                      ) : (
+                        <p className="kindergarten-board-prompt" role="status">
+                          Think it through. Choose your answer in the activity guide to reveal
+                          your result.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="math-workspace">
+                      <MathGraph values={mathValues} />
+                    </div>
+                  )}
                 </>
               ) : lesson.kind === "vision" ? (
                 <>
@@ -1198,20 +1254,9 @@ export default function App() {
                   <p className="why">
                     {lesson.math?.theory ?? lessonDescription}
                   </p>
-                  <h5>Try this problem</h5>
-                  <p className="math-problem">{lesson.math?.problem ?? lessonDescription}</p>
-                  <MathVisualModel visual={lesson.math?.visual} />
-                  <h5>Python code to type</h5>
-                  <p className="why">
-                    Type this example into the editor, then enter your answer. Check with Python
-                    runs your code and compares its printed result with your answer.
-                  </p>
-                  <pre className="math-code-snippet">
-                    <code>{mathCodeSnippet}</code>
-                  </pre>
-                  <p className="why">
-                    Multiple blanks should be answered in order, separated by commas. Your
-                    program output also appears in Program Output and on the graph.
+                  <h5>1. {isGuidedMath ? "Solve and choose your prediction" : "Solve and make a prediction"}</h5>
+                  <p className={`math-problem${mathRunId ? " math-problem-result" : ""}`}>
+                    {lesson.math?.problem ?? lessonDescription}
                   </p>
                   <form
                     className="math-answer-form"
@@ -1220,30 +1265,70 @@ export default function App() {
                       checkMathAnswer();
                     }}
                   >
-                    <label htmlFor="math-answer">Your answer</label>
-                    <div className="math-answer-controls">
-                      <input
-                        id="math-answer"
-                        type="text"
-                        inputMode="decimal"
-                        autoComplete="off"
-                        placeholder="Type your answer"
-                        value={mathAnswer}
-                        onChange={(event) => {
-                          setMathAnswer(event.target.value);
-                          setMathAnswerFeedback(null);
-                        }}
-                      />
-                      <button type="submit" disabled={running}>
-                        Check with Python
-                      </button>
-                    </div>
-                    {lesson.math?.problem.includes("____") &&
-                      lesson.math.problem.split("____").length > 2 && (
-                      <span className="math-answer-help">
-                        Enter answers in blank order, separated by commas.
-                      </span>
-                      )}
+                    {isGuidedMath ? (
+                      <>
+                        <span className="math-answer-label">Tap your answer</span>
+                        <div className="math-answer-choices" role="group" aria-label="Choose your answer">
+                          {(lesson.math?.choices ?? []).map((choice, index) => (
+                            <button
+                              className={`math-answer-choice${selectedMathChoice === index ? " selected" : ""}`}
+                              type="button"
+                              aria-pressed={selectedMathChoice === index}
+                              key={`${choice.label}-${index}`}
+                              onClick={() => {
+                                setSelectedMathChoice(index);
+                                setMathAnswerFeedback(null);
+                                setMathValues([]);
+                              }}
+                            >
+                              {choice.label}
+                            </button>
+                          ))}
+                        </div>
+                        <button className="math-check-button" type="submit">
+                          2. Check and animate
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <label htmlFor="math-answer">Your prediction</label>
+                        <div className="math-answer-controls">
+                          <input
+                            id="math-answer"
+                            type="text"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            placeholder="Type your answer"
+                            value={mathAnswer}
+                            onChange={(event) => {
+                              setMathAnswer(event.target.value);
+                              setMathAnswerFeedback(null);
+                            }}
+                          />
+                        </div>
+                        {lesson.math?.problem.includes("____") &&
+                          lesson.math.problem.split("____").length > 2 && (
+                          <span className="math-answer-help">
+                            Enter answers in blank order, separated by commas.
+                          </span>
+                          )}
+                        <h5>2. Type the Python code in the editor</h5>
+                        <p className="why">
+                          Use the code editor beside this guide. Type these lines, then run the program
+                          to see what your code calculates.
+                        </p>
+                        <pre className="math-code-snippet">
+                          <code>{mathCodeSnippet}</code>
+                        </pre>
+                        <p className="why">
+                          The visual result is built from the numbers your program actually prints.
+                          Program Output and the graph update from the same run.
+                        </p>
+                        <button className="math-check-button" type="submit" disabled={running}>
+                          3. Run code and check prediction
+                        </button>
+                      </>
+                    )}
                     {mathAnswerFeedback && (
                       <p
                         className={`math-answer-feedback ${mathAnswerFeedback}`}
@@ -1251,13 +1336,28 @@ export default function App() {
                         aria-live="polite"
                       >
                         {mathAnswerFeedback === "correct"
-                          ? "Correct — your answer matches the result of your Python program."
+                          ? isGuidedMath
+                            ? "That's right! Your answer is coming to life."
+                            : "Correct — your answer matches the result of your Python program."
                           : mathAnswerFeedback === "incorrect"
-                            ? "Not quite. Review the lesson theory or adjust your Python calculation, then try again."
+                            ? isGuidedMath
+                              ? "Not quite. Look at the question and try another answer."
+                              : "Not quite. Review the lesson theory or adjust your Python calculation, then try again."
                             : mathAnswerFeedback === "invalid"
-                              ? "Enter a number for each blank. Separate multiple answers with commas."
-                              : "Your program must run successfully and print numeric results before the answer can be checked."}
+                              ? isGuidedMath
+                                ? "Choose one of the answer cards first."
+                                : "Enter a number for each blank. Separate multiple answers with commas."
+                              : mathAnswerFeedback === "configuration-error"
+                                ? "This activity is missing its answer key. Please let a teacher know."
+                                : "Your program must run successfully and print numeric results before the answer can be checked."}
                       </p>
+                    )}
+                    {!isGuidedMath && (
+                      <MathVisualModel
+                        key={`${lesson.id}:${mathRunId}`}
+                        visual={lesson.math?.visual}
+                        values={mathValues}
+                      />
                     )}
                   </form>
                   {lesson.source && <p className="lesson-source">{lesson.source}</p>}
@@ -1293,7 +1393,7 @@ export default function App() {
               )}
             </div>
 
-            <div className="editor">
+            {!isGuidedMath && <div className="editor">
               <div className="panel-label editor-bar">
                 <span>
                   {lesson.kind === "math"
@@ -1380,13 +1480,17 @@ export default function App() {
                   <pre className="companion-code">{lesson.arduinoSketch}</pre>
                 </div>
               )}
-            </div>
+            </div>}
           </section>
 
           <footer className="console">
             <div className="console-pane">
               <p className="panel-label">
-                {lesson.kind === "math" ? "Program Output" : t("serialOutput")}
+                {isGuidedMath
+                  ? "Activity"
+                  : lesson.kind === "math"
+                    ? "Program Output"
+                    : t("serialOutput")}
                 {running && <span className="live"> ● {t("running")}</span>}
               </p>
               <pre>
@@ -1394,7 +1498,11 @@ export default function App() {
                   ? serial.join("\n")
                   : running
                     ? t("sketchRunning")
-                    : `${lesson.output.initial}\n${lesson.output.status}`}
+                    : isGuidedMath
+                      ? mathAnswerFeedback === "correct"
+                        ? "You solved it! See your answer take shape in the activity."
+                        : "Choose an answer to reveal the animated result."
+                      : `${lesson.output.initial}\n${lesson.output.status}`}
               </pre>
             </div>
             <div className="console-pane diagnostics">

@@ -6994,11 +6994,11 @@
       "id": 701,
       "phase": "math_k2",
       "title": "Count the Collection",
-      "description": "A number tells how many objects are in a collection. Change the object count, add the print statement, and run the program to check the result.",
+      "description": "Count a collection carefully and choose the numeral that tells how many objects there are.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "A number can tell how many objects are in a group. A Python variable stores that count, and print() shows the value.",
+        "theory": "A number tells how many objects are in a group. Count each object once, then say how many there are altogether.",
         "problem": "There are 8 objects. How many objects are there? 8 = ____",
         "visual": {
           "kind": "count",
@@ -7006,7 +7006,36 @@
             8
           ],
           "unit": "objects"
-        }
+        },
+        "answer": [
+          8
+        ],
+        "choices": [
+          {
+            "label": "6 objects",
+            "values": [
+              6
+            ]
+          },
+          {
+            "label": "7 objects",
+            "values": [
+              7
+            ]
+          },
+          {
+            "label": "8 objects",
+            "values": [
+              8
+            ]
+          },
+          {
+            "label": "9 objects",
+            "values": [
+              9
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {
@@ -7030,11 +7059,11 @@
       "id": 702,
       "phase": "math_k2",
       "title": "Add to Find the Total",
-      "description": "Addition combines two amounts. Change the amounts, add a print statement that adds them, then run the code to see the total.",
+      "description": "Join two groups and find how many objects there are altogether.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "Addition combines groups. The plus sign (+) adds the two amounts to find how many there are altogether.",
+        "theory": "Addition joins groups together. Count the first group, then count on through the second group to find the total.",
         "problem": "A group of 8 objects joins a group of 5. How many altogether? 8 + 5 = ____",
         "visual": {
           "kind": "combine",
@@ -7043,7 +7072,36 @@
             5
           ],
           "unit": "objects"
-        }
+        },
+        "answer": [
+          13
+        ],
+        "choices": [
+          {
+            "label": "11 objects",
+            "values": [
+              11
+            ]
+          },
+          {
+            "label": "12 objects",
+            "values": [
+              12
+            ]
+          },
+          {
+            "label": "13 objects",
+            "values": [
+              13
+            ]
+          },
+          {
+            "label": "14 objects",
+            "values": [
+              14
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {
@@ -7067,11 +7125,11 @@
       "id": 703,
       "phase": "math_k2",
       "title": "Subtract to Compare",
-      "description": "Subtraction can show how many more one group has than another. Change the amounts and print the difference.",
+      "description": "Compare two groups and find how many more objects are in the larger group.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "Subtraction compares amounts or finds what remains. Subtract the smaller group from the larger group to find the difference.",
+        "theory": "To find how many more, match objects from each group. Count the ones left unmatched in the larger group.",
         "problem": "There are 14 red counters and 6 blue counters. How many more red counters? 14 - 6 = ____",
         "visual": {
           "kind": "compare",
@@ -7080,7 +7138,36 @@
             6
           ],
           "unit": "counters"
-        }
+        },
+        "answer": [
+          8
+        ],
+        "choices": [
+          {
+            "label": "6 counters",
+            "values": [
+              6
+            ]
+          },
+          {
+            "label": "7 counters",
+            "values": [
+              7
+            ]
+          },
+          {
+            "label": "8 counters",
+            "values": [
+              8
+            ]
+          },
+          {
+            "label": "9 counters",
+            "values": [
+              9
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {
@@ -7104,18 +7191,52 @@
       "id": 704,
       "phase": "math_k2",
       "title": "Build a Number with Tens and Ones",
-      "description": "A two-digit number is made of tens and ones. Use whole-number division and remainder to split the number 34, then try another number.",
+      "description": "Explore how bundles of ten and single objects make a two-digit number.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "Place value tells what each digit means. Whole-number division (//) counts full groups of ten; remainder (%) finds the ones left over.",
+        "theory": "Ten ones can be bundled as one ten. In 34, there are 3 bundles of ten and 4 single ones.",
         "problem": "Split 34 into tens and ones: 34 = ____ tens + ____ ones",
         "visual": {
           "kind": "place-value",
           "values": [
             34
           ]
-        }
+        },
+        "answer": [
+          3,
+          4
+        ],
+        "choices": [
+          {
+            "label": "2 tens and 4 ones",
+            "values": [
+              2,
+              4
+            ]
+          },
+          {
+            "label": "3 tens and 4 ones",
+            "values": [
+              3,
+              4
+            ]
+          },
+          {
+            "label": "3 tens and 3 ones",
+            "values": [
+              3,
+              3
+            ]
+          },
+          {
+            "label": "4 tens and 3 ones",
+            "values": [
+              4,
+              3
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {
@@ -7141,11 +7262,11 @@
       "id": 705,
       "phase": "math_k2",
       "title": "Make Equal Groups",
-      "description": "Equal groups can be counted by multiplication. Change the number of groups or objects in each group, then print the total.",
+      "description": "Make equal groups and find how many objects there are in all.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "Multiplication is a quick way to add equal-sized groups. Multiply the number of groups by the number in each group.",
+        "theory": "Equal groups have the same number of objects. Count each group, or count on by the same amount for every group.",
         "problem": "There are 3 groups with 4 objects in each. How many objects total? 3 × 4 = ____",
         "visual": {
           "kind": "groups",
@@ -7154,7 +7275,36 @@
             4
           ],
           "unit": "objects"
-        }
+        },
+        "answer": [
+          12
+        ],
+        "choices": [
+          {
+            "label": "10 objects",
+            "values": [
+              10
+            ]
+          },
+          {
+            "label": "11 objects",
+            "values": [
+              11
+            ]
+          },
+          {
+            "label": "12 objects",
+            "values": [
+              12
+            ]
+          },
+          {
+            "label": "13 objects",
+            "values": [
+              13
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {
@@ -7178,11 +7328,11 @@
       "id": 706,
       "phase": "math_k2",
       "title": "Compare Two Lengths",
-      "description": "Measurements use units so lengths can be compared fairly. Both ribbons are measured in centimetres; print how much longer the first ribbon is.",
+      "description": "Compare two ribbons measured in centimetres and find how much longer one ribbon is.",
       "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; mathematics activities authored by Synapsis.",
       "kind": "math",
       "math": {
-        "theory": "Measurements need units. When lengths use the same unit, subtract the shorter length from the longer length to compare them.",
+        "theory": "Line up the ends of two lengths. The part that extends past the shorter length shows how much longer it is.",
         "problem": "A 12 cm ribbon and a 7 cm ribbon differ by how many centimetres? 12 - 7 = ____ cm",
         "visual": {
           "kind": "length",
@@ -7191,7 +7341,36 @@
             7
           ],
           "unit": "cm"
-        }
+        },
+        "answer": [
+          5
+        ],
+        "choices": [
+          {
+            "label": "3 cm",
+            "values": [
+              3
+            ]
+          },
+          {
+            "label": "4 cm",
+            "values": [
+              4
+            ]
+          },
+          {
+            "label": "5 cm",
+            "values": [
+              5
+            ]
+          },
+          {
+            "label": "6 cm",
+            "values": [
+              6
+            ]
+          }
+        ]
       },
       "featuredComponent": "math",
       "circuit": {

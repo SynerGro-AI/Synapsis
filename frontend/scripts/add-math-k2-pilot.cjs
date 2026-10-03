@@ -111,9 +111,16 @@ const lessons = [
   {
     id: 701,
     title: "Count the Collection",
-    description: "A number tells how many objects are in a collection. Change the object count, add the print statement, and run the program to check the result.",
-    theory: "A number can tell how many objects are in a group. A Python variable stores that count, and print() shows the value.",
+    description: "Count a collection carefully and choose the numeral that tells how many objects there are.",
+    theory: "A number tells how many objects are in a group. Count each object once, then say how many there are altogether.",
     problem: "There are 8 objects. How many objects are there? 8 = ____",
+    answer: [8],
+    choices: [
+      { label: "6 objects", values: [6] },
+      { label: "7 objects", values: [7] },
+      { label: "8 objects", values: [8] },
+      { label: "9 objects", values: [9] },
+    ],
     visual: { kind: "count", values: [8], unit: "objects" },
     starter: "objects = 8\n# Add a print statement to show how many objects there are.\n",
     hints: ["print(objects)"],
@@ -121,9 +128,16 @@ const lessons = [
   {
     id: 702,
     title: "Add to Find the Total",
-    description: "Addition combines two amounts. Change the amounts, add a print statement that adds them, then run the code to see the total.",
-    theory: "Addition combines groups. The plus sign (+) adds the two amounts to find how many there are altogether.",
+    description: "Join two groups and find how many objects there are altogether.",
+    theory: "Addition joins groups together. Count the first group, then count on through the second group to find the total.",
     problem: "A group of 8 objects joins a group of 5. How many altogether? 8 + 5 = ____",
+    answer: [13],
+    choices: [
+      { label: "11 objects", values: [11] },
+      { label: "12 objects", values: [12] },
+      { label: "13 objects", values: [13] },
+      { label: "14 objects", values: [14] },
+    ],
     visual: { kind: "combine", values: [8, 5], unit: "objects" },
     starter: "first_group = 8\nmore_objects = 5\n# Add a print statement to find the total.\n",
     hints: ["print(first_group + more_objects)"],
@@ -131,9 +145,16 @@ const lessons = [
   {
     id: 703,
     title: "Subtract to Compare",
-    description: "Subtraction can show how many more one group has than another. Change the amounts and print the difference.",
-    theory: "Subtraction compares amounts or finds what remains. Subtract the smaller group from the larger group to find the difference.",
+    description: "Compare two groups and find how many more objects are in the larger group.",
+    theory: "To find how many more, match objects from each group. Count the ones left unmatched in the larger group.",
     problem: "There are 14 red counters and 6 blue counters. How many more red counters? 14 - 6 = ____",
+    answer: [8],
+    choices: [
+      { label: "6 counters", values: [6] },
+      { label: "7 counters", values: [7] },
+      { label: "8 counters", values: [8] },
+      { label: "9 counters", values: [9] },
+    ],
     visual: { kind: "compare", values: [14, 6], unit: "counters" },
     starter: "red_counters = 14\nblue_counters = 6\n# Print how many more red counters there are.\n",
     hints: ["print(red_counters - blue_counters)"],
@@ -141,9 +162,16 @@ const lessons = [
   {
     id: 704,
     title: "Build a Number with Tens and Ones",
-    description: "A two-digit number is made of tens and ones. Use whole-number division and remainder to split the number 34, then try another number.",
-    theory: "Place value tells what each digit means. Whole-number division (//) counts full groups of ten; remainder (%) finds the ones left over.",
+    description: "Explore how bundles of ten and single objects make a two-digit number.",
+    theory: "Ten ones can be bundled as one ten. In 34, there are 3 bundles of ten and 4 single ones.",
     problem: "Split 34 into tens and ones: 34 = ____ tens + ____ ones",
+    answer: [3, 4],
+    choices: [
+      { label: "2 tens and 4 ones", values: [2, 4] },
+      { label: "3 tens and 4 ones", values: [3, 4] },
+      { label: "3 tens and 3 ones", values: [3, 3] },
+      { label: "4 tens and 3 ones", values: [4, 3] },
+    ],
     visual: { kind: "place-value", values: [34] },
     starter: "number = 34\n# Find the number of tens and ones, then print both.\n",
     hints: ["tens = number // 10", "ones = number % 10", "print(tens, ones)"],
@@ -151,9 +179,16 @@ const lessons = [
   {
     id: 705,
     title: "Make Equal Groups",
-    description: "Equal groups can be counted by multiplication. Change the number of groups or objects in each group, then print the total.",
-    theory: "Multiplication is a quick way to add equal-sized groups. Multiply the number of groups by the number in each group.",
+    description: "Make equal groups and find how many objects there are in all.",
+    theory: "Equal groups have the same number of objects. Count each group, or count on by the same amount for every group.",
     problem: "There are 3 groups with 4 objects in each. How many objects total? 3 × 4 = ____",
+    answer: [12],
+    choices: [
+      { label: "10 objects", values: [10] },
+      { label: "11 objects", values: [11] },
+      { label: "12 objects", values: [12] },
+      { label: "13 objects", values: [13] },
+    ],
     visual: { kind: "groups", values: [3, 4], unit: "objects" },
     starter: "groups = 3\nobjects_in_each_group = 4\n# Print the total number of objects.\n",
     hints: ["print(groups * objects_in_each_group)"],
@@ -161,9 +196,16 @@ const lessons = [
   {
     id: 706,
     title: "Compare Two Lengths",
-    description: "Measurements use units so lengths can be compared fairly. Both ribbons are measured in centimetres; print how much longer the first ribbon is.",
-    theory: "Measurements need units. When lengths use the same unit, subtract the shorter length from the longer length to compare them.",
+    description: "Compare two ribbons measured in centimetres and find how much longer one ribbon is.",
+    theory: "Line up the ends of two lengths. The part that extends past the shorter length shows how much longer it is.",
     problem: "A 12 cm ribbon and a 7 cm ribbon differ by how many centimetres? 12 - 7 = ____ cm",
+    answer: [5],
+    choices: [
+      { label: "3 cm", values: [3] },
+      { label: "4 cm", values: [4] },
+      { label: "5 cm", values: [5] },
+      { label: "6 cm", values: [6] },
+    ],
     visual: { kind: "length", values: [12, 7], unit: "cm" },
     starter: "first_ribbon_cm = 12\nsecond_ribbon_cm = 7\n# Print the difference in centimetres.\n",
     hints: ["print(first_ribbon_cm - second_ribbon_cm)"],
@@ -251,14 +293,19 @@ const lessons = [
       "print(mean)",
     ],
   },
-].map(({ id, title, description, theory, problem, visual, starter, hints }) => ({
+].map(({ id, title, description, theory, problem, answer, choices, visual, starter, hints }) => ({
   id,
   phase: id <= 706 ? "math_k2" : "math_3_5",
   title,
   description,
   source: credit,
   kind: "math",
-  math: { theory, problem, visual },
+  math: {
+    theory,
+    problem,
+    visual,
+    ...(answer ? { answer, choices } : {}),
+  },
   featuredComponent: "math",
   circuit: { palette: [], required: [], notes: "" },
   codeTemplate: { language: "python", starter },
@@ -288,6 +335,8 @@ data.lessons.sort((a, b) => a.id - b.id);
 for (const item of lessons) {
   if (!item.source.includes("Paul McWhorter") || !item.codeTemplate.starter.includes("\n"))
     throw new Error(`Invalid math lesson ${item.id}`);
+  if (item.phase === "math_k2" && (!item.math.answer || !item.math.choices?.length))
+    throw new Error(`Guided math lesson ${item.id} needs an answer and choices`);
 }
 const serialized = JSON.stringify(data, null, 2) + "\n";
 fs.writeFileSync(filePath, serialized);
