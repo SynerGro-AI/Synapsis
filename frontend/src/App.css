@@ -1325,11 +1325,12 @@
 .react-course-panels {
   display: grid;
   flex: 1;
-  min-height: 440px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 520px;
+  grid-template-columns: minmax(220px, .8fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
 }
 
+.react-guide-panel,
 .react-code-panel,
 .react-preview-panel {
   display: flex;
@@ -1340,6 +1341,68 @@
   border: 1px solid #343f4c;
   border-radius: 8px;
   background: #171b21;
+}
+
+.react-guide-panel {
+  overflow: auto;
+}
+
+.react-guide-content {
+  padding: 12px;
+  color: #c5d1de;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.react-guide-content h5 {
+  margin: 2px 0 7px;
+  color: #f0f4f8;
+  font-size: 13px;
+}
+
+.react-guide-content p {
+  margin: 0 0 14px;
+}
+
+.react-guide-content ol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
+.react-guide-content li {
+  padding-left: 2px;
+}
+
+.react-guide-content li p {
+  margin-bottom: 6px;
+}
+
+.react-guide-content pre {
+  margin: 0 0 6px;
+  padding: 9px;
+  overflow-x: auto;
+  border: 1px solid #3d4652;
+  border-radius: 6px;
+  background: #11161c;
+  color: #e8c98a;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.react-guide-content small {
+  display: block;
+  color: #9ba9b8;
+}
+
+.react-guide-content .react-guide-next {
+  margin: 0;
+  padding: 9px;
+  border-left: 2px solid #61dafb;
+  background: #1d252d;
 }
 
 .react-panel-bar {
@@ -1431,6 +1494,17 @@
   margin: 0;
 }
 
+@media (max-width: 1040px) {
+  .react-course-panels {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .react-guide-panel {
+    grid-column: 1 / -1;
+    max-height: 280px;
+  }
+}
+
 @media (max-width: 760px) {
   .react-course {
     padding: 10px;
@@ -1452,6 +1526,11 @@
 
   .react-course-panels {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .react-guide-panel {
+    grid-column: auto;
+    max-height: none;
   }
 
   .react-code-panel,

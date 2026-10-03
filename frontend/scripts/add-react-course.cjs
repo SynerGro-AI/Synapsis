@@ -29,14 +29,14 @@ const phase = {
 };
 const source = "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.";
 const circuit = { palette: [], required: [], notes: "" };
-const lesson = (id, title, description, expectedText, starter, hints) => ({
+const lesson = (id, title, description, expectedText, starter, hints, codeSteps) => ({
   id,
   phase: "react_foundations",
   title,
   description,
   source,
   kind: "react",
-  react: { expectedText },
+  react: { expectedText, codeSteps },
   featuredComponent: "terminal",
   circuit,
   codeTemplate: { language: "javascript", starter },
@@ -48,7 +48,7 @@ const lessons = [
   lesson(
     801,
     "Render Your First Component",
-    "Complete a React component and render a clear welcome heading in the preview.",
+    "A React component is a JavaScript function that describes part of a page. It returns JSX, which looks like HTML, and React turns that JSX into the visible interface.",
     "Hello from Synapsis",
     `function App() {
   return (
@@ -59,11 +59,18 @@ const lessons = [
 }
 `,
     ["Return one JSX element from App.", "Try an h1 with the text Hello from Synapsis."],
+    [
+      {
+        instruction: "Inside the main element, add a heading that welcomes the learner.",
+        explanation: "JSX uses familiar tag-shaped elements. The h1 marks the page's main heading.",
+        code: "<h1>Hello from Synapsis</h1>",
+      },
+    ],
   ),
   lesson(
     802,
     "Shape a Page with JSX",
-    "Use semantic JSX elements to give a small page a heading and a helpful sentence.",
+    "JSX lets you describe the structure of a page with elements. Semantic tags such as main, h2, and p make the page easier to understand for both people and assistive technology.",
     "Build in small steps",
     `function App() {
   return (
@@ -74,11 +81,23 @@ const lessons = [
 }
 `,
     ["Use a main element for the page content.", "Place an h2 and a p inside main."],
+    [
+      {
+        instruction: "Add a section heading inside main.",
+        explanation: "An h2 introduces a section beneath the page's main heading.",
+        code: "<h2>Build in small steps</h2>",
+      },
+      {
+        instruction: "Under the heading, add one sentence in a paragraph.",
+        explanation: "A p element groups a short piece of readable text.",
+        code: "<p>Each element adds useful structure.</p>",
+      },
+    ],
   ),
   lesson(
     803,
     "Reuse a Component with Props",
-    "Pass a name into a reusable Greeting component and render it in the app.",
+    "A component can be reused with different information instead of hard-coding every copy. Props are named values passed to a component, like inputs passed to a function.",
     "Trail Maker",
     `function Greeting({ name }) {
   return <p>Welcome, {name}!</p>;
@@ -93,11 +112,18 @@ function App() {
 }
 `,
     ["Give Greeting a name prop.", "Render <Greeting name=\"Trail Maker\" /> inside App."],
+    [
+      {
+        instruction: "Inside App's main element, render Greeting with a name prop.",
+        explanation: "The name prop supplies this use of Greeting with the text it should display.",
+        code: '<Greeting name="Trail Maker" />',
+      },
+    ],
   ),
   lesson(
     804,
     "Update State with a Click",
-    "Use useState and a button event so the preview changes from zero to one when clicked.",
+    "React state remembers a value between renders. useState gives you the current value and a setter; calling the setter updates the screen. An onClick event connects that update to a button press.",
     "Count: 1",
     `function App() {
   const [count, setCount] = React.useState(0);
@@ -111,11 +137,18 @@ function App() {
 }
 `,
     ["Add a button with an onClick handler.", "Call setCount(count + 1) when the button is clicked."],
+    [
+      {
+        instruction: "Add a button that calls the setter to increase the count.",
+        explanation: "The click handler uses the current count to calculate and display the next value.",
+        code: '<button onClick={() => setCount(count + 1)}>Add one</button>',
+      },
+    ],
   ),
   lesson(
     805,
     "Render a List from Data",
-    "Turn an array of small activity names into a semantic list with map.",
+    "When data is stored in an array, JavaScript's map method can turn each value into a JSX element. A key helps React keep track of each item when the list changes.",
     "Test",
     `function App() {
   const activities = ["Draw", "Build", "Test"];
@@ -129,11 +162,20 @@ function App() {
 }
 `,
     ["Map over activities.", "Give each li a key and show its activity text."],
+    [
+      {
+        instruction: "Inside a ul element, map each activity to a list item.",
+        explanation: "Each pass through map creates one li. The key gives React a stable identity for each item.",
+        code: `{activities.map((activity) => (
+  <li key={activity}>{activity}</li>
+))}`,
+      },
+    ],
   ),
   lesson(
     806,
     "Build a Tiny Reading List",
-    "Use controlled input, state, and a submit event to add a title to a reading list.",
+    "A controlled input gets its value from React state and updates that state when the learner types. A form submit handler can then save the value and render it as a new result.",
     "Added: Green Trails",
     `function App() {
   const [title, setTitle] = React.useState("");
@@ -148,18 +190,35 @@ function App() {
     <main>
       <h2>Reading list</h2>
       <form onSubmit={addTitle}>
-        <label>
-          Book title
-          <input value={title} onChange={(event) => setTitle(event.target.value)} />
-        </label>
-        <button type="submit">Add title</button>
+        {/* Add a labeled text input connected to title. */}
+        {/* Add a submit button. */}
       </form>
-      {savedTitle && <p>Added: {savedTitle}</p>}
+      {/* Show the saved title after submission. */}
     </main>
   );
 }
 `,
     ["Keep the input connected to title with value and onChange.", "Try Green Trails, then submit the form."],
+    [
+      {
+        instruction: "Replace the first comment with a labeled input connected to the title state.",
+        explanation: "The value prop displays state, and onChange updates it whenever the learner types.",
+        code: `<label>
+  Book title
+  <input value={title} onChange={(event) => setTitle(event.target.value)} />
+</label>`,
+      },
+      {
+        instruction: "Replace the next comment with a button that submits the form.",
+        explanation: "A submit button runs the existing addTitle handler, which saves the current input.",
+        code: '<button type="submit">Add title</button>',
+      },
+      {
+        instruction: "Replace the last comment with a message that appears after a title is saved.",
+        explanation: "This conditional JSX only renders the paragraph when savedTitle has a value.",
+        code: "{savedTitle && <p>Added: {savedTitle}</p>}",
+      },
+    ],
   ),
 ];
 
@@ -177,7 +236,12 @@ data.phases.sort((a, b) =>
 data.lessons.sort((a, b) => a.id - b.id);
 
 for (const item of lessons) {
-  if (item.kind !== "react" || !item.react.expectedText || !item.source.includes("Paul McWhorter"))
+  if (
+    item.kind !== "react" ||
+    !item.react.expectedText ||
+    !item.react.codeSteps.length ||
+    !item.source.includes("Paul McWhorter")
+  )
     throw new Error(`Invalid React lesson ${item.id}`);
 }
 

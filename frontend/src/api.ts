@@ -57,6 +57,11 @@ export interface Lesson {
   };
   react?: {
     expectedText: string;
+    codeSteps: {
+      instruction: string;
+      explanation: string;
+      code: string;
+    }[];
   };
   math?: {
     theory: string;

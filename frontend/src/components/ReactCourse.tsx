@@ -171,7 +171,6 @@ export default function ReactCourse({
         <div>
           <span className="panel-label">React Studio</span>
           <h4>{lesson.title}</h4>
-          <p>{lesson.description}</p>
         </div>
         {completed && <span className="lesson-done">✓ completed</span>}
       </header>
@@ -180,6 +179,26 @@ export default function ReactCourse({
         <progress value={passed ? 1 : 0} max={1} aria-label="Lesson progress" />
       </div>
       <div className="react-course-panels">
+        <section className="react-guide-panel" aria-label="Lesson instructions">
+          <div className="react-panel-bar"><strong>Lesson guide</strong></div>
+          <div className="react-guide-content">
+            <h5>What you’ll learn</h5>
+            <p>{lesson.description}</p>
+            <h5>Code to type</h5>
+            <ol>
+              {(lesson.react?.codeSteps ?? []).map((step, index) => (
+                <li key={`${step.instruction}-${index}`}>
+                  <p>{step.instruction}</p>
+                  <pre><code>{step.code}</code></pre>
+                  <small>{step.explanation}</small>
+                </li>
+              ))}
+            </ol>
+            <p className="react-guide-next">
+              Type the code in App.jsx, then choose <strong>Run app</strong> to see what it does.
+            </p>
+          </div>
+        </section>
         <section className="react-code-panel">
           <div className="react-panel-bar">
             <strong>App.jsx</strong>
