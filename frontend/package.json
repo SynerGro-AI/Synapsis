@@ -5,18 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/build-react-runtime.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "prebuild": "node scripts/copy-data.mjs"
+    "prebuild": "node scripts/copy-data.mjs && node scripts/build-react-runtime.mjs"
   },
   "dependencies": {
+    "@babel/standalone": "^7.28.4",
     "@wokwi/elements": "^1.9.2",
     "monaco-editor": "^0.56.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/babel__standalone": "^7.1.9",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

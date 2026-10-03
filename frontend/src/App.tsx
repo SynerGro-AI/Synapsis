@@ -7,6 +7,7 @@ import type { CodeEditorHandle } from "./components/CodeEditor";
 import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
+import ReactCourse from "./components/ReactCourse";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import MathGraph from "./components/MathGraph";
 import MathVisualModel from "./components/MathVisualModel";
@@ -286,7 +287,7 @@ export default function App() {
     [activeTrack, data.lessons, phaseTrack],
   );
   const courseLessonNumbers = useMemo(() => {
-    if (!["math", "science", "language_arts"].includes(activeTrack)) {
+    if (!["math", "science", "language_arts", "react"].includes(activeTrack)) {
       return new Map<number, number>();
     }
     return new Map(
@@ -1041,6 +1042,31 @@ export default function App() {
             )}
             <TerminalCourse
               lesson={displayLesson}
+              completed={completed}
+              onComplete={completeTerminalLesson}
+              restoreKey={`${lesson.id}:${restoreCount}`}
+            />
+          </main>
+        ) : lesson.kind === "react" ? (
+          <main className="main react-main">
+            <header className="topbar">
+              <button
+                className="nav-toggle"
+                onClick={() => setNavOpen(true)}
+                aria-label={t("openLessons")}
+              >
+                ☰
+              </button>
+              <h3>
+                {t("lesson")} {displayedLessonNumber} — {lessonTitle}
+              </h3>
+              {completed && <span className="lesson-done">✓ {t("completed")}</span>}
+              {offline && <span className="offline">{t("backendOffline")}</span>}
+            </header>
+            <ReactCourse
+              key={`${lesson.id}:${restoreCount}`}
+              lesson={displayLesson}
+              displayedLessonNumber={displayedLessonNumber}
               completed={completed}
               onComplete={completeTerminalLesson}
               restoreKey={`${lesson.id}:${restoreCount}`}

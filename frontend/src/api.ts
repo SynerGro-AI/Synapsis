@@ -41,8 +41,9 @@ export interface Lesson {
   /** Defaults to "arduino" when absent. "terminal" = shell course; "python" = Pi GPIO;
    *  "serial" = a Python program bridging over a serial port to a running Arduino sketch;
    *  "vision" = a Python (OpenCV/cv2) program that reads real image pixels;
-   *  "math" = Python arithmetic in a circuit-free workspace. */
-  kind?: "arduino" | "terminal" | "python" | "serial" | "vision" | "math";
+   *  "math" = Python arithmetic in a circuit-free workspace; "react" = JSX in an isolated
+   *  React preview iframe. */
+  kind?: "arduino" | "terminal" | "python" | "serial" | "vision" | "math" | "react";
   /** For "serial" lessons: the fixed companion Arduino sketch (shown read-only,
    *  "pre-flashed" and run in the background while the learner types Python). */
   arduinoSketch?: string;
@@ -53,6 +54,9 @@ export interface Lesson {
     scene: "photo" | "ball" | "led";
     /** For scene "photo": the file under public/vision/ that cv2.imread() decodes. */
     sampleImage?: string;
+  };
+  react?: {
+    expectedText: string;
   };
   math?: {
     theory: string;

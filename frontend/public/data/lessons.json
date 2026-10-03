@@ -88,6 +88,13 @@
       "icon": "∫",
       "blurb": "A standards-neutral progression from precalculus foundations through differential, integral, and multivariable calculus.",
       "accent": "#80a9ff"
+    },
+    {
+      "id": "react",
+      "name": "React App Building",
+      "icon": "⚛",
+      "blurb": "Build original interactive web apps with React components, JSX, props, state, and events.",
+      "accent": "#61dafb"
     }
   ],
   "phases": [
@@ -774,6 +781,20 @@
       "status": "coming-soon",
       "prerequisites": [
         "calculus_integral"
+      ]
+    },
+    {
+      "id": "react_foundations",
+      "track": "react",
+      "name": "React Foundations",
+      "range": "1-6",
+      "concepts": [
+        "Components and rendered output",
+        "JSX and semantic structure",
+        "Props and reusable UI",
+        "State and events",
+        "Rendering collections",
+        "Forms and a small app"
       ]
     }
   ],
@@ -7619,6 +7640,180 @@
       "output": {
         "initial": "Run your math program to see the result.",
         "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 801,
+      "phase": "react_foundations",
+      "title": "Render Your First Component",
+      "description": "Complete a React component and render a clear welcome heading in the preview.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Hello from Synapsis"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  return (\n    <main>\n      {/* Add a heading that welcomes the learner. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Return one JSX element from App.",
+        "Try an h1 with the text Hello from Synapsis."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 802,
+      "phase": "react_foundations",
+      "title": "Shape a Page with JSX",
+      "description": "Use semantic JSX elements to give a small page a heading and a helpful sentence.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Build in small steps"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  return (\n    <main>\n      {/* Add a heading and a short paragraph. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Use a main element for the page content.",
+        "Place an h2 and a p inside main."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 803,
+      "phase": "react_foundations",
+      "title": "Reuse a Component with Props",
+      "description": "Pass a name into a reusable Greeting component and render it in the app.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Trail Maker"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function Greeting({ name }) {\n  return <p>Welcome, {name}!</p>;\n}\n\nfunction App() {\n  return (\n    <main>\n      {/* Render Greeting with the name Trail Maker. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Give Greeting a name prop.",
+        "Render <Greeting name=\"Trail Maker\" /> inside App."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 804,
+      "phase": "react_foundations",
+      "title": "Update State with a Click",
+      "description": "Use useState and a button event so the preview changes from zero to one when clicked.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Count: 1"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [count, setCount] = React.useState(0);\n\n  return (\n    <main>\n      <p>Count: {count}</p>\n      {/* Add a button that increases count by one. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Add a button with an onClick handler.",
+        "Call setCount(count + 1) when the button is clicked."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 805,
+      "phase": "react_foundations",
+      "title": "Render a List from Data",
+      "description": "Turn an array of small activity names into a semantic list with map.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Test"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const activities = [\"Draw\", \"Build\", \"Test\"];\n\n  return (\n    <main>\n      <h2>Workshop plan</h2>\n      {/* Use map to render an li for every activity. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Map over activities.",
+        "Give each li a key and show its activity text."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 806,
+      "phase": "react_foundations",
+      "title": "Build a Tiny Reading List",
+      "description": "Use controlled input, state, and a submit event to add a title to a reading list.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Added: Green Trails"
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [title, setTitle] = React.useState(\"\");\n  const [savedTitle, setSavedTitle] = React.useState(\"\");\n\n  function addTitle(event) {\n    event.preventDefault();\n    setSavedTitle(title);\n  }\n\n  return (\n    <main>\n      <h2>Reading list</h2>\n      <form onSubmit={addTitle}>\n        <label>\n          Book title\n          <input value={title} onChange={(event) => setTitle(event.target.value)} />\n        </label>\n        <button type=\"submit\">Add title</button>\n      </form>\n      {savedTitle && <p>Added: {savedTitle}</p>}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Keep the input connected to title with value and onChange.",
+        "Try Green Trails, then submit the form."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
       }
     }
   ]
