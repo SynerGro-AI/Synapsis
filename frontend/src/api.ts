@@ -43,7 +43,7 @@ export interface Lesson {
    *  "vision" = a Python (OpenCV/cv2) program that reads real image pixels;
    *  "math" = Python arithmetic in a circuit-free workspace; "react" = JSX in an isolated
    *  React preview iframe. */
-  kind?: "arduino" | "terminal" | "python" | "serial" | "vision" | "math" | "react";
+  kind?: "arduino" | "terminal" | "python" | "serial" | "vision" | "math" | "react" | "lab";
   /** For "serial" lessons: the fixed companion Arduino sketch (shown read-only,
    *  "pre-flashed" and run in the background while the learner types Python). */
   arduinoSketch?: string;
@@ -84,6 +84,13 @@ export interface Lesson {
       values: number[];
       unit?: string;
     };
+  };
+  /** For "lab" lessons: the interactive numerical-methods lab (offline math engine). */
+  lab?: {
+    /** Starting function expression, e.g. "x^2 - 2". The learner can change it. */
+    expression?: string;
+    /** Optional starting named variables, e.g. [{ name: "a", value: 1 }]. */
+    variables?: { name: string; value: number }[];
   };
   terminal?: {
     shell: string;

@@ -520,6 +520,19 @@
       ]
     },
     {
+      "id": "math_numerical",
+      "track": "math",
+      "name": "Numerical Methods Lab",
+      "range": "35",
+      "concepts": [
+        "Function graphing",
+        "Riemann integration",
+        "Numerical derivatives",
+        "Newton's method",
+        "Series convergence"
+      ]
+    },
+    {
       "id": "language_k2",
       "track": "language_arts",
       "name": "K–2: Early Literacy",
@@ -7927,6 +7940,38 @@
       "output": {
         "initial": "Run your math program to see the result.",
         "status": "Waiting for your Python..."
+      }
+    },
+    {
+      "id": 721,
+      "phase": "math_numerical",
+      "title": "Numerical Methods Lab",
+      "description": "A graphing calculator and numerical-methods workbench that runs entirely offline. Type any function of x, define your own variables, then graph it, estimate its integral with Riemann rectangles, find a numerical derivative, solve for a root with Newton's method, or sum a series — every result is computed live in your browser.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education context; numerical methods lab authored by Synapsis.",
+      "kind": "lab",
+      "lab": {
+        "expression": "x^2 - 2",
+        "variables": []
+      },
+      "featuredComponent": "math",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "text",
+        "starter": ""
+      },
+      "hints": [
+        "Try f(x) = sin(x) and graph it from -6 to 6.",
+        "Integrate x^2 from 0 to 4 — raise n and watch it approach 21.333.",
+        "Find a root of x^2 - 2 with Newton's method to see the square root of 2.",
+        "Sum (-1)^k/(2*k+1) for k = 0 to 500, then multiply by 4 to approach pi."
+      ],
+      "output": {
+        "initial": "The lab computes as you type.",
+        "status": "Offline numerical engine ready."
       }
     },
     {

@@ -8,6 +8,7 @@ import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import ReactCourse from "./components/ReactCourse";
+import NumericalLab from "./components/NumericalLab";
 import FeedbackWidget from "./components/FeedbackWidget";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import MathGraph from "./components/MathGraph";
@@ -1071,6 +1072,30 @@ export default function App() {
               completed={completed}
               onComplete={completeTerminalLesson}
               restoreKey={`${lesson.id}:${restoreCount}`}
+            />
+          </main>
+        ) : lesson.kind === "lab" ? (
+          <main className="main lab-main">
+            <header className="topbar">
+              <button
+                className="nav-toggle"
+                onClick={() => setNavOpen(true)}
+                aria-label={t("openLessons")}
+              >
+                ☰
+              </button>
+              <h3>
+                {t("lesson")} {displayedLessonNumber} — {lessonTitle}
+              </h3>
+              {completed && <span className="lesson-done">✓ {t("completed")}</span>}
+              {offline && <span className="offline">{t("backendOffline")}</span>}
+            </header>
+            <NumericalLab
+              key={`${lesson.id}:${restoreCount}`}
+              lesson={displayLesson}
+              displayedLessonNumber={displayedLessonNumber}
+              completed={completed}
+              onComplete={completeTerminalLesson}
             />
           </main>
         ) : (
