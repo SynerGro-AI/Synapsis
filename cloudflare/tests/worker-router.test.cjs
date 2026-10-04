@@ -107,3 +107,31 @@ test("logout remains a no-content response", async () => {
   const { response } = await send("/api/auth/logout", "POST");
   assert.equal(response.status, 204);
 });
+
+test("feedback accepts an anonymous POST and rejects other methods", async () => {
+  const env = createEnv();
+  const valid = await worker.fetch(
+    new Request("https://synapsis.school/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 5, comment: "Love it", context: "React App Building" }),
+    }),
+    env,
+  );
+  assert.equal(valid.status, 201);
+
+  const badEnv = createEnv();
+  const badRating = await worker.fetch(
+    new Request("https://synapsis.school/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: 9 }),
+    }),
+    badEnv,
+  );
+  assert.equal(badRating.status, 400);
+
+  const wrongMethod = await send("/api/feedback", "GET");
+  assert.equal(wrongMethod.response.status, 405);
+  assert.equal(wrongMethod.response.headers.get("Allow"), "POST");
+});

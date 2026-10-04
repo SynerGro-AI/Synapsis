@@ -2528,6 +2528,212 @@
   }
 }
 
+/* ---- Feedback widget (floating star rating) ---- */
+.feedback-widget {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.feedback-fab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border: 1px solid #e8a33d;
+  border-radius: 24px;
+  background: #e8a33d;
+  color: #1e1e1e;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px #0006;
+}
+
+.feedback-fab:hover {
+  background: #f5b95a;
+}
+
+.feedback-fab.active {
+  background: #1e1e1e;
+  color: #e8a33d;
+}
+
+.feedback-fab:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.feedback-card {
+  width: min(320px, calc(100vw - 36px));
+  padding: 14px;
+  border: 1px solid #3d4652;
+  border-radius: 12px;
+  background: #1b2027;
+  color: #e7edf4;
+  box-shadow: 0 10px 30px #0008;
+}
+
+.feedback-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.feedback-close {
+  border: 0;
+  background: transparent;
+  color: #9ba9b8;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.feedback-close:hover {
+  color: #e7edf4;
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.feedback-star {
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #46525f;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.1s ease, transform 0.1s ease;
+}
+
+.feedback-star:hover {
+  transform: scale(1.1);
+}
+
+.feedback-star.on {
+  color: #ffc24a;
+}
+
+.feedback-star:focus-visible {
+  outline: 2px solid #61dafb;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.feedback-star-label {
+  margin-left: 8px;
+  color: #9ba9b8;
+  font-size: 12px;
+}
+
+.feedback-comment-label {
+  font-size: 12px;
+  color: #c5d1de;
+}
+
+.feedback-comment-label span {
+  color: #8191a0;
+}
+
+.feedback-comment {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #3d4652;
+  border-radius: 7px;
+  background: #11161c;
+  color: #e7edf4;
+  font: inherit;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.feedback-comment:focus-visible {
+  outline: none;
+  border-color: #61dafb;
+}
+
+.feedback-submit {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: #198754;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.feedback-submit:hover {
+  background: #1e9d61;
+}
+
+.feedback-submit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.feedback-error {
+  margin: 0;
+  color: #ff9e9e;
+  font-size: 12px;
+}
+
+.feedback-thanks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feedback-thanks p {
+  margin: 0;
+  color: #85dfa6;
+  font-size: 13px;
+}
+
+.feedback-secondary {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border: 1px solid #425164;
+  border-radius: 6px;
+  background: #263343;
+  color: #d9f5ff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .feedback-widget {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .feedback-fab-text {
+    display: none;
+  }
+
+  .feedback-fab {
+    padding: 11px;
+    font-size: 18px;
+  }
+}
+
 /* ===================== Dev-Setup terminal course ===================== */
 .terminal-main {
   display: flex;

@@ -160,6 +160,7 @@ function allowedMethods(path: string): string[] | null {
     return ["GET", "HEAD"];
   if (path === "/api/auth/register" || path === "/api/auth/login" || path === "/api/auth/logout")
     return ["POST"];
+  if (path === "/api/feedback") return ["POST"];
   if (path === "/api/auth/me" || path === "/api/progress") return ["GET", "HEAD"];
   if (/^\/api\/progress\/\d+$/.test(path)) return ["PUT"];
   return null;
@@ -191,6 +192,17 @@ async function ensureSchema(env: Env): Promise<void> {
       circuit TEXT,
       updated_at TEXT NOT NULL,
       PRIMARY KEY (user_id, lesson_id)
+    )`,
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER REFERENCES users(id),
+      username TEXT,
+      rating INTEGER NOT NULL,
+      comment TEXT,
+      context TEXT,
+      created_at TEXT NOT NULL
     )`,
   ).run();
   schemaReady = true;
@@ -313,6 +325,37 @@ async function putProgress(
   return new Response(null, { status: 204 });
 }
 
+async function submitFeedback(
+  request: Request,
+  env: Env,
+  session: Session | null,
+): Promise<Response> {
+  const body = (await request.json().catch(() => ({}))) as {
+    rating?: number;
+    comment?: string;
+    context?: string;
+  };
+  const rating = Number(body.rating);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+    return error("Rating must be a whole number from 1 to 5", 400);
+  const comment = (body.comment ?? "").trim().slice(0, 1000);
+  const context = (body.context ?? "").trim().slice(0, 120);
+  await env.DB.prepare(
+    `INSERT INTO feedback (user_id, username, rating, comment, context, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+  )
+    .bind(
+      session?.id ?? null,
+      session?.username ?? null,
+      rating,
+      comment || null,
+      context || null,
+      new Date().toISOString(),
+    )
+    .run();
+  return json({ ok: true }, 201);
+}
+
 // ---------- router ----------
 
 export default {
@@ -341,6 +384,9 @@ export default {
     if (request.method === "POST" && path === "/api/auth/logout") return logout();
 
     const session = await readSession(env, request);
+    if (request.method === "POST" && path === "/api/feedback")
+      return submitFeedback(request, env, session);
+
     if (path === "/api/auth/me")
       return session ? json({ username: session.username }) : error("Not signed in", 401);
 

@@ -28,6 +28,15 @@ public static class Db
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (user_id, lesson_id)
             );
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER REFERENCES users(id),
+                username TEXT,
+                rating INTEGER NOT NULL,
+                comment TEXT,
+                context TEXT,
+                created_at TEXT NOT NULL
+            );
             """;
         cmd.ExecuteNonQuery();
 

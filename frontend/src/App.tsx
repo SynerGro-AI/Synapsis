@@ -8,6 +8,7 @@ import SchematicSymbol from "./components/SchematicSymbol";
 import TerminalCourse from "./components/TerminalCourse";
 import Transcript from "./components/Transcript";
 import ReactCourse from "./components/ReactCourse";
+import FeedbackWidget from "./components/FeedbackWidget";
 import VisionCanvas, { type VisionFrame } from "./components/VisionCanvas";
 import MathGraph from "./components/MathGraph";
 import MathVisualModel from "./components/MathVisualModel";
@@ -1556,6 +1557,13 @@ export default function App() {
         </main>
         )}
       </div>
+      <FeedbackWidget
+        context={
+          view === "transcript"
+            ? "transcript"
+            : `${activeTrackInfo?.name ?? activeTrack} · lesson ${displayedLessonNumber}`
+        }
+      />
     </div>
   );
 }

@@ -217,8 +217,45 @@ app.MapPut("/api/progress/{lessonId:int}", (int lessonId, ProgressUpdate update,
     return Results.NoContent();
 }).RequireAuthorization();
 
+// ---------- Feedback ----------
+
+app.MapPost("/api/feedback", (FeedbackInput input, ClaimsPrincipal user, HttpContext http) =>
+{
+    if (input.Rating < 1 || input.Rating > 5)
+        return Results.Json(
+            new { error = "Rating must be a whole number from 1 to 5" },
+            statusCode: 400);
+
+    var comment = input.Comment?.Trim();
+    if (comment is { Length: > 1000 }) comment = comment[..1000];
+    var context = input.Context?.Trim();
+    if (context is { Length: > 120 }) context = context[..120];
+
+    var signedIn = http.User.Identity?.IsAuthenticated == true;
+    long? userId = signedIn ? UserId(user) : null;
+    var username = signedIn ? http.User.Identity!.Name : null;
+
+    using var conn = Db.Open();
+    using var cmd = conn.CreateCommand();
+    cmd.CommandText = """
+        INSERT INTO feedback (user_id, username, rating, comment, context, created_at)
+        VALUES ($u, $n, $r, $c, $x, $t)
+        """;
+    cmd.Parameters.AddWithValue("$u", (object?)userId ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("$n", (object?)username ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("$r", input.Rating);
+    cmd.Parameters.AddWithValue("$c", string.IsNullOrEmpty(comment) ? DBNull.Value : comment);
+    cmd.Parameters.AddWithValue("$x", string.IsNullOrEmpty(context) ? DBNull.Value : context);
+    cmd.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("o"));
+    cmd.ExecuteNonQuery();
+
+    return Results.Json(new { ok = true }, statusCode: 201);
+});
+
 app.Run();
 
 record Credentials(string? Username, string? Password);
 
 record ProgressUpdate(bool Completed, string? Sketch, string? Circuit, bool Current);
+
+record FeedbackInput(int Rating, string? Comment, string? Context);
