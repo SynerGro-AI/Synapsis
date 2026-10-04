@@ -293,9 +293,81 @@ const lessons = [
       "print(mean)",
     ],
   },
+  {
+    id: 713,
+    title: "Vectors: The Dot Product",
+    description: "A vector stores several numbers at once. The dot product multiplies matching components and adds the results — a foundation of linear algebra.",
+    theory: "To find the dot product of two vectors, multiply their matching components and add every product. The result is one number that measures how strongly the vectors point the same way.",
+    problem: "Find the dot product of [2, 3, 4] and [5, 6, 7]: (2·5) + (3·6) + (4·7) = ____",
+    starter: "a = [2, 3, 4]\nb = [5, 6, 7]\ntotal = 0\n# Add each pair's product, then print the dot product.\n",
+    hints: ["for i in range(len(a)):", "    total = total + a[i] * b[i]", "print(total)"],
+  },
+  {
+    id: 714,
+    title: "A Converging Series",
+    description: "Adding 1 + 1/2 + 1/4 + ... creeps closer and closer to 2 but never passes it. Watch the running total converge on the graph.",
+    theory: "A geometric series adds terms that shrink by the same ratio each step. When each term is half the one before, the running total approaches a limit — here, 2.",
+    problem: "Print the running total after each of the first 5 terms: ____, ____, ____, ____, ____",
+    starter: "term = 1\ntotal = 0\n# Add each term to the total and print the running total five times.\n",
+    hints: ["for i in range(5):", "    total = total + term", "    print(total)", "    term = term / 2"],
+  },
+  {
+    id: 715,
+    title: "Model a Parabola",
+    description: "A function turns each input into an output. Sampling f(x) = x² across inputs traces the curve a graphing calculator would draw.",
+    theory: "Evaluating a function at many inputs produces points that outline its graph. For f(x) = x², outputs grow faster as x increases, forming a parabola.",
+    problem: "Evaluate f(x) = x² for x = 0, 1, 2, 3, 4, 5: ____, ____, ____, ____, ____, ____",
+    starter: "# Print f(x) = x*x for each whole number x from 0 to 5.\n",
+    hints: ["for x in range(6):", "    print(x * x)"],
+  },
+  {
+    id: 716,
+    title: "The Slope of a Curve",
+    description: "Calculus finds the slope of a curve at a single point by taking a tiny step. Estimate the slope of f(x) = x² at x = 3.",
+    theory: "The derivative is the slope of a function at a point. Approximate it with a tiny step h: (f(x+h) − f(x)) / h. As h shrinks, the estimate nears the exact slope.",
+    problem: "Estimate the slope of f(x) = x² at x = 3 using h = 0.001, rounded to 3 decimals: ____",
+    starter: "x = 3\nh = 0.001\n# Estimate the slope with (f(x+h)-f(x))/h and print it rounded to 3 decimals.\n",
+    hints: ["slope = ((x + h) * (x + h) - x * x) / h", "print(round(slope, 3))"],
+  },
+  {
+    id: 717,
+    title: "Area Under a Curve",
+    description: "Integration adds up thin rectangles to measure the area beneath a curve. Accumulate the area under f(x) = x² step by step.",
+    theory: "A Riemann sum approximates the area under a curve with rectangles. Each rectangle's area is its height f(x) times its width. Summing them estimates the integral.",
+    problem: "With width-1 rectangles of height x² at x = 0, 1, 2, 3, print the running area total: ____, ____, ____, ____",
+    starter: "area = 0\n# For x = 0, 1, 2, 3 add x*x*1 to the area and print the running total.\n",
+    hints: ["for x in range(4):", "    area = area + x * x * 1", "    print(area)"],
+  },
+  {
+    id: 718,
+    title: "Mean and Variance",
+    description: "Statistics summarize data. The mean is the balance point; the variance measures how spread out the values are.",
+    theory: "The mean is the sum of the values divided by their count. The variance is the mean of the squared differences from the mean — larger when the data spreads wider.",
+    problem: "For the data 4, 8, 6, 2, print the mean and then the variance: mean = ____, variance = ____",
+    starter: "data = [4, 8, 6, 2]\nn = len(data)\ntotal = 0\n# Print the mean, then the variance (mean of squared deviations).\n",
+    hints: ["mean = sum(data) / n", "for value in data:", "    total = total + (value - mean) ** 2", "print(mean, total / n)"],
+  },
+  {
+    id: 719,
+    title: "Counting Combinations",
+    description: "Discrete math counts possibilities. The number of ways to choose k items from n is built from factorials.",
+    theory: "A factorial n! multiplies every whole number from 1 to n. The number of ways to choose k items from n is n! / (k! · (n−k)!).",
+    problem: "How many ways can you choose 2 items from 5? 5! / (2! · 3!) = ____",
+    starter: "def factorial(n):\n    result = 1\n    for i in range(2, n + 1):\n        result = result * i\n    return result\nn = 5\nk = 2\n# Print n! / (k! * (n-k)!).\n",
+    hints: ["print(factorial(n) // (factorial(k) * factorial(n - k)))"],
+  },
+  {
+    id: 720,
+    title: "Find the Minimum",
+    description: "Optimization finds the input that makes a function smallest. Sample f(x) = (x−3)² + 2 and see where it bottoms out.",
+    theory: "Many problems reduce to minimizing a function. Sampling f(x) across inputs reveals its lowest point — the vertex of this parabola is its minimum value.",
+    problem: "Print f(x) = (x−3)² + 2 for x = 1, 2, 3, 4, 5: ____, ____, ____, ____, ____",
+    starter: "# Print f(x) = (x-3)**2 + 2 for each whole number x from 1 to 5.\n",
+    hints: ["for x in range(1, 6):", "    print((x - 3) ** 2 + 2)"],
+  },
 ].map(({ id, title, description, theory, problem, answer, choices, visual, starter, hints }) => ({
   id,
-  phase: id <= 706 ? "math_k2" : "math_3_5",
+  phase: id <= 706 ? "math_k2" : id <= 712 ? "math_3_5" : "math_university",
   title,
   description,
   source: credit,
@@ -323,7 +395,10 @@ data.phases.push(...phases);
 const math35Phase = data.phases.find((item) => item.id === "math_3_5");
 if (!math35Phase) throw new Error("Missing Math Grades 3-5 phase");
 delete math35Phase.status;
-data.lessons = data.lessons.filter((item) => item.id < 701 || item.id > 712);
+const mathUniversityPhase = data.phases.find((item) => item.id === "math_university");
+if (!mathUniversityPhase) throw new Error("Missing Math University phase");
+delete mathUniversityPhase.status;
+data.lessons = data.lessons.filter((item) => item.id < 701 || item.id > 720);
 data.lessons.push(...lessons);
 data.phases.sort((a, b) => {
   const trackOrder = data.tracks.findIndex((track) => track.id === a.track) -
@@ -341,4 +416,4 @@ for (const item of lessons) {
 const serialized = JSON.stringify(data, null, 2) + "\n";
 fs.writeFileSync(filePath, serialized);
 fs.writeFileSync(path.join(BE, "lessons.json"), serialized);
-console.log("Published K-University curriculum blueprint and Math K-5 lessons 701-712.");
+console.log("Published K-University curriculum blueprint and Math lessons 701-720 (K-5 + University).");
