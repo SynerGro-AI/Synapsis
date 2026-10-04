@@ -135,3 +135,23 @@ test("feedback accepts an anonymous POST and rejects other methods", async () =>
   assert.equal(wrongMethod.response.status, 405);
   assert.equal(wrongMethod.response.headers.get("Allow"), "POST");
 });
+
+test("feedback export is disabled without an admin, and gated when enabled", async () => {
+  // No ADMIN_USERNAME configured -> export disabled.
+  const disabled = await send("/api/feedback/export", "GET");
+  assert.equal(disabled.response.status, 404);
+
+  // Enabled but no session -> 401.
+  const env = createEnv();
+  env.ADMIN_USERNAME = "owner";
+  const unauth = await worker.fetch(
+    new Request("https://synapsis.school/api/feedback/export", { method: "GET" }),
+    env,
+  );
+  assert.equal(unauth.status, 401);
+
+  // Wrong method -> 405 Allow: GET.
+  const wrongMethod = await send("/api/feedback/export", "POST");
+  assert.equal(wrongMethod.response.status, 405);
+  assert.equal(wrongMethod.response.headers.get("Allow"), "GET");
+});

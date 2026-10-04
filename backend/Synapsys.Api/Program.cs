@@ -252,6 +252,50 @@ app.MapPost("/api/feedback", (FeedbackInput input, ClaimsPrincipal user, HttpCon
     return Results.Json(new { ok = true }, statusCode: 201);
 });
 
+app.MapGet("/api/feedback/export", (ClaimsPrincipal user, HttpContext http) =>
+{
+    var admin = (Environment.GetEnvironmentVariable("ADMIN_USERNAME") ?? "").Trim();
+    if (admin.Length == 0)
+        return Results.Json(new { error = "Feedback export is not enabled" }, statusCode: 404);
+    if (http.User.Identity?.IsAuthenticated != true)
+        return Results.Json(new { error = "Not signed in" }, statusCode: 401);
+    if (!string.Equals(http.User.Identity!.Name, admin, StringComparison.OrdinalIgnoreCase))
+        return Results.Json(new { error = "Not allowed" }, statusCode: 403);
+
+    var ratings = new List<object>();
+    double sum = 0;
+    using (var conn = Db.Open())
+    using (var cmd = conn.CreateCommand())
+    {
+        cmd.CommandText =
+            "SELECT id, username, rating, comment, context, created_at FROM feedback ORDER BY id DESC";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var rating = reader.GetInt32(2);
+            sum += rating;
+            ratings.Add(new
+            {
+                id = reader.GetInt64(0),
+                username = reader.IsDBNull(1) ? null : reader.GetString(1),
+                rating,
+                comment = reader.IsDBNull(3) ? null : reader.GetString(3),
+                context = reader.IsDBNull(4) ? null : reader.GetString(4),
+                created_at = reader.GetString(5),
+            });
+        }
+    }
+
+    var count = ratings.Count;
+    var average = count > 0 ? Math.Round(sum / count, 2) : 0;
+    var payload = System.Text.Json.JsonSerializer.Serialize(
+        new { exportedAt = DateTime.UtcNow.ToString("o"), count, average, ratings },
+        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+    http.Response.Headers.Append(
+        "Content-Disposition", "attachment; filename=\"synapsis-ratings.json\"");
+    return Results.Content(payload, "application/json; charset=utf-8");
+});
+
 app.Run();
 
 record Credentials(string? Username, string? Password);

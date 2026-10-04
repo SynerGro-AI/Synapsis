@@ -7,6 +7,9 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   SESSION_SECRET: string;
+  /** When set, the signed-in user with this username may download all ratings
+   *  from GET /api/feedback/export. Unset = export disabled (404). */
+  ADMIN_USERNAME?: string;
 }
 
 // Minimal ambient types so this file stands alone without workers-types.
@@ -161,6 +164,7 @@ function allowedMethods(path: string): string[] | null {
   if (path === "/api/auth/register" || path === "/api/auth/login" || path === "/api/auth/logout")
     return ["POST"];
   if (path === "/api/feedback") return ["POST"];
+  if (path === "/api/feedback/export") return ["GET"];
   if (path === "/api/auth/me" || path === "/api/progress") return ["GET", "HEAD"];
   if (/^\/api\/progress\/\d+$/.test(path)) return ["PUT"];
   return null;
@@ -356,6 +360,48 @@ async function submitFeedback(
   return json({ ok: true }, 201);
 }
 
+interface FeedbackRow {
+  id: number;
+  username: string | null;
+  rating: number;
+  comment: string | null;
+  context: string | null;
+  created_at: string;
+}
+
+/** Admin-only: download every rating + comment as a readable JSON file.
+ *  Enabled only when env.ADMIN_USERNAME is set and the signed-in user matches it. */
+async function exportFeedback(env: Env, session: Session | null): Promise<Response> {
+  const admin = (env.ADMIN_USERNAME ?? "").trim();
+  if (!admin) return error("Feedback export is not enabled", 404);
+  if (!session) return error("Not signed in", 401);
+  if (session.username.toLowerCase() !== admin.toLowerCase())
+    return error("Not allowed", 403);
+
+  const rows = await env.DB.prepare(
+    "SELECT id, username, rating, comment, context, created_at FROM feedback ORDER BY id DESC",
+  ).all<FeedbackRow>();
+  const ratings = rows.results;
+  const count = ratings.length;
+  const average =
+    count > 0
+      ? Math.round((ratings.reduce((sum, r) => sum + r.rating, 0) / count) * 100) / 100
+      : 0;
+  const body = JSON.stringify(
+    { exportedAt: new Date().toISOString(), count, average, ratings },
+    null,
+    2,
+  );
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Disposition": 'attachment; filename="synapsis-ratings.json"',
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 // ---------- router ----------
 
 export default {
@@ -386,6 +432,7 @@ export default {
     const session = await readSession(env, request);
     if (request.method === "POST" && path === "/api/feedback")
       return submitFeedback(request, env, session);
+    if (path === "/api/feedback/export") return exportFeedback(env, session);
 
     if (path === "/api/auth/me")
       return session ? json({ username: session.username }) : error("Not signed in", 401);
