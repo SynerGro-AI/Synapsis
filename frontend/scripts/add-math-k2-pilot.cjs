@@ -54,6 +54,7 @@ const phases = [
     track: "math",
     name: "K–2: Number Sense & Operations",
     range: "1-6",
+    status: "coming-soon",
     concepts: [
       "Counting and cardinality",
       "Addition within 20",
@@ -392,14 +393,19 @@ for (const track of tracks) {
 }
 data.phases = data.phases.filter((item) => !phases.some((candidate) => candidate.id === item.id));
 data.phases.push(...phases);
+// K–5 math is locked out of the live site pending a redesign. The K–2 and
+// Grades 3–5 lesson definitions above are kept in source for that future work,
+// but they are NOT published: only the University lessons (id 713+) go live, and
+// the K–2 / 3–5 phases stay "coming-soon" so they appear on the roadmap instead
+// of as live lessons.
 const math35Phase = data.phases.find((item) => item.id === "math_3_5");
 if (!math35Phase) throw new Error("Missing Math Grades 3-5 phase");
-delete math35Phase.status;
+math35Phase.status = "coming-soon";
 const mathUniversityPhase = data.phases.find((item) => item.id === "math_university");
 if (!mathUniversityPhase) throw new Error("Missing Math University phase");
 delete mathUniversityPhase.status;
 data.lessons = data.lessons.filter((item) => item.id < 701 || item.id > 720);
-data.lessons.push(...lessons);
+data.lessons.push(...lessons.filter((item) => item.id >= 713));
 data.phases.sort((a, b) => {
   const trackOrder = data.tracks.findIndex((track) => track.id === a.track) -
     data.tracks.findIndex((track) => track.id === b.track);
@@ -416,4 +422,4 @@ for (const item of lessons) {
 const serialized = JSON.stringify(data, null, 2) + "\n";
 fs.writeFileSync(filePath, serialized);
 fs.writeFileSync(path.join(BE, "lessons.json"), serialized);
-console.log("Published K-University curriculum blueprint and Math lessons 701-720 (K-5 + University).");
+console.log("Published University math (713-720); locked K-5 (701-712) out as coming-soon.");
