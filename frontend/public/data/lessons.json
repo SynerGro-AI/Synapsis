@@ -853,6 +853,20 @@
         "Audit activity",
         "Service operations console"
       ]
+    },
+    {
+      "id": "react_advanced",
+      "track": "react",
+      "name": "Advanced React Engineering",
+      "range": "25-30",
+      "concepts": [
+        "useReducer",
+        "Context",
+        "Custom hooks",
+        "Memoization",
+        "Refs",
+        "Composed app state"
+      ]
     }
   ],
   "lessons": [
@@ -8249,6 +8263,252 @@
         "Use a heading that identifies the service operations console.",
         "Display openCount and resolvedCount as summary metrics.",
         "Map visibleRequests into table rows using request.id as the key."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 825,
+      "phase": "react_advanced",
+      "title": "Manage State with useReducer",
+      "description": "When state updates follow clear rules, a reducer keeps them predictable. A reducer is a pure function that takes the current state and an action, and returns the next state.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Count: 0",
+        "codeSteps": [
+          {
+            "instruction": "Inside the reducer, return the next state when the action is increment.",
+            "explanation": "A reducer never mutates state; it returns a brand-new object describing the next state.",
+            "code": "if (action.type === \"increment\") {\n  return { count: state.count + 1 };\n}"
+          },
+          {
+            "instruction": "Add a button that dispatches the increment action.",
+            "explanation": "dispatch sends an action to the reducer, which decides how the state should change.",
+            "code": "<button onClick={() => dispatch({ type: \"increment\" })}>Add one</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function reducer(state, action) {\n  {/* Handle the \"increment\" action. */}\n  return state;\n}\n\nfunction App() {\n  const [state, dispatch] = React.useReducer(reducer, { count: 0 });\n\n  return (\n    <main>\n      <p>Count: {state.count}</p>\n      {/* Add a button that dispatches increment. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Return a new state object for the increment action.",
+        "Dispatch { type: \"increment\" } from the button."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 826,
+      "phase": "react_advanced",
+      "title": "Share State with Context",
+      "description": "Context lets a value reach deeply nested components without passing props through every level. A provider supplies the value; any descendant reads it with useContext.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Signed in as Sam",
+        "codeSteps": [
+          {
+            "instruction": "Greet the user that Greeting read from context.",
+            "explanation": "useContext returns the nearest provider's value, so Greeting needs no props.",
+            "code": "Signed in as {user}"
+          },
+          {
+            "instruction": "Render the Greeting component inside the provider.",
+            "explanation": "Only components inside the provider can read its value.",
+            "code": "<Greeting />"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "const UserContext = React.createContext(\"Guest\");\n\nfunction Greeting() {\n  const user = React.useContext(UserContext);\n  return <p>{/* Greet the signed-in user. */}</p>;\n}\n\nfunction App() {\n  return (\n    <UserContext.Provider value=\"Sam\">\n      <main>\n        {/* Render the Greeting inside the provider. */}\n      </main>\n    </UserContext.Provider>\n  );\n}\n"
+      },
+      "hints": [
+        "Read the context value with React.useContext.",
+        "Render <Greeting /> inside the provider."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 827,
+      "phase": "react_advanced",
+      "title": "Build a Custom Hook",
+      "description": "A custom hook is a function whose name starts with use and that calls other hooks. It packages reusable stateful logic so many components can share it.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Panel is open",
+        "codeSteps": [
+          {
+            "instruction": "Return the current value and a toggle function from the hook.",
+            "explanation": "A custom hook can return anything; here it returns a pair, like useState does.",
+            "code": "return [on, () => setOn((value) => !value)];"
+          },
+          {
+            "instruction": "Add a button that calls the hook's toggle function.",
+            "explanation": "The component stays simple because the stateful logic lives in the hook.",
+            "code": "<button onClick={toggle}>Toggle</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function useToggle(initial) {\n  const [on, setOn] = React.useState(initial);\n  {/* Return the value and a function that flips it. */}\n}\n\nfunction App() {\n  const [open, toggle] = useToggle(true);\n\n  return (\n    <main>\n      <p>Panel is {open ? \"open\" : \"closed\"}</p>\n      {/* Add a button that toggles the panel. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Return the current value and a toggle function from the hook.",
+        "Call toggle from the button's onClick."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 828,
+      "phase": "react_advanced",
+      "title": "Memoize Work with useMemo",
+      "description": "useMemo remembers the result of a calculation and only recomputes it when its dependencies change. This avoids repeating expensive work on every render.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Total: 60",
+        "codeSteps": [
+          {
+            "instruction": "Memoize the total, recomputing only when count changes.",
+            "explanation": "The dependency array [count] tells React when the memoized value must be recalculated.",
+            "code": "const total = React.useMemo(() => count * unitPrice, [count]);"
+          },
+          {
+            "instruction": "Add a button that increases the count.",
+            "explanation": "Changing count invalidates the memo, so the total is recomputed for the new value.",
+            "code": "<button onClick={() => setCount(count + 1)}>Add item</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const [count, setCount] = React.useState(3);\n  const unitPrice = 20;\n\n  {/* Memoize the total so it only recomputes when count changes. */}\n\n  return (\n    <main>\n      <p>Total: {total}</p>\n      {/* Add a button that increases the count. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Compute total with React.useMemo and a [count] dependency.",
+        "Increase count from the button."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 829,
+      "phase": "react_advanced",
+      "title": "Remember a Value with useRef",
+      "description": "useRef stores a mutable value that survives re-renders without causing them. Unlike state, changing a ref does not trigger a new render.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "Renders so far: 1",
+        "codeSteps": [
+          {
+            "instruction": "Increase the ref so it counts this render.",
+            "explanation": "A ref persists across renders, so it accumulates a running count without extra state.",
+            "code": "renders.current = renders.current + 1;"
+          },
+          {
+            "instruction": "Add a button that forces another render.",
+            "explanation": "Updating state re-renders the component; the ref keeps its value and counts up.",
+            "code": "<button onClick={() => setTick((n) => n + 1)}>Re-render</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "function App() {\n  const renders = React.useRef(0);\n  const [, setTick] = React.useState(0);\n  {/* Count this render by increasing the ref. */}\n\n  return (\n    <main>\n      <p>Renders so far: {renders.current}</p>\n      {/* Add a button that forces another render. */}\n    </main>\n  );\n}\n"
+      },
+      "hints": [
+        "Increase renders.current each render.",
+        "Call setTick from the button to force a re-render."
+      ],
+      "output": {
+        "initial": "Run your React app to see the preview.",
+        "status": "Waiting for your JSX..."
+      }
+    },
+    {
+      "id": 830,
+      "phase": "react_advanced",
+      "title": "Capstone: A Reducer-and-Context Task Board",
+      "description": "Combine the advanced tools into one small app: a reducer owns the task list, context shares it, and a summary component reads it without prop drilling.",
+      "source": "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.",
+      "kind": "react",
+      "react": {
+        "expectedText": "2 tasks open",
+        "codeSteps": [
+          {
+            "instruction": "Show the number of open tasks from context.",
+            "explanation": "Summary reads the shared task list directly, so it needs no props.",
+            "code": "{tasks.length} tasks open"
+          },
+          {
+            "instruction": "Render the Summary and a button that adds a task.",
+            "explanation": "The button dispatches an action; the reducer returns a new list and the Summary updates.",
+            "code": "<Summary />\n<button onClick={() => dispatch({ type: \"add\", task: { id: Date.now(), title: \"New\" } })}>\n  Add task\n</button>"
+          }
+        ]
+      },
+      "featuredComponent": "terminal",
+      "circuit": {
+        "palette": [],
+        "required": [],
+        "notes": ""
+      },
+      "codeTemplate": {
+        "language": "javascript",
+        "starter": "const TasksContext = React.createContext(null);\n\nfunction reducer(state, action) {\n  if (action.type === \"add\") {\n    return [...state, action.task];\n  }\n  return state;\n}\n\nfunction Summary() {\n  const tasks = React.useContext(TasksContext);\n  return <p>{/* Show how many tasks are open. */}</p>;\n}\n\nfunction App() {\n  const [tasks, dispatch] = React.useReducer(reducer, [\n    { id: 1, title: \"Triage\" },\n    { id: 2, title: \"Review\" },\n  ]);\n\n  return (\n    <TasksContext.Provider value={tasks}>\n      <main>\n        <h1>Task board</h1>\n        {/* Render the Summary and an add-task button. */}\n      </main>\n    </TasksContext.Provider>\n  );\n}\n"
+      },
+      "hints": [
+        "Show tasks.length in the Summary.",
+        "Render <Summary /> and a button that dispatches add."
       ],
       "output": {
         "initial": "Run your React app to see the preview.",

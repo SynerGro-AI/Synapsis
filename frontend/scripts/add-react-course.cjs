@@ -42,6 +42,13 @@ const phases = [
     range: "19-24",
     concepts: ["Reusable components", "Accessible announcements", "Efficient rendering", "Pagination", "Audit activity", "Service operations console"],
   },
+  {
+    id: "react_advanced",
+    track: "react",
+    name: "Advanced React Engineering",
+    range: "25-30",
+    concepts: ["useReducer", "Context", "Custom hooks", "Memoization", "Refs", "Composed app state"],
+  },
 ];
 const source = "Paul McWhorter (toptechboy.com; Patreon) — coding-education inspiration; original React lessons authored by Synapsis.";
 const circuit = { palette: [], required: [], notes: "" };
@@ -54,7 +61,9 @@ const lesson = (id, title, description, expectedText, starter, hints, codeSteps)
         ? "react_production_ui"
         : id <= 818
           ? "react_enterprise_apps"
-          : "react_quality_capstone",
+          : id <= 824
+            ? "react_quality_capstone"
+            : "react_advanced",
   title,
   description,
   source,
@@ -723,12 +732,234 @@ function App() {
   ),
 ];
 
+const experiencedLessons = [
+  lesson(
+    825,
+    "Manage State with useReducer",
+    "When state updates follow clear rules, a reducer keeps them predictable. A reducer is a pure function that takes the current state and an action, and returns the next state.",
+    "Count: 0",
+    `function reducer(state, action) {
+  {/* Handle the "increment" action. */}
+  return state;
+}
+
+function App() {
+  const [state, dispatch] = React.useReducer(reducer, { count: 0 });
+
+  return (
+    <main>
+      <p>Count: {state.count}</p>
+      {/* Add a button that dispatches increment. */}
+    </main>
+  );
+}
+`,
+    ["Return a new state object for the increment action.", "Dispatch { type: \"increment\" } from the button."],
+    [
+      {
+        instruction: "Inside the reducer, return the next state when the action is increment.",
+        explanation: "A reducer never mutates state; it returns a brand-new object describing the next state.",
+        code: 'if (action.type === "increment") {\n  return { count: state.count + 1 };\n}',
+      },
+      {
+        instruction: "Add a button that dispatches the increment action.",
+        explanation: "dispatch sends an action to the reducer, which decides how the state should change.",
+        code: '<button onClick={() => dispatch({ type: "increment" })}>Add one</button>',
+      },
+    ],
+  ),
+  lesson(
+    826,
+    "Share State with Context",
+    "Context lets a value reach deeply nested components without passing props through every level. A provider supplies the value; any descendant reads it with useContext.",
+    "Signed in as Sam",
+    `const UserContext = React.createContext("Guest");
+
+function Greeting() {
+  const user = React.useContext(UserContext);
+  return <p>{/* Greet the signed-in user. */}</p>;
+}
+
+function App() {
+  return (
+    <UserContext.Provider value="Sam">
+      <main>
+        {/* Render the Greeting inside the provider. */}
+      </main>
+    </UserContext.Provider>
+  );
+}
+`,
+    ["Read the context value with React.useContext.", "Render <Greeting /> inside the provider."],
+    [
+      {
+        instruction: "Greet the user that Greeting read from context.",
+        explanation: "useContext returns the nearest provider's value, so Greeting needs no props.",
+        code: "Signed in as {user}",
+      },
+      {
+        instruction: "Render the Greeting component inside the provider.",
+        explanation: "Only components inside the provider can read its value.",
+        code: "<Greeting />",
+      },
+    ],
+  ),
+  lesson(
+    827,
+    "Build a Custom Hook",
+    "A custom hook is a function whose name starts with use and that calls other hooks. It packages reusable stateful logic so many components can share it.",
+    "Panel is open",
+    `function useToggle(initial) {
+  const [on, setOn] = React.useState(initial);
+  {/* Return the value and a function that flips it. */}
+}
+
+function App() {
+  const [open, toggle] = useToggle(true);
+
+  return (
+    <main>
+      <p>Panel is {open ? "open" : "closed"}</p>
+      {/* Add a button that toggles the panel. */}
+    </main>
+  );
+}
+`,
+    ["Return the current value and a toggle function from the hook.", "Call toggle from the button's onClick."],
+    [
+      {
+        instruction: "Return the current value and a toggle function from the hook.",
+        explanation: "A custom hook can return anything; here it returns a pair, like useState does.",
+        code: "return [on, () => setOn((value) => !value)];",
+      },
+      {
+        instruction: "Add a button that calls the hook's toggle function.",
+        explanation: "The component stays simple because the stateful logic lives in the hook.",
+        code: "<button onClick={toggle}>Toggle</button>",
+      },
+    ],
+  ),
+  lesson(
+    828,
+    "Memoize Work with useMemo",
+    "useMemo remembers the result of a calculation and only recomputes it when its dependencies change. This avoids repeating expensive work on every render.",
+    "Total: 60",
+    `function App() {
+  const [count, setCount] = React.useState(3);
+  const unitPrice = 20;
+
+  {/* Memoize the total so it only recomputes when count changes. */}
+
+  return (
+    <main>
+      <p>Total: {total}</p>
+      {/* Add a button that increases the count. */}
+    </main>
+  );
+}
+`,
+    ["Compute total with React.useMemo and a [count] dependency.", "Increase count from the button."],
+    [
+      {
+        instruction: "Memoize the total, recomputing only when count changes.",
+        explanation: "The dependency array [count] tells React when the memoized value must be recalculated.",
+        code: "const total = React.useMemo(() => count * unitPrice, [count]);",
+      },
+      {
+        instruction: "Add a button that increases the count.",
+        explanation: "Changing count invalidates the memo, so the total is recomputed for the new value.",
+        code: "<button onClick={() => setCount(count + 1)}>Add item</button>",
+      },
+    ],
+  ),
+  lesson(
+    829,
+    "Remember a Value with useRef",
+    "useRef stores a mutable value that survives re-renders without causing them. Unlike state, changing a ref does not trigger a new render.",
+    "Renders so far: 1",
+    `function App() {
+  const renders = React.useRef(0);
+  const [, setTick] = React.useState(0);
+  {/* Count this render by increasing the ref. */}
+
+  return (
+    <main>
+      <p>Renders so far: {renders.current}</p>
+      {/* Add a button that forces another render. */}
+    </main>
+  );
+}
+`,
+    ["Increase renders.current each render.", "Call setTick from the button to force a re-render."],
+    [
+      {
+        instruction: "Increase the ref so it counts this render.",
+        explanation: "A ref persists across renders, so it accumulates a running count without extra state.",
+        code: "renders.current = renders.current + 1;",
+      },
+      {
+        instruction: "Add a button that forces another render.",
+        explanation: "Updating state re-renders the component; the ref keeps its value and counts up.",
+        code: "<button onClick={() => setTick((n) => n + 1)}>Re-render</button>",
+      },
+    ],
+  ),
+  lesson(
+    830,
+    "Capstone: A Reducer-and-Context Task Board",
+    "Combine the advanced tools into one small app: a reducer owns the task list, context shares it, and a summary component reads it without prop drilling.",
+    "2 tasks open",
+    `const TasksContext = React.createContext(null);
+
+function reducer(state, action) {
+  if (action.type === "add") {
+    return [...state, action.task];
+  }
+  return state;
+}
+
+function Summary() {
+  const tasks = React.useContext(TasksContext);
+  return <p>{/* Show how many tasks are open. */}</p>;
+}
+
+function App() {
+  const [tasks, dispatch] = React.useReducer(reducer, [
+    { id: 1, title: "Triage" },
+    { id: 2, title: "Review" },
+  ]);
+
+  return (
+    <TasksContext.Provider value={tasks}>
+      <main>
+        <h1>Task board</h1>
+        {/* Render the Summary and an add-task button. */}
+      </main>
+    </TasksContext.Provider>
+  );
+}
+`,
+    ["Show tasks.length in the Summary.", "Render <Summary /> and a button that dispatches add."],
+    [
+      {
+        instruction: "Show the number of open tasks from context.",
+        explanation: "Summary reads the shared task list directly, so it needs no props.",
+        code: "{tasks.length} tasks open",
+      },
+      {
+        instruction: "Render the Summary and a button that adds a task.",
+        explanation: "The button dispatches an action; the reducer returns a new list and the Summary updates.",
+        code: '<Summary />\n<button onClick={() => dispatch({ type: "add", task: { id: Date.now(), title: "New" } })}>\n  Add task\n</button>',
+      },
+    ],
+  ),
+];
 data.tracks = data.tracks.filter((item) => item.id !== track.id);
 data.tracks.push(track);
 data.phases = data.phases.filter((item) => !phases.some((phaseItem) => phaseItem.id === item.id));
 data.phases.push(...phases);
-data.lessons = data.lessons.filter((item) => item.id < 801 || item.id > 824);
-data.lessons.push(...lessons, ...advancedLessons);
+data.lessons = data.lessons.filter((item) => item.id < 801 || item.id > 830);
+data.lessons.push(...lessons, ...advancedLessons, ...experiencedLessons);
 data.phases.sort((a, b) =>
   data.tracks.findIndex((item) => item.id === a.track) -
     data.tracks.findIndex((item) => item.id === b.track) ||
@@ -736,7 +967,7 @@ data.phases.sort((a, b) =>
 );
 data.lessons.sort((a, b) => a.id - b.id);
 
-for (const item of [...lessons, ...advancedLessons]) {
+for (const item of [...lessons, ...advancedLessons, ...experiencedLessons]) {
   if (
     item.kind !== "react" ||
     !item.react.expectedText ||
@@ -749,4 +980,4 @@ for (const item of [...lessons, ...advancedLessons]) {
 const serialized = `${JSON.stringify(data, null, 2)}\n`;
 fs.writeFileSync(frontend, serialized);
 fs.writeFileSync(backend, serialized);
-console.log("Published 24 original, runnable React app-building lessons.");
+console.log("Published 30 original, runnable React app-building lessons.");
